@@ -104,10 +104,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_adds_logstash_timestamp_when_configured
     driver.configure("logstash_format true\n")
     stub_elastic
+    ts = DateTime.now.to_s
     driver.emit(sample_record)
     driver.run
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], DateTime.now.to_s)
+    assert_equal(index_cmds[1]['@timestamp'], ts)
   end
 
   def test_doesnt_add_tag_key_by_default
