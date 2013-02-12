@@ -8,10 +8,9 @@ I wrote this so you can search logs routed through Fluentd.
 
 ## Usage
 
-In your fluentd configration, use type elasticsearch. Additional configuration is optional, default values would look like this:
+In your fluentd configration, use `type elasticsearch`. Additional configuration is optional, default values would look like this:
 
 ```
-type elasticsearch
 host localhost
 port 9200
 index_name fluentd
@@ -25,9 +24,9 @@ index_type fluentd
 logstash_format true # defaults to false
 ```
 
-This is meant to make storing data into elasticsearch compatible to what logstash inserts. This way one could take advantade of [kibana](http://kibana.org/).
+This is meant to make writing data into elasticsearch compatible to what logstash writes. By doing this, one could take advantade of [kibana](http://kibana.org/).
 
-
+---
 
 ```
 include_tag_key true # defaults to false
@@ -45,8 +44,10 @@ This will add the fluentd tag in the json record. For instance, if you have a co
 The record inserted into elasticsearch would be
 
 ```
-{"_key":"my.logs", "whatever_key":"whatever_value"}
+{"_key":"my.logs", "name":"Johnny Doeie"}
 ```
+
+---
 
 fluentd-plugin-elasticsearch is a buffered output that uses elasticseach's bulk API. So additional buffer configuration would be (with default values):
 
