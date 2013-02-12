@@ -4,21 +4,61 @@ I wrote this so you can search logs routed through Fluentd.
 
 ## Installation
 
-Add this line to your application's Gemfile:
-
-    gem 'fluent-plugin-elasticsearch'
-
-And then execute:
-
-    $ bundle
-
-Or install it yourself as:
-
     $ gem install fluent-plugin-elasticsearch
 
 ## Usage
 
-TODO: Write usage instructions here
+In your fluentd configration, use type elasticsearch. Additional configuration is optional, default values would look like this:
+
+```
+type elasticsearch
+host localhost
+port 9200
+index_name fluentd
+index_type fluentd
+```
+
+
+**More options:**
+
+```
+logstash_format true # defaults to false
+```
+
+This is meant to make storing data into elasticsearch compatible to what logstash inserts. This way one could take advantade of [kibana](http://kibana.org/).
+
+
+
+```
+include_tag_key true # defaults to false
+```
+
+This will add the fluentd tag in the json record. For instance, if you have a config like this:
+
+```
+<match my.logs>
+  type elasticsearch
+  include_tag_key true
+</match>
+```
+
+The record inserted into elasticsearch would be
+
+```
+{"_key":"my.logs", "whatever_key":"whatever_value"}
+```
+
+fluentd-plugin-elasticsearch is a buffered output that uses elasticseach's bulk API. So additional buffer configuration would be (with default values):
+
+```
+buffer_type memory
+flush_interval 60
+retry_limit 17
+retry_wait 1.0
+num_threads 1
+```
+
+
 
 ## Contributing
 
