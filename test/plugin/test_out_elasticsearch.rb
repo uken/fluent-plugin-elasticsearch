@@ -126,7 +126,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert_nil(index_cmds[1]['_key'])
+    assert_nil(index_cmds[1]['tag'])
   end
 
   def test_adds_tag_key_when_configured
@@ -134,7 +134,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert(index_cmds[1].has_key? '_key')
-    assert_equal(index_cmds[1]['_key'], 'mytag')
+    assert(index_cmds[1].has_key?('tag'))
+    assert_equal(index_cmds[1]['tag'], 'mytag')
   end
 end

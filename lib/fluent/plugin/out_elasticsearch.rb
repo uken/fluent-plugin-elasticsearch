@@ -10,7 +10,9 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :logstash_format, :bool, :default => false
   config_param :type_name, :string, :default => "fluentd"
   config_param :index_name, :string, :default => "fluentd"
-  config_param :include_tag_key, :bool, :default => false
+
+  include Fluent::SetTagKeyMixin
+  config_set_default :include_tag_key, false
 
   def initialize
     super
@@ -34,15 +36,17 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
   def write(chunk)
     bulk_message = []
+
     chunk.msgpack_each do |tag, time, record|
-      target_index = self.index_name
-      if self.logstash_format
+      if @logstash_format
         record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
         target_index = "logstash-#{Time.now.strftime("%Y.%m.%d")}"
+      else
+        target_index = @index_name
       end
 
-      if self.include_tag_key
-        record.merge!('_key' => tag)
+      if @include_tag_key
+        record.merge!(@tag_key => tag)
       end
 
       bulk_message << { "index" => {"_index" => target_index, "_type" => type_name} }.to_json
@@ -50,7 +54,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     end
     bulk_message << ""
 
-    http = Net::HTTP.new(self.host, self.port.to_i)
+    http = Net::HTTP.new(@host, @port.to_i)
     request = Net::HTTP::Post.new("/_bulk")
     request.body = bulk_message.join("\n")
     http.request(request)

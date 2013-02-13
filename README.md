@@ -30,6 +30,7 @@ This is meant to make writing data into elasticsearch compatible to what logstas
 
 ```
 include_tag_key true # defaults to false
+tag_key tag # defaults to tag
 ```
 
 This will add the fluentd tag in the json record. For instance, if you have a config like this:
@@ -38,6 +39,7 @@ This will add the fluentd tag in the json record. For instance, if you have a co
 <match my.logs>
   type elasticsearch
   include_tag_key true
+  tag_key _key
 </match>
 ```
 
