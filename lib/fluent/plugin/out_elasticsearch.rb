@@ -4,6 +4,7 @@ require 'date'
 
 class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   Fluent::Plugin.register_output('elasticsearch', self)
+
   config_param :host, :string,  :default => 'localhost'
   config_param :port, :integer, :default => 9200
   config_param :logstash_format, :bool, :default => false
@@ -55,4 +56,3 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     http.request(request)
   end
 end
-

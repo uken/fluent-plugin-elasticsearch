@@ -126,7 +126,4 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert(index_cmds[1].has_key? '_key')
     assert_equal(index_cmds[1]['_key'], 'mytag')
   end
-
-
 end
-

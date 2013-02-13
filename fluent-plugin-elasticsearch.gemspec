@@ -1,23 +1,22 @@
 # -*- encoding: utf-8 -*-
-lib = File.expand_path('../lib', __FILE__)
-$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
+$:.push File.expand_path("../lib", __FILE__)
 
-Gem::Specification.new do |gem|
-  gem.name          = "fluent-plugin-elasticsearch"
-  gem.version       = '0.1.0'
-  gem.authors       = [""]
-  gem.email         = [""]
-  gem.description   = %q{}
-  gem.summary       = %q{}
-  gem.homepage      = ""
+Gem::Specification.new do |s|
+  s.name          = "fluent-plugin-elasticsearch"
+  s.version       = '0.1.0'
+  s.authors       = ["diogo"]
+  s.email         = ["team@uken.com"]
+  s.description   = %q{ElasticSearch output plugin for Fluent event collector}
+  s.summary       = s.description
+  s.homepage      = "https://github.com/uken/fluent-plugin-elasticsearch"
 
-  gem.files         = `git ls-files`.split($/)
-  gem.executables   = gem.files.grep(%r{^bin/}).map{ |f| File.basename(f) }
-  gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
-  gem.require_paths = ["lib"]
+  s.files         = `git ls-files`.split($/)
+  s.executables   = s.files.grep(%r{^bin/}).map{ |f| File.basename(f) }
+  s.test_files    = s.files.grep(%r{^(test|spec|features)/})
+  s.require_paths = ["lib"]
 
-  gem.add_runtime_dependency "fluentd"
-  gem.add_runtime_dependency "json"
-  gem.add_development_dependency "rake"
-  gem.add_development_dependency "webmock"
+  s.add_runtime_dependency "fluentd"
+
+  s.add_development_dependency "rake"
+  s.add_development_dependency "webmock"
 end
