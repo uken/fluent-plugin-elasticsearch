@@ -1,4 +1,4 @@
-Copyright (c) 2012 TODO: Write your name
+Copyright (c) 2012 Uken Games
 
 MIT License
 

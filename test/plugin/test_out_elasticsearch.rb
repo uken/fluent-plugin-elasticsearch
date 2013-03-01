@@ -6,6 +6,8 @@ require 'fluent/plugin/out_elasticsearch'
 require 'webmock/test_unit'
 require 'date'
 
+require 'helper'
+
 $:.push File.expand_path("../lib", __FILE__)
 $:.push File.dirname(__FILE__)
 
