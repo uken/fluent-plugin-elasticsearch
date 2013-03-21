@@ -14,7 +14,7 @@ In your fluentd configration, use `type elasticsearch`. Additional configuration
 host localhost
 port 9200
 index_name fluentd
-index_type fluentd
+type_name fluentd
 ```
 
 
