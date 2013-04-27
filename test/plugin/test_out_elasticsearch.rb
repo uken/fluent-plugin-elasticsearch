@@ -100,9 +100,10 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_writes_to_logstash_index
     driver.configure("logstash_format true\n")
-    logstash_index = "logstash-#{Time.now.strftime("%Y.%m.%d")}"
+    time = Time.parse Date.today.to_s
+    logstash_index = "logstash-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic
-    driver.emit(sample_record)
+    driver.emit(sample_record, time)
     driver.run
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
