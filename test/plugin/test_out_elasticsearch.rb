@@ -125,6 +125,16 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(index_cmds[1]['@timestamp'], ts)
   end
 
+  def test_adds_logstash_message_when_configured
+    driver.configure("logstash_format true\n")
+    stub_elastic
+    ts = DateTime.now.to_s
+    driver.emit(sample_record)
+    driver.run
+    assert(index_cmds[1].has_key? '@message')
+    assert_equal(index_cmds[1]['@message'], sample_record.merge!({'@timestamp' => ts}))
+  end
+
   def test_doesnt_add_tag_key_by_default
     stub_elastic
     driver.emit(sample_record)

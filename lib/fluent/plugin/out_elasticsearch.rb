@@ -40,6 +40,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     chunk.msgpack_each do |tag, time, record|
       if @logstash_format
         record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
+        record.merge!({"@message" => record.dup})
         target_index = "logstash-#{Time.at(time).getutc.strftime("%Y.%m.%d")}"
       else
         target_index = @index_name
