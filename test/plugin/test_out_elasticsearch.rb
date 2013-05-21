@@ -149,6 +149,14 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(index_cmds[0]['index']['_id'], '42')
   end
 
+  def test_doesnt_add_record_id_if_missing_when_configured
+    driver.configure("unique_key another_request_id\n")
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert(!index_cmds[0]['index'].has_key?('_id'))
+  end
+
   def test_adds_record_id_when_not_configured
     stub_elastic
     driver.emit(sample_record)

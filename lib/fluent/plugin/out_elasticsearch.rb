@@ -50,11 +50,11 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         record.merge!(@tag_key => tag)
       end
 
-      if @unique_key
-        bulk_message << { "index" => {"_index" => target_index, "_type" => type_name, "_id" => record[@unique_key]} }.to_json
-      else
-        bulk_message << { "index" => {"_index" => target_index, "_type" => type_name} }.to_json
+      meta = { "index" => {"_index" => target_index, "_type" => type_name} }
+      if @unique_key && record[@unique_key]
+        meta['index']['_id'] = record[@unique_key]
       end
+      bulk_message << meta.to_json
       bulk_message << record.to_json
     end
     bulk_message << ""
