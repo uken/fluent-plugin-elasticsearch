@@ -51,6 +51,21 @@ The record inserted into elasticsearch would be
 
 ---
 
+```
+unique_key request_id # use "request_id" field as a record id in ES
+```
+
+By default, all records inserted into elasticsearch get a random _id. This option allows to use a field in the record as an identifier.
+
+This following record `{"name":"Johnny","request_id":"87d89af7daffad6"}` will trigger the following ElasticSearch command
+
+```
+{ "index" : { "_index" : "logstash-2013.01.01, "_type" : "fluentd", "_id" : "87d89af7daffad6" } }
+{ "name": "Johnny", "request_id": "87d89af7daffad6" }
+```
+
+---
+
 fluentd-plugin-elasticsearch is a buffered output that uses elasticseach's bulk API. So additional buffer configuration would be (with default values):
 
 ```

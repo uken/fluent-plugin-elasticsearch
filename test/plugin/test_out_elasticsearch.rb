@@ -26,7 +26,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def sample_record
-    {'age' => 26}
+    {'age' => 26, 'request_id' => '42'}
   end
 
   def stub_elastic(url="http://localhost:9200/_bulk")
@@ -139,5 +139,20 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run
     assert(index_cmds[1].has_key?('tag'))
     assert_equal(index_cmds[1]['tag'], 'mytag')
+  end
+
+  def test_adds_record_id_when_configured
+    driver.configure("unique_key request_id\n")
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert_equal(index_cmds[0]['index']['_id'], '42')
+  end
+
+  def test_adds_record_id_when_not_configured
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert(!index_cmds[0]['index'].has_key?('_id'))
   end
 end
