@@ -10,6 +10,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :logstash_format, :bool, :default => false
   config_param :type_name, :string, :default => "fluentd"
   config_param :index_name, :string, :default => "fluentd"
+  config_param :unique_key, :string, :default => nil
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -49,7 +50,11 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         record.merge!(@tag_key => tag)
       end
 
-      bulk_message << { "index" => {"_index" => target_index, "_type" => type_name} }.to_json
+      meta = { "index" => {"_index" => target_index, "_type" => type_name} }
+      if @unique_key && record[@unique_key]
+        meta['index']['_id'] = record[@unique_key]
+      end
+      bulk_message << meta.to_json
       bulk_message << record.to_json
     end
     bulk_message << ""
