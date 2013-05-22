@@ -1,0 +1,18 @@
+Changelog
+=========
+
+0.1.2
+=====
+
+- add id_key option
+
+0.1.1
+=====
+
+- fix timezone in logstash key
+
+
+0.1.0
+=====
+
+ - Initial gem release.
