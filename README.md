@@ -52,7 +52,7 @@ The record inserted into elasticsearch would be
 ---
 
 ```
-unique_key request_id # use "request_id" field as a record id in ES
+id_key request_id # use "request_id" field as a record id in ES
 ```
 
 By default, all records inserted into elasticsearch get a random _id. This option allows to use a field in the record as an identifier.
