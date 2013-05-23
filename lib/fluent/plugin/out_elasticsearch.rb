@@ -8,6 +8,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :host, :string,  :default => 'localhost'
   config_param :port, :integer, :default => 9200
   config_param :logstash_format, :bool, :default => false
+  config_param :logstash_include_message, :bool, :default => false
   config_param :type_name, :string, :default => "fluentd"
   config_param :index_name, :string, :default => "fluentd"
   config_param :id_key, :string, :default => nil
@@ -41,6 +42,9 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     chunk.msgpack_each do |tag, time, record|
       if @logstash_format
         record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
+        if @logstash_include_message
+          record.merge!({"@message" => record.dup.to_s})
+        end
         target_index = "logstash-#{Time.at(time).getutc.strftime("%Y.%m.%d")}"
       else
         target_index = @index_name
