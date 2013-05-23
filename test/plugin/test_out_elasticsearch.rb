@@ -115,6 +115,14 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_nil(index_cmds[1]['@timestamp'])
   end
 
+  def test_doesnt_add_logstash_message_by_default
+    driver.configure("logstash_format true\n")
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert_nil(index_cmds[1]['@message'])
+  end
+
   def test_adds_logstash_timestamp_when_configured
     driver.configure("logstash_format true\n")
     stub_elastic
@@ -126,13 +134,13 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_adds_logstash_message_when_configured
-    driver.configure("logstash_format true\n")
+    driver.configure("logstash_format true\nlogstash_include_message  true")
     stub_elastic
     ts = DateTime.now.to_s
     driver.emit(sample_record)
     driver.run
     assert(index_cmds[1].has_key? '@message')
-    assert_equal(index_cmds[1]['@message'], sample_record.merge!({'@timestamp' => ts}))
+    assert_equal(index_cmds[1]['@message'], sample_record.merge!({'@timestamp' => ts}).to_s)
   end
 
   def test_doesnt_add_tag_key_by_default
