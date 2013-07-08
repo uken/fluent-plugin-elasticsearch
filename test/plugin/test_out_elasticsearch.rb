@@ -35,6 +35,10 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
   end
 
+  def stub_elastic_unavailable(url="http://localhost:9200/_bulk")
+    stub_request(:post, url).to_return(:status => [503, "Service Unavailable"])
+  end
+
   def test_writes_to_default_index
     stub_elastic
     driver.emit(sample_record)
@@ -162,5 +166,13 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.emit(sample_record)
     driver.run
     assert(!index_cmds[0]['index'].has_key?('_id'))
+  end
+
+  def test_request_error
+    stub_elastic_unavailable
+    driver.emit(sample_record)
+    assert_raise(Net::HTTPFatalError) {
+      driver.run
+    }
   end
 end
