@@ -1,6 +1,11 @@
 Changelog
 =========
 
+0.1.3
+=====
+
+- raising an exception on non-success response from elasticsearch
+
 0.1.2
 =====
 
