@@ -24,7 +24,15 @@ type_name fluentd
 logstash_format true # defaults to false
 ```
 
-This is meant to make writing data into elasticsearch compatible to what logstash writes. By doing this, one could take advantade of [kibana](http://kibana.org/).
+This is meant to make writing data into elasticsearch compatible to what logstash writes. By doing this, one could take advantage of [kibana](http://kibana.org/).
+
+---
+
+```
+map {'my.tag' => 'index1', 'my.other.tag' => 'index2'}
+```
+
+Will change the index the record is written to, based on the tag - works for a single index name as well as a logstash format.  This is useful when you have inputs from different sources that to want to keep separated.  Will default to the index name provided or "logstash" if the tag isn't found.
 
 ---
 
