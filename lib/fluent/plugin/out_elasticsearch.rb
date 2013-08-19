@@ -11,6 +11,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :type_name, :string, :default => "fluentd"
   config_param :index_name, :string, :default => "fluentd"
   config_param :id_key, :string, :default => nil
+  config_param :map, :string, :default => "{}"
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -21,6 +22,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
   def configure(conf)
     super
+    @index_map = eval(@map)
   end
 
   def start
@@ -40,10 +42,11 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
     chunk.msgpack_each do |tag, time, record|
       if @logstash_format
+        mapped_index = @index_map[tag] || "logstash"
         record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
-        target_index = "logstash-#{Time.at(time).getutc.strftime("%Y.%m.%d")}"
+        target_index = "#{mapped_index}-#{Time.at(time).getutc.strftime("%Y.%m.%d")}"
       else
-        target_index = @index_name
+        target_index = @index_map[tag] || @index_name
       end
 
       if @include_tag_key
