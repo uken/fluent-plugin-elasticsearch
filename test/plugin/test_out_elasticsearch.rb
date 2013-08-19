@@ -112,10 +112,21 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
 
-  def test_writes_to_mapped_index
+  def test_writes_to_logstash_mapped_index
+    driver.configure("logstash_format true\n")
     driver.configure("map {'test' => 'bob'}\n")
     time = Time.parse Date.today.to_s
     mapped_index = "bob-#{time.getutc.strftime("%Y.%m.%d")}"
+    stub_elastic
+    driver.emit(sample_record, time)
+    driver.run
+    assert_equal(mapped_index, index_cmds.first['index']['_index'])
+  end
+
+  def test_writes_to_mapped_index
+    driver.configure("map {'test' => 'bob'}\n")
+    time = Time.parse Date.today.to_s
+    mapped_index = "bob"
     stub_elastic
     driver.emit(sample_record, time)
     driver.run
