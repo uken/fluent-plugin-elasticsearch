@@ -26,6 +26,12 @@ logstash_format true # defaults to false
 
 This is meant to make writing data into elasticsearch compatible to what logstash writes. By doing this, one could take advantade of [kibana](http://kibana.org/).
 
+```
+logstash_prefix mylogs # defaults to "logstash"
+```
+
+By default, the records inserted into index `logstash-YYMMDD`. This option allows to insert into specified index like 'mylogs-YYMMDD'.
+
 ---
 
 ```
