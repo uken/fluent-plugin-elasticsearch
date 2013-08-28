@@ -1,6 +1,11 @@
 Changelog
 =========
 
+0.1.4
+=====
+
+- add logstash_prefix option
+
 0.1.3
 =====
 
