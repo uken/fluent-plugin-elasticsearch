@@ -112,6 +112,17 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
 
+  def test_writes_to_logstash_index_with_specified_prefix
+    driver.configure("logstash_format true\n")
+    driver.configure("logstash_prefix myprefix\n")
+    time = Time.parse Date.today.to_s
+    logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
+    stub_elastic
+    driver.emit(sample_record, time)
+    driver.run
+    assert_equal(logstash_index, index_cmds.first['index']['_index'])
+  end
+
   def test_doesnt_add_logstash_timestamp_by_default
     stub_elastic
     driver.emit(sample_record)
