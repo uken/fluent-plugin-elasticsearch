@@ -30,7 +30,7 @@ This is meant to make writing data into elasticsearch compatible to what logstas
 logstash_prefix mylogs # defaults to "logstash"
 ```
 
-By default, the records inserted into index `logstash-YYMMDD`. This option allows to insert into specified index like 'mylogs-YYMMDD'.
+By default, the records inserted into index `logstash-YYMMDD`. This option allows to insert into specified index like `mylogs-YYMMDD`.
 
 ---
 
