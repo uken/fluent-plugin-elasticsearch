@@ -9,6 +9,7 @@ Gem::Specification.new do |s|
   s.description   = %q{ElasticSearch output plugin for Fluent event collector}
   s.summary       = s.description
   s.homepage      = "https://github.com/uken/fluent-plugin-elasticsearch"
+  s.license       = 'MIT'
 
   s.files         = `git ls-files`.split($/)
   s.executables   = s.files.grep(%r{^bin/}).map{ |f| File.basename(f) }
