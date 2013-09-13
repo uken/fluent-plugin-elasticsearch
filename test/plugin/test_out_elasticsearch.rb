@@ -140,6 +140,48 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(index_cmds[1]['@timestamp'], ts)
   end
 
+  def test_writes_to_tag_mapped_index
+    driver.configure("tag_mapped true\n")
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert_equal('test', index_cmds.first['index']['_index'])
+  end
+
+  def test_remove_tag_prefix_when_configured
+    driver('test.mytag')
+    driver.configure("tag_mapped true\n")
+    driver.configure("remove_tag_prefix test.\n")
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert_equal('mytag', index_cmds.first['index']['_index'])
+  end
+
+  def test_writes_to_tag_mapped_index_with_logstash_format
+    driver.configure("tag_mapped true\n")
+    driver.configure("logstash_format true\n")
+    time = Time.parse Date.today.to_s
+    logstash_index = "test-#{time.getutc.strftime("%Y.%m.%d")}"
+    stub_elastic
+    driver.emit(sample_record, time)
+    driver.run
+    assert_equal(logstash_index, index_cmds.first['index']['_index'])
+  end
+
+  def test_remove_tag_prefix_from_logstash_index_when_configured
+    driver('test.mytag')
+    driver.configure("tag_mapped true\n")
+    driver.configure("logstash_format true\n")
+    driver.configure("remove_tag_prefix test.\n")
+    time = Time.parse Date.today.to_s
+    logstash_index = "mytag-#{time.getutc.strftime("%Y.%m.%d")}"
+    stub_elastic
+    driver.emit(sample_record, time)
+    driver.run
+    assert_equal(logstash_index, index_cmds.first['index']['_index'])
+  end
+
   def test_doesnt_add_tag_key_by_default
     stub_elastic
     driver.emit(sample_record)

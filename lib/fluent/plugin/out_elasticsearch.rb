@@ -12,6 +12,8 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :type_name, :string, :default => "fluentd"
   config_param :index_name, :string, :default => "fluentd"
   config_param :id_key, :string, :default => nil
+  config_param :tag_mapped, :bool, :default => false
+  config_param :remove_tag_prefix, :string, :default => nil
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -36,22 +38,40 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     super
   end
 
+  def cleanend_up_tag(tag)
+    if @remove_tag_prefix
+      tag.sub(/^#{@remove_tag_prefix}/, '')
+    else
+      tag
+    end
+  end
+
+  def logstash_index_name(tag, time)
+    prefix = @tag_mapped ? cleanend_up_tag(tag) : @logstash_prefix
+    "#{prefix}-#{Time.at(time).getutc.strftime("%Y.%m.%d")}"
+  end
+
+  def target_index(tag, time)
+    if @logstash_format
+      logstash_index_name(tag, time)
+    else
+      @tag_mapped ? cleanend_up_tag(tag) : @index_name
+    end
+  end
+
   def write(chunk)
     bulk_message = []
 
     chunk.msgpack_each do |tag, time, record|
-      if @logstash_format
-        record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
-        target_index = "#{@logstash_prefix}-#{Time.at(time).getutc.strftime("%Y.%m.%d")}"
-      else
-        target_index = @index_name
-      end
-
       if @include_tag_key
         record.merge!(@tag_key => tag)
       end
 
-      meta = { "index" => {"_index" => target_index, "_type" => type_name} }
+      if @logstash_format
+        record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
+      end
+
+      meta = { "index" => {"_index" => target_index(tag, time), "_type" => type_name} }
       if @id_key && record[@id_key]
         meta['index']['_id'] = record[@id_key]
       end
