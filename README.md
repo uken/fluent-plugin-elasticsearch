@@ -72,6 +72,28 @@ This following record `{"name":"Johnny","request_id":"87d89af7daffad6"}` will tr
 
 ---
 
+```
+tag_mapped true # defaults to false
+remove_tag_prefix tag_prefix # defaults to nil
+```
+
+This will map the fluentd tag to target index name. For instance, if you have a config like this:
+
+```
+<match events.**>
+  type elasticsearch
+  tag_mapped true
+  remove_tag_prefix events.
+</match>
+```
+
+and receive event which tagged `events.purchased_event`, the index name would be `purchased_event`.
+
+These options also work with `logstash_format`.
+If `logstash_format` is true, the index name would be `purchased_event-YYYY.MM.DD`.
+
+---
+
 fluentd-plugin-elasticsearch is a buffered output that uses elasticseach's bulk API. So additional buffer configuration would be (with default values):
 
 ```
