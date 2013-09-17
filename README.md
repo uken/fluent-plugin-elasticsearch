@@ -82,7 +82,21 @@ retry_wait 1.0
 num_threads 1
 ```
 
+---
 
+Please consider using [fluent-plugin-forest](https://github.com/tagomoris/fluent-plugin-forest) to send multiple logs to multiple ElasticSearch indices:
+
+```
+<match my.logs.*>
+  type forest
+  subtype elasticsearch
+  remove_prefix my.logs
+  <template>
+    logstash_prefix ${tag}
+    # ...
+  </template>
+</match>
+```
 
 ## Contributing
 
