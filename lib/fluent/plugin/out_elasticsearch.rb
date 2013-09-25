@@ -41,6 +41,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
     chunk.msgpack_each do |tag, time, record|
       if @logstash_format
+        record.keys.each { |k| record['@'+k]=record[k]; record.delete(k) }
         record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
         target_index = "#{@logstash_prefix}-#{Time.at(time).getutc.strftime("%Y.%m.%d")}"
       else
