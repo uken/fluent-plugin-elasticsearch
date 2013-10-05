@@ -112,7 +112,7 @@ module Fluent
         begin
           node = @nodes.select { |n| n.available? }.first
           # Raise an Error if there are no nodes available
-          raise ArgumentError 'No more ElasticSearch servers to try' unless node
+          raise 'No more ElasticSearch servers to try' unless node
           $log.debug "Sending log to #{node.name}"
           http = Net::HTTP.new(node.host, node.port.to_i)
           request = Net::HTTP::Post.new("/_bulk")
