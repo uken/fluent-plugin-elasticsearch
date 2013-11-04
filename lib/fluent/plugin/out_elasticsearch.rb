@@ -110,7 +110,7 @@ module Fluent
       end
       bulk_message << ""
 
-      retryable :on => [Timeout::Error, Errno::ECONNRESET, Errno::ECONNREFUSED], :times => 3, :sleep => false do
+      retryable :on => [Timeout::Error, Errno::ECONNRESET, Errno::ECONNREFUSED, Net::HTTPFatalError], :times => 3, :sleep => false do
         # Select the first available node
         begin
           node = @nodes.select { |n| n.available? }.first
@@ -122,7 +122,7 @@ module Fluent
           http.request(request).value
           # We rescue the exception so we can mark the node as unavailable
           # then we rethrow the same exeption so retryable does its job
-        rescue Timeout::Error, Errno::ECONNRESET, Errno::ECONNREFUSED => e
+        rescue Timeout::Error, Errno::ECONNRESET, Errno::ECONNREFUSED, Net::HTTPFatalError => e
           node.disable
           raise e
         end
