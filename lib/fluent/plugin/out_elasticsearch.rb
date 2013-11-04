@@ -43,16 +43,16 @@ module Fluent
         e['port'] = port.to_s
       end
 
-      conf.elements.each {|e|
+      conf.elements.each {|element|
         # Ignore anything that is not a server
-        next if e.name != "server"
-        host = e['host']
-        port = e.fetch('port', 9200)
+        next if element.name != "server"
+        host = element['host']
+        port = element.fetch('port', 9200)
         port = port ? port.to_i : 9200
-        check_avaliability = e.fetch("check_avaliability", 300)
-        name = e.fetch('name', "#{host}:#{port}")
+        check_availability = element.fetch("check_availability", 300)
+        name = element.fetch('name', "#{host}:#{port}")
 
-        @nodes << Node.new(name, host, port, check_avaliability)
+        @nodes << Node.new(name, host, port, check_availability)
         $log.info "Adding backup elasticsearch node '#{name}'", :host=>host, :port=>port
       }
     end
@@ -73,9 +73,12 @@ module Fluent
     # longer than the check_availability setting states. The #write method
     # should disable it again if the node can't be reached
     def check_nodes
-      return unless (Time.now - @last_check) > @check_nodes_interval
+      unless (Time.now - @last_check) > @check_nodes_interval
+        @last_check = Time.now
+        return
+      end
       @nodes.select { |x| x.available? == false }.each do |node|
-        if (Time.now - node.disabled_since) > node.check_avaliability
+        if (Time.now - node.disabled_since) > node.check_availability
           node.enable
         end
       end
@@ -130,21 +133,21 @@ module Fluent
   end
 
   class Node
-    attr_reader :name, :host, :port, :check_avaliability, :disabled_since
+    attr_reader :name, :host, :port, :check_availability, :disabled_since
     attr_writer :available
-    def initialize(name, host, port, check_avaliability)
+    def initialize(name, host, port, check_availability)
       @name = name
       @host = host
       @port = port
       @available = true
-      @check_avaliability = check_avaliability
+      @check_availability = check_availability
       @disabled_since = nil
     end
 
     def disable
       @available = false
       @disabled_since = Time.now
-      $log.info "Disabling '#{name}' (#{@host}:#{@port}) it will be automatically reenabled in #{@check_avaliability} seconds"
+      $log.info "Disabling '#{name}' (#{@host}:#{@port}) it will be automatically reenabled in #{@check_availability} seconds"
     end
 
     def enable

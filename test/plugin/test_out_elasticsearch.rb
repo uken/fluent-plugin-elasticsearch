@@ -16,15 +16,18 @@ WebMock.disable_net_connect!
 class ElasticsearchOutput < Test::Unit::TestCase
   attr_accessor :index_cmds
 
+  HOST1 = '127.0.0.1'
+  HOST2 = '127.0.0.2'
+
   CONFIG = %[
      <server>
         name test
-        host 127.0.0.1
+        host #{HOST1}
         port 9200
     </server>
      <server>
         name test
-        host 127.0.0.2
+        host #{HOST2}
         port 9200
     </server>
   ]
@@ -207,4 +210,14 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.run
     }
   end
+
+  def test_failover_when_first_server_dies
+    driver.configure(CONFIG)
+    stub_elastic_unavailable("http://#{HOST1}:9200/_bulk")
+    working_server_request = stub_elastic("http://#{HOST2}:9200/_bulk")
+    driver.emit(sample_record)
+    driver.run
+    assert_requested(working_server_request)
+  end
+
 end
