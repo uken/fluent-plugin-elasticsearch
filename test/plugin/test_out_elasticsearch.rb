@@ -204,9 +204,10 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_request_error
     driver.configure(CONFIG)
-    stub_elastic_unavailable
+    stub_elastic_unavailable("http://#{HOST1}:9200/_bulk")
+    stub_elastic_unavailable("http://#{HOST2}:9200/_bulk")
     driver.emit(sample_record)
-    assert_raise(Net::HTTPFatalError) {
+    assert_raise(RuntimeError, "No more ElasticSearch servers to try") {
       driver.run
     }
   end
