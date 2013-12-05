@@ -55,8 +55,8 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       if @id_key && record[@id_key]
         meta['index']['_id'] = record[@id_key]
       end
-      bulk_message << meta.to_json
-      bulk_message << record.to_json
+      bulk_message << Yajl::Encoder.encode(meta)
+      bulk_message << Yajl::Encoder.encode(record)
     end
     bulk_message << ""
 
