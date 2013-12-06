@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.2.0
+=====
+
+- fix encoding issues with JSON conversion and again when sending to elasticsearch (#19, #21)
+- add logstash_dateformat option (#20)
+
 0.1.4
 =====
 
