@@ -14,7 +14,7 @@ $:.push File.dirname(__FILE__)
 WebMock.disable_net_connect!
 
 class ElasticsearchOutput < Test::Unit::TestCase
-  attr_accessor :index_cmds
+  attr_accessor :index_cmds, :content_type
 
   def setup
     Fluent::Test.setup
@@ -31,6 +31,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def stub_elastic(url="http://localhost:9200/_bulk")
     stub_request(:post, url).with do |req|
+      @content_type = req.headers["Content-Type"]
       @index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
     end
   end
@@ -44,6 +45,13 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.emit(sample_record)
     driver.run
     assert_equal('fluentd', index_cmds.first['index']['_index'])
+  end
+
+  def test_wrties_with_proper_content_type
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert_equal("application/json; charset=utf-8", @content_type)
   end
 
   def test_writes_to_default_type
@@ -122,7 +130,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
-  
+
     def test_writes_to_logstash_index_with_specified_dateformat
     driver.configure("logstash_format true\n")
     driver.configure("logstash_dateformat %Y.%m\n")

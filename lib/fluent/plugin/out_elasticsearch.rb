@@ -9,7 +9,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :port, :integer, :default => 9200
   config_param :logstash_format, :bool, :default => false
   config_param :logstash_prefix, :string, :default => "logstash"
-  config_param :logstash_dateformat, :string, :default => "%Y.%m.%d" 
+  config_param :logstash_dateformat, :string, :default => "%Y.%m.%d"
   config_param :type_name, :string, :default => "fluentd"
   config_param :index_name, :string, :default => "fluentd"
   config_param :id_key, :string, :default => nil
@@ -62,7 +62,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     bulk_message << ""
 
     http = Net::HTTP.new(@host, @port.to_i)
-    request = Net::HTTP::Post.new("/_bulk")
+    request = Net::HTTP::Post.new('/_bulk', {'content-type' => 'application/json; charset=utf-8'})
     request.body = bulk_message.join("\n")
     http.request(request).value
   end
