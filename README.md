@@ -70,6 +70,33 @@ The record inserted into elasticsearch would be
 ---
 
 ```
+tag_format /^mytag\.(?<index_key>.+)\.(?<type_key>.+)\.(?<other>.+)$/
+index_name $[:index_key]
+type_name  $[:type_key]
+```
+
+This enable using regexp matched tag in index_name and type_name. For instance, if you have a config like this:
+
+```
+<match mytag.**>
+  type elasticsearch
+  tag_format /^mytag\.(?<index_key>.+)\.(?<type_key>.+)\.(?<other>.+)$/
+  index_name $[:index_key]
+  type_name  $[:type_key]
+</match>
+```
+
+and emit tag like this:
+
+```
+mytag.myindex.mytype.server1
+```
+
+The record inserted into index `myindex-YYMMDD` with type `mytype`.
+
+---
+
+```
 id_key request_id # use "request_id" field as a record id in ES
 ```
 
