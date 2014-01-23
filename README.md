@@ -75,7 +75,7 @@ index_name $[:index_key]
 type_name  $[:type_key]
 ```
 
-This enable using regexp matched tag in index_name and type_name. For instance, if you have a config like this:
+This enable using regexp matched tag in index_name, type_name and logstash_prefix. For instance, if you have a config like this:
 
 ```
 <match mytag.**>
@@ -92,7 +92,27 @@ and emit tag like this:
 mytag.myindex.mytype.server1
 ```
 
-The record inserted into index `myindex-YYMMDD` with type `mytype`.
+The record inserted into index `myindex` with type `mytype`.
+
+If logstash_format is true:
+
+```
+<match mytag.**>
+  type elasticsearch
+  tag_format /^mytag\.(?<prefix_key>.+)\.(?<type_key>.+)\.(?<other>.+)$/
+  type_name  $[:type_key]
+  logstash_format true
+  logstash_prefix $[:prefix_key]
+</match>
+```
+
+and emit tag like this:
+
+```
+mytag.myprefix.mytype.server1
+```
+
+The record inserted into index `myprefix-YYMMDD` with type `mytype`.
 
 ---
 
