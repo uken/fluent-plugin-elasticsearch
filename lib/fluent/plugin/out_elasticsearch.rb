@@ -13,6 +13,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :type_name, :string, :default => "fluentd"
   config_param :index_name, :string, :default => "fluentd"
   config_param :id_key, :string, :default => nil
+  config_param :tag_format, :string, :default => nil
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -53,6 +54,36 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       end
 
       meta = { "index" => {"_index" => target_index, "_type" => type_name} }
+
+      if @tag_format
+        if @tag_format[0] == ?/ && @tag_format[@tag_format.length-1] == ?/
+          # regexp
+          begin
+            regexp = Regexp.new(@tag_format[1..-2])
+            if regexp.named_captures.empty?
+              raise "No named captures"
+            end
+          rescue
+            raise ConfigError, "Invalid regexp '#{@tag_format[1..-2]}': #{$!}"
+          end
+        end
+
+        @parser = Fluent::TextParser::RegexpParser.new(regexp)
+
+        @regexp = @parser.call(tag)
+
+        if @index_name[0..2] == "$[:" && @index_name[@index_name.length-1] == "]"
+          index_key = @index_name[3..-2]
+          index     = @regexp[1][index_key]
+          meta["index"]["_index"] = index
+        end
+        if @type_name[0..2] == "$[:" && @type_name[@type_name.length-1] == "]"
+          type_key  = @type_name[3..-2]
+          type      = @regexp[1][type_key]
+          meta["index"]["_type"] = type
+        end
+      end
+
       if @id_key && record[@id_key]
         meta['index']['_id'] = record[@id_key]
       end

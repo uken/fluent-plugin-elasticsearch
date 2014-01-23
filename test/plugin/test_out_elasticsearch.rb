@@ -69,12 +69,48 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal('myindex', index_cmds.first['index']['_index'])
   end
 
+  def test_writes_to_specified_index_with_tag_format
+    driver('mytag.myindex.mytype.**').configure("tag_format /^mytag\\.(?<index_key>.+)\\.(?<type>.+)\\.(?<rest>.+)$/\n")
+    driver('mytag.myindex.mytype.**').configure("index_name $[:index_key]\n")
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert_equal('myindex', index_cmds.first['index']['_index'])
+  end
+
+  def test_writes_to_specified_index_with_tag_format_and_normal_index_name
+    driver('mytag.myindex.mytype.**').configure("tag_format /^mytag\\.(?<index_key>.+)\\.(?<type>.+)\\.(?<rest>.+)$/\n")
+    driver('mytag.myindex.mytype.**').configure("index_name $[index_key]\n")
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert_equal('$[index_key]', index_cmds.first['index']['_index'])
+  end
+
   def test_writes_to_speficied_type
     driver.configure("type_name mytype\n")
     stub_elastic
     driver.emit(sample_record)
     driver.run
     assert_equal('mytype', index_cmds.first['index']['_type'])
+  end
+
+  def test_writes_to_specified_index_with_tag_format
+    driver('mytag.myindex.mytype.**').configure("tag_format /^mytag\\.(?<index_key>.+)\\.(?<type_key>.+)\\.(?<rest>.+)$/\n")
+    driver('mytag.myindex.mytype.**').configure("type_name $[:type_key]\n")
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert_equal('mytype', index_cmds.first['index']['_type'])
+  end
+
+  def test_writes_to_specified_index_with_tag_format_and_normal_type_name
+    driver('mytag.myindex.mytype.**').configure("tag_format /^mytag\\.(?<index_key>.+)\\.(?<type_key>.+)\\.(?<rest>.+)$/\n")
+    driver('mytag.myindex.mytype.**').configure("type_name $[type_key]\n")
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert_equal('$[type_key]', index_cmds.first['index']['_type'])
   end
 
   def test_writes_to_speficied_host
