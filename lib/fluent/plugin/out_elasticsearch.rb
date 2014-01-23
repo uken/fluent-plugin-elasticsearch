@@ -42,19 +42,6 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     bulk_message = []
 
     chunk.msgpack_each do |tag, time, record|
-      if @logstash_format
-        record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
-        target_index = "#{@logstash_prefix}-#{Time.at(time).getutc.strftime("#{@logstash_dateformat}")}"
-      else
-        target_index = @index_name
-      end
-
-      if @include_tag_key
-        record.merge!(@tag_key => tag)
-      end
-
-      meta = { "index" => {"_index" => target_index, "_type" => type_name} }
-
       if @tag_format
         if @tag_format[0] == ?/ && @tag_format[@tag_format.length-1] == ?/
           # regexp
@@ -72,17 +59,35 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
         @regexp = @parser.call(tag)
 
-        if @index_name[0..2] == "$[:" && @index_name[@index_name.length-1] == "]"
+        if @index_name && @index_name[0..2] == "$[:" && @index_name[@index_name.length-1] == "]"
           index_key = @index_name[3..-2]
           index     = @regexp[1][index_key]
-          meta["index"]["_index"] = index
+          @index_name = index if index
         end
-        if @type_name[0..2] == "$[:" && @type_name[@type_name.length-1] == "]"
+        if @type_name && @type_name[0..2] == "$[:" && @type_name[@type_name.length-1] == "]"
           type_key  = @type_name[3..-2]
           type      = @regexp[1][type_key]
-          meta["index"]["_type"] = type
+          @type_name = type if type
+        end
+        if @logstash_format && @logstash_prefix && @logstash_prefix[0..2] == "$[:" && @logstash_prefix[@logstash_prefix.length-1] == "]"
+          prefix_key = @logstash_prefix[3..-2]
+          prefix     = @regexp[1][prefix_key]
+          @logstash_prefix = prefix if prefix
         end
       end
+
+      if @logstash_format
+        record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
+        target_index = "#{@logstash_prefix}-#{Time.at(time).getutc.strftime("#{@logstash_dateformat}")}"
+      else
+        target_index = @index_name
+      end
+
+      if @include_tag_key
+        record.merge!(@tag_key => tag)
+      end
+
+      meta = { "index" => {"_index" => target_index, "_type" => type_name} }
 
       if @id_key && record[@id_key]
         meta['index']['_id'] = record[@id_key]
