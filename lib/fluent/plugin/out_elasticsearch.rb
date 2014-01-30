@@ -15,8 +15,6 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :id_key, :string, :default => nil
   config_param :add_timestamp, :string, :default => false
   config_param :timestamp_key, :string, :default => "@timestamp"
-  config_param :backup_file, :bool, :default => false
-  config_param :backup_file_path, :string, :default => ""
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -67,23 +65,11 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       bulk_message << Yajl::Encoder.encode(meta)
       bulk_message << Yajl::Encoder.encode(record)
     end
-    backup(bulk_message)
     bulk_message << ""
 
     http = Net::HTTP.new(@host, @port.to_i)
     request = Net::HTTP::Post.new('/_bulk', {'content-type' => 'application/json; charset=utf-8'})
     request.body = bulk_message.join("\n")
     http.request(request).value
-  end
-
-  private
-  def backup(bulk_message)
-    if @backup_file
-      File.open(@backup_file_path + "." + Time.now.strftime('%Y%m%d'),'a:utf-8') { |file|
-        bulk_message.each{|hash|
-          file.puts hash
-        }
-      }
-    end
   end
 end
