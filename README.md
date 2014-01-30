@@ -96,6 +96,18 @@ num_threads 1
 
 ---
 
+logstash_format is false case, How to timestamp key add. (need to use the kibana)
+
+```
+index_name fluentd
+logstash_format false
+add_timestamp true # add timestamp option(need to use the kibana)
+timestamp_key ts # default : @timestamp
+```
+
+
+---
+
 Please consider using [fluent-plugin-forest](https://github.com/tagomoris/fluent-plugin-forest) to send multiple logs to multiple ElasticSearch indices:
 
 ```

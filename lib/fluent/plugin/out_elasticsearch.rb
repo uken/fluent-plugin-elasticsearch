@@ -13,6 +13,8 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :type_name, :string, :default => "fluentd"
   config_param :index_name, :string, :default => "fluentd"
   config_param :id_key, :string, :default => nil
+  config_param :add_timestamp, :string, :default => false
+  config_param :timestamp_key, :string, :default => "@timestamp"
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -41,10 +43,14 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     bulk_message = []
 
     chunk.msgpack_each do |tag, time, record|
+
       if @logstash_format
-        record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
+        record.merge!({@timestamp_key => Time.at(time).to_datetime.to_s})
         target_index = "#{@logstash_prefix}-#{Time.at(time).getutc.strftime("#{@logstash_dateformat}")}"
       else
+        if @add_timestamp
+          record.merge!({@timestamp_key => Time.at(time).to_datetime.to_s})
+        end
         target_index = @index_name
       end
 
