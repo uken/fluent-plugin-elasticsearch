@@ -13,7 +13,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :type_name, :string, :default => "fluentd"
   config_param :index_name, :string, :default => "fluentd"
   config_param :id_key, :string, :default => nil
-  config_param :flush_size, :string, :default => 1000
+  config_param :flush_size, :integer, :default => 1000
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -28,8 +28,8 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
   def start
     super
-    @es = Elasticsearch::Client.new hosts:["#{@host}:#{@port.to_i}"], reload_connections: true
-    raise "Can not reach Elasticsearch cluster (#{@host}:#{@port.to_i})!" unless @es.ping
+    @es = Elasticsearch::Client.new :hosts => ["#{@host}:#{@port}"], :reload_connections => true
+    raise "Can not reach Elasticsearch cluster (#{@host}:#{@port})!" unless @es.ping
   end
 
   def format(tag, time, record)
@@ -59,7 +59,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       if @id_key && record[@id_key]
         meta['index']['_id'] = record[@id_key]
       end
-      if bulk_message.size < @flush_size.to_i
+      if bulk_message.size < @flush_size
         bulk_message << Yajl::Encoder.encode(meta)
         bulk_message << Yajl::Encoder.encode(record)
       else 
