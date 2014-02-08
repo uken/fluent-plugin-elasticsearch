@@ -1,4 +1,4 @@
-# Fluent::Plugin::Elasticsearch
+# Fluent::Plugin::Elasticsearch, a plugin for [Fluentd](http://fluentd.org)
 
 [![Gem Version](https://badge.fury.io/rb/fluent-plugin-elasticsearch.png)](http://badge.fury.io/rb/fluent-plugin-elasticsearch)
 [![Dependency Status](https://gemnasium.com/uken/guard-sidekiq.png)](https://gemnasium.com/uken/fluent-plugin-elasticsearch)
