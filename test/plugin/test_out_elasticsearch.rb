@@ -26,7 +26,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def sample_record
-    {'age' => 26, 'request_id' => '42'}
+    {'age' => 26, 'request_id' => '42', 'parent_id' => 'parent'}
   end
 
   def stub_elastic(url="http://localhost:9200/_bulk")
@@ -208,6 +208,29 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.emit(sample_record)
     driver.run
     assert(!index_cmds[0]['index'].has_key?('_id'))
+  end
+
+  def test_adds_parent_key_when_configured
+    driver.configure("parent_key parent_id\n")
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert_equal(index_cmds[0]['index']['_parent'], 'parent')
+  end
+
+  def test_doesnt_add_parent_key_if_missing_when_configured
+    driver.configure("parent_key another_parent_id\n")
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert(!index_cmds[0]['index'].has_key?('_parent'))
+  end
+
+  def test_adds_parent_key_when_not_configured
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert(!index_cmds[0]['index'].has_key?('_parent'))
   end
 
   def test_request_error
