@@ -13,6 +13,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :type_name, :string, :default => "fluentd"
   config_param :index_name, :string, :default => "fluentd"
   config_param :id_key, :string, :default => nil
+  config_param :parent_key, :string, :default => nil
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -56,6 +57,10 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       if @id_key && record[@id_key]
         meta['index']['_id'] = record[@id_key]
       end
+      if @parent_key && record[@parent_key]
+        meta['index']['_parent'] = record[@parent_key]
+      end
+
       bulk_message << Yajl::Encoder.encode(meta)
       bulk_message << Yajl::Encoder.encode(record)
     end
