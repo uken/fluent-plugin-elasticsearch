@@ -101,6 +101,14 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(4, index_cmds.count)
   end
 
+  def test_makes_bulk_request_with_specific_size
+    driver_configure("flush_size 100\n")
+    stub_elastic
+    100.times { driver.emit(sample_)record.merge('age'=>rand(100))) }
+    driver.run
+    assert_equal(200, index_cmds.count)
+  end
+
   def test_all_records_are_preserved_in_bulk
     stub_elastic
     driver.emit(sample_record)
@@ -118,6 +126,16 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.emit(sample_record, time)
     driver.run
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
+  end
+  
+  def test_writes_to_logstash_utc_index
+    driver.configure("utc_index false\n")
+    time = Time.parse Date.today.to_s
+    utc_index = "logstash-#{time.strftime("%Y.%m.%d")}"
+    stub_elastic
+    driver_emit(sample_record, time)
+    driver.run
+    assert_equal(utc_index, index_cmds.first['index']['_index'])
   end
 
   def test_writes_to_logstash_index_with_specified_prefix

@@ -1,6 +1,6 @@
 # encoding: UTF-8
-require 'net/http'
 require 'date'
+require 'elasticsearch'
 
 class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   Fluent::Plugin.register_output('elasticsearch', self)
@@ -10,10 +10,12 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :logstash_format, :bool, :default => false
   config_param :logstash_prefix, :string, :default => "logstash"
   config_param :logstash_dateformat, :string, :default => "%Y.%m.%d"
+  config_param :utc_index, :bool, :default => true
   config_param :type_name, :string, :default => "fluentd"
   config_param :index_name, :string, :default => "fluentd"
   config_param :id_key, :string, :default => nil
   config_param :parent_key, :string, :default => nil
+  config_param :flush_size, :integer, :default => 1000
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -28,6 +30,8 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
   def start
     super
+    @es = Elasticsearch::Client.new :hosts => ["#{@host}:#{@port}"], :reload_connections => true
+    raise "Can not reach Elasticsearch cluster (#{@host}:#{@port})!" unless @es.ping
   end
 
   def format(tag, time, record)
@@ -44,7 +48,11 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     chunk.msgpack_each do |tag, time, record|
       if @logstash_format
         record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
-        target_index = "#{@logstash_prefix}-#{Time.at(time).getutc.strftime("#{@logstash_dateformat}")}"
+    	if @utc_index
+    	    target_index = "#{@logstash_prefix}-#{Time.at(time).getutc.strftime("#{@logstash_dateformat}")}"
+    	else
+    	    target_index = "#{@logstash_prefix}-#{Time.at(time).strftime("#{@logstash_dateformat}")}"
+    	end
       else
         target_index = @index_name
       end
@@ -57,18 +65,24 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       if @id_key && record[@id_key]
         meta['index']['_id'] = record[@id_key]
       end
+
       if @parent_key && record[@parent_key]
         meta['index']['_parent'] = record[@parent_key]
       end
 
-      bulk_message << Yajl::Encoder.encode(meta)
-      bulk_message << Yajl::Encoder.encode(record)
+      if bulk_message.size < @flush_size
+        bulk_message << Yajl::Encoder.encode(meta)
+        bulk_message << Yajl::Encoder.encode(record)
+      else 
+	    send(bulk_message)
+        bulk_message.clear
+      end
     end
-    bulk_message << ""
-
-    http = Net::HTTP.new(@host, @port.to_i)
-    request = Net::HTTP::Post.new('/_bulk', {'content-type' => 'application/json; charset=utf-8'})
-    request.body = bulk_message.join("\n")
-    http.request(request).value
+    send(bulk_message) unless bulk_message.empty?
+    bulk_message.clear
+  end
+  
+  def send(data)
+    @es.bulk body: data
   end
 end
