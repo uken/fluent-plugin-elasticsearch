@@ -1,5 +1,6 @@
 # encoding: UTF-8
 require 'date'
+require 'patron'
 require 'elasticsearch'
 
 class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
@@ -48,11 +49,11 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     chunk.msgpack_each do |tag, time, record|
       if @logstash_format
         record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
-    	if @utc_index
-    	    target_index = "#{@logstash_prefix}-#{Time.at(time).getutc.strftime("#{@logstash_dateformat}")}"
-    	else
-    	    target_index = "#{@logstash_prefix}-#{Time.at(time).strftime("#{@logstash_dateformat}")}"
-    	end
+        if @utc_index
+          target_index = "#{@logstash_prefix}-#{Time.at(time).getutc.strftime("#{@logstash_dateformat}")}"
+        else
+          target_index = "#{@logstash_prefix}-#{Time.at(time).strftime("#{@logstash_dateformat}")}"
+        end
       else
         target_index = @index_name
       end
@@ -61,28 +62,30 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         record.merge!(@tag_key => tag)
       end
 
-      meta = { "index" => {"_index" => target_index, "_type" => type_name} }
+      content = { :index => { :_index => target_index, :_type => type_name, :data => record } }
       if @id_key && record[@id_key]
-        meta['index']['_id'] = record[@id_key]
+        content[:index][:_id] = record[@id_key]
       end
 
       if @parent_key && record[@parent_key]
-        meta['index']['_parent'] = record[@parent_key]
+        content[:index][:_parent] = record[@parent_key]
       end
 
-      if bulk_message.size < @flush_size
-        bulk_message << Yajl::Encoder.encode(meta)
-        bulk_message << Yajl::Encoder.encode(record)
-      else 
-	    send(bulk_message)
+      if bulk_message.size < @flush_size - 1
+        bulk_message << Yajl::Encoder.encode(content)
+      else
+        bulk_message << Yajl::Encoder.encode(content)
+
+        send(bulk_message)
         bulk_message.clear
       end
     end
+
     send(bulk_message) unless bulk_message.empty?
     bulk_message.clear
   end
   
   def send(data)
-    @es.bulk body: data
+    @es.bulk body: data.join("\n")
   end
 end
