@@ -218,7 +218,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert(index_cmds[1].has_key?("tag"))
+    assert(index_cmds[1].has_key?('tag'))
     assert_equal(index_cmds[1]['tag'], 'mytag')
   end
 
@@ -228,7 +228,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert_equal(index_cmds.first['index']['_id'], '42')
+    assert_equal(index_cmds[0]['index']['_id'], '42')
   end
 
   def test_doesnt_add_id_key_if_missing_when_configured
@@ -237,7 +237,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert(!index_cmds.first['index'].has_key?('_id'))
+    assert(!index_cmds[0]['index'].has_key?('_id'))
   end
 
   def test_adds_id_key_when_not_configured
@@ -245,7 +245,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert(!index_cmds.first['index'].has_key?('_id'))
+    assert(!index_cmds[0]['index'].has_key?('_id'))
   end
 
   def test_adds_parent_key_when_configured
@@ -254,7 +254,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert_equal(index_cmds.first['index']['_parent'], 'parent')
+    assert_equal(index_cmds[0]['index']['_parent'], 'parent')
   end
 
   def test_doesnt_add_parent_key_if_missing_when_configured
@@ -263,7 +263,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert(!index_cmds.first['index'].has_key?('_parent'))
+    assert(!index_cmds[0]['index'].has_key?('_parent'))
   end
 
   def test_adds_parent_key_when_not_configured
@@ -271,7 +271,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert(!index_cmds.first['index'].has_key?('_parent'))
+    assert(!index_cmds[0]['index'].has_key?('_parent'))
   end
 
   def test_request_error

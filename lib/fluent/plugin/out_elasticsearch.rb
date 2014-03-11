@@ -31,7 +31,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
   def start
     super
-    @es = Elasticsearch::Client.new :hosts => ["#{@host}:#{@port}"], :reload_connections => true
+    @es = Elasticsearch::Client.new :hosts => ["#{@host}:#{@port}"], :reload_connections => true, :adapter => :patron
     raise "Can not reach Elasticsearch cluster (#{@host}:#{@port})!" unless @es.ping
   end
 
