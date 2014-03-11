@@ -104,7 +104,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_makes_bulk_request_with_specific_size
     driver_configure("flush_size 100\n")
     stub_elastic
-    100.times { driver.emit(sample_)record.merge('age'=>rand(100))) }
+    100.times { driver.emit(sample_record.merge('age'=>rand(100))) }
     driver.run
     assert_equal(200, index_cmds.count)
   end

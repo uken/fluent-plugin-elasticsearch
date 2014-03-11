@@ -1,6 +1,7 @@
 # encoding: UTF-8
 require 'date'
 require 'typhoeus'
+require 'typhoeus/adapters/faraday'
 require 'elasticsearch'
 
 class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
@@ -65,10 +66,9 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       if @id_key && record[@id_key]
         meta['index']['_id'] = record[@id_key]
       end
-      if bulk_message.size < @flush_size
-        bulk_message << Yajl::Encoder.encode(meta)
-        bulk_message << Yajl::Encoder.encode(record)
-      else 
+      bulk_message << Yajl::Encoder.encode(meta)
+      bulk_message << Yajl::Encoder.encode(record)
+      if bulk_message.size == @flush_size
 	send(bulk_message)
         bulk_message.clear
       end
