@@ -64,15 +64,15 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
       meta = { "index" => {"_index" => target_index, "_type" => type_name} }
       if @id_key && record[@id_key]
-        meta["index"]["_id"] = record[@id_key]
+        meta['index']['_id'] = record[@id_key]
       end
 
       if @parent_key && record[@parent_key]
-        meta["index"]["_parent"] = record[@parent_key]
+        meta['index']['_parent'] = record[@parent_key]
       end
 
-	  bulk_message << meta
-	  bulk_message << record
+      bulk_message << meta
+      bulk_message << record
 
       if bulk_message.size >= @flush_size
         send(bulk_message)

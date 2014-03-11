@@ -35,7 +35,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def stub_elastic(url="http://localhost:9200/_bulk")
     stub_request(:post, url).with do |req|
-	  @index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
+    @index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
     end
   end
 
@@ -48,7 +48,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert_equal('fluentd', index_cmds.first["index"]["_index"])
+    assert_equal('fluentd', index_cmds.first['index']['_index'])
   end
 
   def test_writes_to_default_type
@@ -56,7 +56,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert_equal('fluentd', index_cmds.first["index"]["_type"])
+    assert_equal('fluentd', index_cmds.first['index']['_type'])
   end
 
   def test_writes_to_speficied_index
@@ -65,7 +65,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert_equal('myindex', index_cmds.first["index"]["_index"])
+    assert_equal('myindex', index_cmds.first['index']['_index'])
   end
 
   def test_writes_to_speficied_type
@@ -74,7 +74,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert_equal('mytype', index_cmds.first["index"]["_type"])
+    assert_equal('mytype', index_cmds.first['index']['_type'])
   end
 
   def test_writes_to_speficied_host
@@ -121,8 +121,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.emit(sample_record)
     driver.emit(sample_record.merge('age' => 27))
     driver.run
-    assert_equal(26, index_cmds[1]["age"])
-    assert_equal(27, index_cmds[3]["age"])
+    assert_equal(26, index_cmds[1]['age'])
+    assert_equal(27, index_cmds[3]['age'])
   end
 
   def test_writes_to_logstash_index
@@ -133,7 +133,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record, time)
     driver.run
-    assert_equal(logstash_index, index_cmds.first["index"]["_index"])
+    assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
   
   def test_writes_to_logstash_utc_index
@@ -145,7 +145,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record, time)
     driver.run
-    assert_equal(utc_index, index_cmds.first["index"]["_index"])
+    assert_equal(utc_index, index_cmds.first['index']['_index'])
   end
 
   def test_writes_to_logstash_index_with_specified_prefix
@@ -157,7 +157,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record, time)
     driver.run
-    assert_equal(logstash_index, index_cmds.first["index"]["_index"])
+    assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
 
     def test_writes_to_logstash_index_with_specified_dateformat
@@ -169,7 +169,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record, time)
     driver.run
-    assert_equal(logstash_index, index_cmds.first["index"]["_index"])
+    assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
 
   def test_writes_to_logstash_index_with_specified_prefix_and_dateformat
@@ -182,7 +182,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record, time)
     driver.run
-    assert_equal(logstash_index, index_cmds.first["index"]["_index"])
+    assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
 
   def test_doesnt_add_logstash_timestamp_by_default
@@ -190,7 +190,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert_nil(index_cmds[1]["@timestamp"])
+    assert_nil(index_cmds[1]['@timestamp'])
   end
 
   def test_adds_logstash_timestamp_when_configured
@@ -200,8 +200,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
     ts = DateTime.now.to_s
     driver.emit(sample_record)
     driver.run
-    assert(index_cmds[1].has_key? "@timestamp")
-    assert_equal(index_cmds[1]["@timestamp"], ts)
+    assert(index_cmds[1].has_key? '@timestamp')
+    assert_equal(index_cmds[1]['@timestamp'], ts)
   end
 
   def test_doesnt_add_tag_key_by_default
@@ -209,7 +209,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert_nil(index_cmds[1]["tag"])
+    assert_nil(index_cmds[1]['tag'])
   end
 
   def test_adds_tag_key_when_configured
@@ -219,7 +219,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.emit(sample_record)
     driver.run
     assert(index_cmds[1].has_key?("tag"))
-    assert_equal(index_cmds[1]["tag"], 'mytag')
+    assert_equal(index_cmds[1]['tag'], 'mytag')
   end
 
   def test_adds_id_key_when_configured
@@ -228,7 +228,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert_equal(index_cmds.first["index"]["_id"], '42')
+    assert_equal(index_cmds.first['index']['_id'], '42')
   end
 
   def test_doesnt_add_id_key_if_missing_when_configured
@@ -237,7 +237,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert(!index_cmds.first["index"].has_key?("_id"))
+    assert(!index_cmds.first['index'].has_key?('_id'))
   end
 
   def test_adds_id_key_when_not_configured
@@ -245,7 +245,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert(!index_cmds.first["index"].has_key?("_id"))
+    assert(!index_cmds.first['index'].has_key?('_id'))
   end
 
   def test_adds_parent_key_when_configured
@@ -254,7 +254,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert_equal(index_cmds.first["index"]["_parent"], 'parent')
+    assert_equal(index_cmds.first['index']['_parent'], 'parent')
   end
 
   def test_doesnt_add_parent_key_if_missing_when_configured
@@ -263,7 +263,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert(!index_cmds.first["index"].has_key?("_parent"))
+    assert(!index_cmds.first['index'].has_key?('_parent'))
   end
 
   def test_adds_parent_key_when_not_configured
@@ -271,7 +271,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert(!index_cmds.first["index"].has_key?("_parent"))
+    assert(!index_cmds.first['index'].has_key?('_parent'))
   end
 
   def test_request_error
