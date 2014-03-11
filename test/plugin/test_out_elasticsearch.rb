@@ -35,8 +35,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def stub_elastic(url="http://localhost:9200/_bulk")
     stub_request(:post, url).with do |req|
-      #$log.debug req
-      @index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
+	  @index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
     end
   end
 
@@ -102,7 +101,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.emit(sample_record)
     driver.emit(sample_record.merge('age' => 27))
     driver.run
-    assert_equal(2, index_cmds.count)
+    assert_equal(4, index_cmds.count)
   end
 
   def test_makes_bulk_request_with_specific_size
@@ -122,8 +121,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.emit(sample_record)
     driver.emit(sample_record.merge('age' => 27))
     driver.run
-    assert_equal(26, index_cmds[0]["index"]["data"]["age"])
-    assert_equal(27, index_cmds[1]["index"]["data"]["age"])
+    assert_equal(26, index_cmds[1]["age"])
+    assert_equal(27, index_cmds[3]["age"])
   end
 
   def test_writes_to_logstash_index
@@ -191,7 +190,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert_nil(index_cmds.first["index"]["data"]["@timestamp"])
+    assert_nil(index_cmds[1]["@timestamp"])
   end
 
   def test_adds_logstash_timestamp_when_configured
@@ -201,8 +200,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
     ts = DateTime.now.to_s
     driver.emit(sample_record)
     driver.run
-    assert(index_cmds.first["index"]["data"].has_key? "@timestamp")
-    assert_equal(index_cmds.first["index"]["data"]["@timestamp"], ts)
+    assert(index_cmds[1].has_key? "@timestamp")
+    assert_equal(index_cmds[1]["@timestamp"], ts)
   end
 
   def test_doesnt_add_tag_key_by_default
@@ -210,7 +209,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert_nil(index_cmds.first["index"]["data"]["tag"])
+    assert_nil(index_cmds[1]["tag"])
   end
 
   def test_adds_tag_key_when_configured
@@ -219,8 +218,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record)
     driver.run
-    assert(index_cmds.first["index"]["data"].has_key?("tag"))
-    assert_equal(index_cmds.first["index"]["data"]["tag"], 'mytag')
+    assert(index_cmds[1].has_key?("tag"))
+    assert_equal(index_cmds[1]["tag"], 'mytag')
   end
 
   def test_adds_id_key_when_configured

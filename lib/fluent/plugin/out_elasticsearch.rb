@@ -62,20 +62,19 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         record.merge!(@tag_key => tag)
       end
 
-      content = { :index => { :_index => target_index, :_type => type_name, :data => record } }
+      meta = { "index" => {"_index" => target_index, "_type" => type_name} }
       if @id_key && record[@id_key]
-        content[:index][:_id] = record[@id_key]
+        meta["index"]["_id"] = record[@id_key]
       end
 
       if @parent_key && record[@parent_key]
-        content[:index][:_parent] = record[@parent_key]
+        meta["index"]["_parent"] = record[@parent_key]
       end
 
-      if bulk_message.size < @flush_size - 1
-        bulk_message << Yajl::Encoder.encode(content)
-      else
-        bulk_message << Yajl::Encoder.encode(content)
+	  bulk_message << meta
+	  bulk_message << record
 
+      if bulk_message.size >= @flush_size
         send(bulk_message)
         bulk_message.clear
       end
@@ -86,6 +85,6 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   end
   
   def send(data)
-    @es.bulk body: data.join("\n")
+    @es.bulk body: data
   end
 end
