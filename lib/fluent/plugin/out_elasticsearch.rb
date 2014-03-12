@@ -17,6 +17,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :id_key, :string, :default => nil
   config_param :parent_key, :string, :default => nil
   config_param :flush_size, :integer, :default => 1000
+  config_param :hosts, :string, :default => nil
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -31,8 +32,16 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
   def start
     super
-    @es = Elasticsearch::Client.new :hosts => ["#{@host}:#{@port}"], :reload_connections => true, :adapter => :patron
+    @es = Elasticsearch::Client.new :hosts => get_hosts, :reload_connections => true, :adapter => :patron, :retry_on_failure => 5
     raise "Can not reach Elasticsearch cluster (#{@host}:#{@port})!" unless @es.ping
+  end
+
+  def get_hosts
+    if @hosts
+        @hosts.split(',').map {|x| x.strip}.compact
+     else
+       ["#{@host}:#{@port}"]
+     end
   end
 
   def format(tag, time, record)
@@ -83,8 +92,9 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     send(bulk_message) unless bulk_message.empty?
     bulk_message.clear
   end
-  
+
   def send(data)
     @es.bulk body: data
   end
 end
+

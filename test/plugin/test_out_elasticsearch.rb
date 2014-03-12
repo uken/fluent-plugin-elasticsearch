@@ -14,7 +14,7 @@ $:.push File.dirname(__FILE__)
 WebMock.disable_net_connect!
 
 class ElasticsearchOutput < Test::Unit::TestCase
-  attr_accessor :index_cmds
+  attr_accessor :index_cmds, :index_command_counts
 
   def setup
     Fluent::Test.setup
@@ -41,6 +41,18 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def stub_elastic_unavailable(url="http://localhost:9200/_bulk")
     stub_request(:post, url).to_return(:status => [503, "Service Unavailable"])
+  end
+
+  def stub_elastic_with_store_index_command_counts(url="http://localhost:9200/_bulk")
+    if @index_command_counts == nil
+       @index_command_counts = {}
+       @index_command_counts.default = 0
+    end
+
+    stub_request(:post, url).with do |req|
+      index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
+      @index_command_counts[url] += index_cmds.size
+    end
   end
 
   def test_writes_to_default_index
@@ -95,6 +107,30 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_requested(elastic_request)
   end
 
+  def test_writes_to_multi_hosts
+    hosts = [['192.168.33.50', 9201], ['192.168.33.51', 9201], ['192.168.33.52', 9201]]
+    hosts_string = hosts.map {|x| "#{x[0]}:#{x[1]}"}.compact.join(',')
+
+    driver.configure("hosts #{hosts_string}")
+     # load balance is performed per bulk, so set bulk size to 1 during test
+    driver.configure("flush_size 1\n")
+
+    hosts.each do |host_info|
+      host, port = host_info
+      stub_elastic_ping("http://#{host}:#{port}")
+      stub_elastic_with_store_index_command_counts("http://#{host}:#{port}/_bulk")
+    end
+
+    10.times { driver.emit(sample_record.merge('age'=>rand(100))) }
+    driver.run
+
+    commands_per_hosts = 20 / hosts.size
+     assert(@index_command_counts.size == hosts.size, "some hosts are not receiving messages")
+    @index_command_counts.each do |url, count|
+      assert(count >= commands_per_hosts, "messages are not sent with load balanced")
+    end
+  end
+
   def test_makes_bulk_request
     stub_elastic_ping
     stub_elastic
@@ -135,7 +171,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
-  
+
   def test_writes_to_logstash_utc_index
     driver.configure("logstash_format true\n")
     driver.configure("utc_index false\n")

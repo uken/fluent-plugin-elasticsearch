@@ -23,8 +23,17 @@ index_name fluentd
 type_name fluentd
 ```
 
-
 **More options:**
+
+```
+hosts host1:port1,host2:port2,host3:port3
+```
+
+You can specify multiple elasticsearch hosts with separator ",".
+
+If you specify multiple hosts, plugin writes to elasticsearch with load balanced. (it's elasticsearch-ruby's feature, default is round-robin.)
+
+If you specify this option, host and port options are ignored.
 
 ```
 logstash_format true # defaults to false
