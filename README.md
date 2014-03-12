@@ -12,6 +12,8 @@ I wrote this so you can search logs routed through Fluentd.
 
     $ gem install fluent-plugin-elasticsearch
 
+* prerequisite : You need to install [libcurl](http://curl.haxx.se/libcurl/) to work with.
+
 ## Usage
 
 In your fluentd configration, use `type elasticsearch`. Additional configuration is optional, default values would look like this:
