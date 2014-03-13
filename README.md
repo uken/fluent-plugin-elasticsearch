@@ -55,6 +55,12 @@ logstash_dateformat %Y.%m. # defaults to "%Y.%m.%d"
 
 By default, the records inserted into index `logstash-YYMMDD`. This option allows to insert into specified index like `logstash-YYYYMM` for a monthly index.
 
+```
+utc_index true
+```
+
+By default, the records inserted into index `logstash-YYMMDD` with utc (Coordinated Universal Time). This option allows to use local time if you describe utc_index to false.
+
 ---
 
 ```
