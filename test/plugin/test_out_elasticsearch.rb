@@ -112,8 +112,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
     hosts_string = hosts.map {|x| "#{x[0]}:#{x[1]}"}.compact.join(',')
 
     driver.configure("hosts #{hosts_string}")
-     # load balance is performed per bulk, so set bulk size to 1 during test
-    driver.configure("flush_size 1\n")
+     # load balance is performed per chunk, so we have to push more than chunk during test
+    driver.configure("buffer_chunk_limit 1K")
 
     hosts.each do |host_info|
       host, port = host_info
@@ -121,14 +121,14 @@ class ElasticsearchOutput < Test::Unit::TestCase
       stub_elastic_with_store_index_command_counts("http://#{host}:#{port}/_bulk")
     end
 
-    10.times { driver.emit(sample_record.merge('age'=>rand(100))) }
+    100000.times do 
+      driver.emit(sample_record.merge('age'=>rand(100)))
+    end
+
     driver.run
 
     commands_per_hosts = 20 / hosts.size
-     assert(@index_command_counts.size == hosts.size, "some hosts are not receiving messages")
-    @index_command_counts.each do |url, count|
-      assert(count >= commands_per_hosts, "messages are not sent with load balanced")
-    end
+    assert(@index_command_counts.size == hosts.size, "some hosts are not receiving messages")
   end
 
   def test_makes_bulk_request
@@ -138,17 +138,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.emit(sample_record.merge('age' => 27))
     driver.run
     assert_equal(4, index_cmds.count)
-  end
-
-  def test_makes_bulk_request_with_specific_size
-    driver.configure("flush_size 10\n")
-    driver.configure("flush_interval 10s\n")
-    stub_elastic_ping
-    stub_elastic
-    100.times { driver.emit(sample_record.merge('age'=>rand(100))) }
-    driver.run
-
-    assert_equal(10, index_cmds.count)
   end
 
   def test_all_records_are_preserved_in_bulk

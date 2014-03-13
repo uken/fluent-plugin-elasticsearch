@@ -16,7 +16,6 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :index_name, :string, :default => "fluentd"
   config_param :id_key, :string, :default => nil
   config_param :parent_key, :string, :default => nil
-  config_param :flush_size, :integer, :default => 1000
   config_param :hosts, :string, :default => nil
 
   include Fluent::SetTagKeyMixin
@@ -82,11 +81,6 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
       bulk_message << meta
       bulk_message << record
-
-      if bulk_message.size >= @flush_size
-        send(bulk_message)
-        bulk_message.clear
-      end
     end
 
     send(bulk_message) unless bulk_message.empty?
