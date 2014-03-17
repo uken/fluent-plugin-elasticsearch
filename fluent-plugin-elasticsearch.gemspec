@@ -21,5 +21,5 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'elasticsearch', '~> 0'
 
   s.add_development_dependency 'rake', '~> 0'
-  s.add_development_dependency 'webmock', '~> 0'
+  s.add_development_dependency 'webmock', '~> 1'
 end

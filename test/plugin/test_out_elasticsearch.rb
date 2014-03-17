@@ -119,7 +119,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       stub_elastic_with_store_index_command_counts("http://#{host}:#{port}/_bulk")
     end
 
-    1000.times do 
+    1000.times do
       driver.emit(sample_record.merge('age'=>rand(100)))
     end
 
@@ -128,7 +128,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     # @note: we cannot make multi chunks with options (flush_interval, buffer_chunk_limit)
     # it's Fluentd test driver's constraint
     # so @index_command_counts.size is always 1
-    
+
     assert(@index_command_counts.size > 0, "not working with hosts options")
 
     total = 0
