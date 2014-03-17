@@ -12,6 +12,8 @@ I wrote this so you can search logs routed through Fluentd.
 
     $ gem install fluent-plugin-elasticsearch
 
+* prerequisite : You need to install [libcurl](http://curl.haxx.se/libcurl/) to work with.
+
 ## Usage
 
 In your fluentd configration, use `type elasticsearch`. Additional configuration is optional, default values would look like this:
@@ -23,8 +25,17 @@ index_name fluentd
 type_name fluentd
 ```
 
-
 **More options:**
+
+```
+hosts host1:port1,host2:port2,host3:port3
+```
+
+You can specify multiple elasticsearch hosts with separator ",".
+
+If you specify multiple hosts, plugin writes to elasticsearch with load balanced. (it's elasticsearch-ruby's feature, default is round-robin.)
+
+If you specify this option, host and port options are ignored.
 
 ```
 logstash_format true # defaults to false
@@ -43,6 +54,12 @@ logstash_dateformat %Y.%m. # defaults to "%Y.%m.%d"
 ```
 
 By default, the records inserted into index `logstash-YYMMDD`. This option allows to insert into specified index like `logstash-YYYYMM` for a monthly index.
+
+```
+utc_index true
+```
+
+By default, the records inserted into index `logstash-YYMMDD` with utc (Coordinated Universal Time). This option allows to use local time if you describe utc_index to false.
 
 ---
 
