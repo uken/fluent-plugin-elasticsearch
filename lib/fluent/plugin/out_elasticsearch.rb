@@ -31,8 +31,12 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
   def start
     super
-    @es = Elasticsearch::Client.new :hosts => get_hosts, :reload_connections => true, :adapter => :patron, :retry_on_failure => 5
-    raise "Can not reach Elasticsearch cluster (#{@host}:#{@port})!" unless @es.ping
+  end
+  
+  def client
+    @_es ||= Elasticsearch::Client.new :hosts => get_hosts, :reload_connections => true, :adapter => :patron, :retry_on_failure => 5
+    raise "Can not reach Elasticsearch cluster (#{@host}:#{@port})!" unless @_es.ping
+	@_es
   end
 
   def get_hosts
@@ -88,7 +92,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   end
 
   def send(data)
-    @es.bulk body: data
+    client.bulk body: data
   end
 end
 
