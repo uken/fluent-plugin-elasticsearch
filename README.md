@@ -12,7 +12,7 @@ I wrote this so you can search logs routed through Fluentd.
 
     $ gem install fluent-plugin-elasticsearch
 
-* prerequisite : You need to install [libcurl](http://curl.haxx.se/libcurl/) to work with.
+* prerequisite : You need to install [libcurl (libcurl-devel)](http://curl.haxx.se/libcurl/) to work with.
 
 ## Usage
 
