@@ -236,6 +236,17 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(index_cmds[1]['@timestamp'], ts)
   end
 
+  def test_uses_custom_timestamp_when_included_in_record
+    driver.configure("logstash_format true\n")
+    stub_elastic_ping
+    stub_elastic
+    ts = DateTime.new(2001,2,3).to_s
+    driver.emit(sample_record.merge!('@timestamp' => ts))
+    driver.run
+    assert(index_cmds[1].has_key? '@timestamp')
+    assert_equal(index_cmds[1]['@timestamp'], ts)
+  end
+
   def test_doesnt_add_tag_key_by_default
     stub_elastic_ping
     stub_elastic
