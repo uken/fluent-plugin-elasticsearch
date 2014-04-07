@@ -1,5 +1,9 @@
 ## Changelog
 
+### Future
+
+- do not generate @timestamp if already part of message (#35)
+
 ### 0.3.0
 
 - add `parent_key` option (#28)
