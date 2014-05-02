@@ -13,6 +13,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :logstash_dateformat, :string, :default => "%Y.%m.%d"
   config_param :utc_index, :bool, :default => true
   config_param :type_name, :string, :default => "fluentd"
+  config_param :type_key, :string, :default => nil
   config_param :index_name, :string, :default => "fluentd"
   config_param :id_key, :string, :default => nil
   config_param :parent_key, :string, :default => nil
@@ -74,7 +75,10 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         record.merge!(@tag_key => tag)
       end
 
-      meta = { "index" => {"_index" => target_index, "_type" => type_name} }
+      if @type_key && record[@type_key]
+        type_name = record[@type_key]
+      end
+      meta = { "index" => {"_index" => target_index, "_type" => type_name } }
       if @id_key && record[@id_key]
         meta['index']['_id'] = record[@id_key]
       end
