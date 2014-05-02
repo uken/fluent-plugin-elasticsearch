@@ -325,4 +325,13 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.run
     }
   end
+
+  def test_use_type_key_when_configured
+    driver.configure("type_key parent_id\n")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert_equal(index_cmds[0]['index']['_type'], 'parent')
+  end
 end
