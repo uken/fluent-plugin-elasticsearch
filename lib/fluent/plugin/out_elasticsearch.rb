@@ -17,6 +17,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :id_key, :string, :default => nil
   config_param :parent_key, :string, :default => nil
   config_param :hosts, :string, :default => nil
+  config_param :transport_timeout, :integer, :default => 5
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -34,7 +35,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   end
 
   def client
-    @_es ||= Elasticsearch::Client.new :hosts => get_hosts, :reload_connections => true, :adapter => :patron, :retry_on_failure => 5
+    @_es ||= Elasticsearch::Client.new :hosts => get_hosts, :reload_connections => true, :adapter => :patron, :retry_on_failure => 5, transport_options: { request: { timeout: @transport_timeout } }
     raise "Can not reach Elasticsearch cluster (#{@host}:#{@port})!" unless @_es.ping
     @_es
   end
