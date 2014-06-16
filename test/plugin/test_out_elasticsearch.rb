@@ -169,8 +169,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_writes_to_logstash_utc_index
-    driver.configure("logstash_format true\n")
-    driver.configure("utc_index false\n")
+    driver.configure("logstash_format true
+                      utc_index false")
     time = Time.parse Date.today.to_s
     utc_index = "logstash-#{time.strftime("%Y.%m.%d")}"
     stub_elastic_ping
@@ -181,8 +181,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_writes_to_logstash_index_with_specified_prefix
-    driver.configure("logstash_format true\n")
-    driver.configure("logstash_prefix myprefix\n")
+    driver.configure("logstash_format true
+                      logstash_prefix myprefix")
     time = Time.parse Date.today.to_s
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
@@ -193,8 +193,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
     def test_writes_to_logstash_index_with_specified_dateformat
-    driver.configure("logstash_format true\n")
-    driver.configure("logstash_dateformat %Y.%m\n")
+    driver.configure("logstash_format true
+                      logstash_dateformat %Y.%m")
     time = Time.parse Date.today.to_s
     logstash_index = "logstash-#{time.getutc.strftime("%Y.%m")}"
     stub_elastic_ping
@@ -205,9 +205,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_writes_to_logstash_index_with_specified_prefix_and_dateformat
-    driver.configure("logstash_format true\n")
-    driver.configure("logstash_prefix myprefix\n")
-    driver.configure("logstash_dateformat %Y.%m\n")
+    driver.configure("logstash_format true
+                      logstash_prefix myprefix
+                      logstash_dateformat %Y.%m")
     time = Time.parse Date.today.to_s
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m")}"
     stub_elastic_ping
