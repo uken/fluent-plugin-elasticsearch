@@ -34,16 +34,24 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   end
 
   def client
-    @_es ||= Elasticsearch::Client.new :hosts => get_hosts, :reload_connections => true, :adapter => :patron, :retry_on_failure => 5
+    @_es ||= begin
+      adapter_conf = lambda {|f| f.adapter :patron }
+      transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new({ hosts: get_hosts,
+                                                                           options: {
+                                                                             reload_connections: true,
+                                                                             retry_on_failure: 5
+                                                                          }}, &adapter_conf)
+      Elasticsearch::Client.new transport: transport
+    end
     raise "Can not reach Elasticsearch cluster (#{@host}:#{@port})!" unless @_es.ping
     @_es
   end
 
   def get_hosts
     if @hosts
-        @hosts.split(',').map {|x| x.strip}.compact
+        @hosts.split(',').map {|x| hp = x.split(':'); { host: hp[0], port: hp[1] || @port } }.compact
      else
-       ["#{@host}:#{@port}"]
+       [{host: @host, port: @port }]
      end
   end
 
