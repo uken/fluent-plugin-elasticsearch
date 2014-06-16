@@ -55,6 +55,10 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
   end
 
+  def fmt_conf(conf)
+    conf.map { |k, v| "#{k} #{v.to_s}" }.join "\n"
+  end
+
   def test_writes_to_default_index
     stub_elastic_ping
     stub_elastic
@@ -72,7 +76,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_writes_to_speficied_index
-    driver.configure("index_name myindex\n")
+    driver.configure fmt_conf({ :index_name => "myindex" })
     stub_elastic_ping
     stub_elastic
     driver.emit(sample_record)
@@ -81,7 +85,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_writes_to_speficied_type
-    driver.configure("type_name mytype\n")
+    driver.configure fmt_conf({:type_name => "mytype" })
     stub_elastic_ping
     stub_elastic
     driver.emit(sample_record)
@@ -90,7 +94,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_writes_to_speficied_host
-    driver.configure("host 192.168.33.50\n")
+    driver.configure fmt_conf({ :host => "192.168.33.50" })
     stub_elastic_ping("http://192.168.33.50:9200")
     elastic_request = stub_elastic("http://192.168.33.50:9200/_bulk")
     driver.emit(sample_record)
@@ -99,7 +103,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_writes_to_speficied_port
-    driver.configure("port 9201\n")
+    driver.configure fmt_conf({ :port => 9201 })
     stub_elastic_ping("http://localhost:9201")
     elastic_request = stub_elastic("http://localhost:9201/_bulk")
     driver.emit(sample_record)
@@ -111,7 +115,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     hosts = [['192.168.33.50', 9201], ['192.168.33.51', 9201], ['192.168.33.52', 9201]]
     hosts_string = hosts.map {|x| "#{x[0]}:#{x[1]}"}.compact.join(',')
 
-    driver.configure("hosts #{hosts_string}")
+    driver.configure fmt_conf({ :hosts => hosts_string })
 
     hosts.each do |host_info|
       host, port = host_info
@@ -158,7 +162,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_writes_to_logstash_index
-    driver.configure("logstash_format true\n")
+    driver.configure fmt_conf({ :logstash_format => true })
     time = Time.parse Date.today.to_s
     logstash_index = "logstash-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
@@ -169,8 +173,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_writes_to_logstash_utc_index
-    driver.configure("logstash_format true\n")
-    driver.configure("utc_index false\n")
+    driver.configure fmt_conf({ :logstash_format => true,
+                                :utc_index       => false })
     time = Time.parse Date.today.to_s
     utc_index = "logstash-#{time.strftime("%Y.%m.%d")}"
     stub_elastic_ping
@@ -181,8 +185,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_writes_to_logstash_index_with_specified_prefix
-    driver.configure("logstash_format true\n")
-    driver.configure("logstash_prefix myprefix\n")
+    driver.configure fmt_conf({ :logstash_format => true,
+                                :logstash_prefix => "myprefix" })
     time = Time.parse Date.today.to_s
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
@@ -192,9 +196,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
 
-    def test_writes_to_logstash_index_with_specified_dateformat
-    driver.configure("logstash_format true\n")
-    driver.configure("logstash_dateformat %Y.%m\n")
+  def test_writes_to_logstash_index_with_specified_dateformat
+    driver.configure fmt_conf({ :logstash_format     => true,
+                                :logstash_dateformat => "%Y.%m" })
     time = Time.parse Date.today.to_s
     logstash_index = "logstash-#{time.getutc.strftime("%Y.%m")}"
     stub_elastic_ping
@@ -205,9 +209,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_writes_to_logstash_index_with_specified_prefix_and_dateformat
-    driver.configure("logstash_format true\n")
-    driver.configure("logstash_prefix myprefix\n")
-    driver.configure("logstash_dateformat %Y.%m\n")
+    driver.configure fmt_conf({ :logstash_format     => true,
+                                :logstash_prefix     => "myprefix",
+                                :logstash_dateformat => "%Y.%m" })
     time = Time.parse Date.today.to_s
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m")}"
     stub_elastic_ping
@@ -226,7 +230,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_adds_logstash_timestamp_when_configured
-    driver.configure("logstash_format true\n")
+    driver.configure fmt_conf({ :logstash_format => true })
     stub_elastic_ping
     stub_elastic
     ts = DateTime.now.to_s
@@ -237,7 +241,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_uses_custom_timestamp_when_included_in_record
-    driver.configure("logstash_format true\n")
+    driver.configure fmt_conf({ :logstash_format => true })
     stub_elastic_ping
     stub_elastic
     ts = DateTime.new(2001,2,3).to_s
@@ -256,7 +260,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_adds_tag_key_when_configured
-    driver('mytag').configure("include_tag_key true\n")
+    driver('mytag').configure fmt_conf({ :include_tag_key => true })
     stub_elastic_ping
     stub_elastic
     driver.emit(sample_record)
@@ -266,7 +270,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_adds_id_key_when_configured
-    driver.configure("id_key request_id\n")
+    driver.configure fmt_conf({ :id_key => "request_id" })
     stub_elastic_ping
     stub_elastic
     driver.emit(sample_record)
@@ -275,7 +279,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_doesnt_add_id_key_if_missing_when_configured
-    driver.configure("id_key another_request_id\n")
+    driver.configure fmt_conf({ :id_key => "another_request_id" })
     stub_elastic_ping
     stub_elastic
     driver.emit(sample_record)
@@ -292,7 +296,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_adds_parent_key_when_configured
-    driver.configure("parent_key parent_id\n")
+    driver.configure fmt_conf({ :parent_key => "parent_id" })
     stub_elastic_ping
     stub_elastic
     driver.emit(sample_record)
@@ -301,7 +305,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_doesnt_add_parent_key_if_missing_when_configured
-    driver.configure("parent_key another_parent_id\n")
+    driver.configure fmt_conf({ :parent_key => "another_parent_id" })
     stub_elastic_ping
     stub_elastic
     driver.emit(sample_record)
