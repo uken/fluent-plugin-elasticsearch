@@ -107,7 +107,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       if @shard
         shard_time = Time.at(time)
         if @utc_index
-          shard_time!.getutc
+          shard_time.getutc!
         end
 
         # If shard_prefix is nil, we inherit the index_name
