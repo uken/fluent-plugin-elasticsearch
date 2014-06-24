@@ -16,7 +16,7 @@ I wrote this so you can search logs routed through Fluentd.
 
 ## Usage
 
-In your fluentd configration, use `type elasticsearch`. Additional configuration is optional, default values would look like this:
+In your fluentd configuration, use `type elasticsearch`. Additional configuration is optional, default values would look like this:
 
 ```
 host localhost
@@ -38,34 +38,78 @@ If you specify multiple hosts, plugin writes to elasticsearch with load balanced
 If you specify this option, host and port options are ignored.
 
 ```
-logstash_format true # defaults to false
+time_key event_time # defaults to nil
 ```
 
-This is meant to make writing data into elasticsearch compatible to what logstash writes. By doing this, one could take advantade of [kibana](http://kibana.org/).
+By default, records are inserted into Elasticsearch as-is. This command allows fluentd to dynamically create a key containing the event time and merge it into the record because sending it to Elasticsearch. If this command is non-nil, use it as the name of this time key.
 
 ```
-logstash_prefix mylogs # defaults to "logstash"
+time_format %Y.%m.%d # defaults to nil (ISO-8601)
 ```
 
-By default, the records inserted into index `logstash-YYMMDD`. This option allows to insert into specified index like `mylogs-YYMMDD`.
+If `time_key` is being used, control the format of the dynamic time key's value. This will be passed as an argument to strftime().
+
+**Sharding settings**
+
+fluent-plugin-elasticsearch allows built-in sharding of records into time-boxed indexes. The following settings control this behavior.
 
 ```
-logstash_dateformat %Y.%m. # defaults to "%Y.%m.%d"
+shard true # defaults to false
 ```
 
-By default, when inserting records in logstash format, @timestamp is dynamically created with the time at log ingestion. If you'd like to use a custom time. Include an @timestamp with your record. 
+This allows `index_name` rewriting to split data into shards by date.
 
 ```
-{"@timestamp":"2014-04-07T000:00:00-00:00"}
+shard_format %{prefix}-%{date}
 ```
 
-By default, the records inserted into index `logstash-YYMMDD`. This option allows to insert into specified index like `logstash-YYYYMM` for a monthly index.
+Adjust the format of the resulting index name while sharding. Possible replacement strings are:
+
+*prefix*, *date*, *index*, *type*
+
+```
+shard_prefix logs # defaults to index_name
+```
+
+Store records under this prefix. If this setting is not configured (left as `nil`), the value of `index_name` is used. To prevent this, explicitly define `shard_prefix` as `false`.
+
+```
+shard_dateformat %Y.%m.%d
+```
+
+Format the `date` part of the `shard_format` according to this date replacement string. This will be passed as an argument to strftime().
 
 ```
 utc_index true
 ```
 
-By default, the records inserted into index `logstash-YYMMDD` with utc (Coordinated Universal Time). This option allows to use local time if you describe utc_index to false.
+By default, the records inserted into index `logstash-YYMMDD` with utc (Coordinated Universal Time). This option allows to use local time if you set utc_index to false.
+
+**Logstash Pre-configuration**
+
+fluent-plugin-elasticsearch comes with some logstash setting pre-configured to allow easy integration with tools like [kibana](http://kibana.org/).
+
+```
+logstash_format true # defaults to false
+```
+
+Enabling this setting causes records to be sharded by date, in an index prefixed by "logstash".
+
+```
+logstash_prefix logstash
+```
+
+By default, with `logstash_format`=true, records are inserted into index `logstash-YYMMDD`. This option allows to insert into specified index like `mylogs-YYMMDD`.
+
+```
+logstash_dateformat %Y.%m.%d
+```
+
+By default, with `logstash_format`=true, a custom key called `@timestamp` is dynamically created inside each record using the event's time at the point of log ingestion. Control its format using this key.  This will be passed as an argument to strftime().
+
+```
+{"@timestamp":"2014-04-07T000:00:00-00:00"}
+```
 
 ---
 
