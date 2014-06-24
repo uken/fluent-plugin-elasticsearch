@@ -71,7 +71,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal('fluentd', index_cmds.first['index']['_type'])
   end
 
-  def test_writes_to_speficied_index
+  def test_writes_to_specified_index
     driver.configure("index_name myindex\n")
     stub_elastic_ping
     stub_elastic
@@ -80,7 +80,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal('myindex', index_cmds.first['index']['_index'])
   end
 
-  def test_writes_to_speficied_type
+  def test_writes_to_specified_type
     driver.configure("type_name mytype\n")
     stub_elastic_ping
     stub_elastic
@@ -89,7 +89,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal('mytype', index_cmds.first['index']['_type'])
   end
 
-  def test_writes_to_speficied_host
+  def test_writes_to_specified_host
     driver.configure("host 192.168.33.50\n")
     stub_elastic_ping("http://192.168.33.50:9200")
     elastic_request = stub_elastic("http://192.168.33.50:9200/_bulk")
@@ -98,7 +98,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_requested(elastic_request)
   end
 
-  def test_writes_to_speficied_port
+  def test_writes_to_specified_port
     driver.configure("port 9201\n")
     stub_elastic_ping("http://localhost:9201")
     elastic_request = stub_elastic("http://localhost:9201/_bulk")
@@ -155,6 +155,30 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run
     assert_equal(26, index_cmds[1]['age'])
     assert_equal(27, index_cmds[3]['age'])
+  end
+
+  def test_writes_with_sharding
+    driver.configure("index_name myindex\n")
+    driver.configure("shard true\n")
+    time = Time.parse Date.today.to_s
+    shard_index = "myindex-#{time.getutc.strftime("%Y.%m.%d")}"
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record, time)
+    driver.run
+    assert_equal(shard_index, index_cmds.first['index']['_index'])
+  end
+
+  def test_writes_with_sharding_with_specified_prefix
+    driver.configure("shard true\n")
+    driver.configure("shard_prefix myprefix\n")
+    time = Time.parse Date.today.to_s
+    shard_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record, time)
+    driver.run
+    assert_equal(shard_index, index_cmds.first['index']['_index'])
   end
 
   def test_writes_to_logstash_index

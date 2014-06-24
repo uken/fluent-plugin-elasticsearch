@@ -3,7 +3,7 @@ $:.push File.expand_path('../lib', __FILE__)
 
 Gem::Specification.new do |s|
   s.name          = 'fluent-plugin-elasticsearch'
-  s.version       = '0.3.1'
+  s.version       = '0.4.0'
   s.authors       = ['diogo', 'pitr']
   s.email         = ['team@uken.com']
   s.description   = %q{ElasticSearch output plugin for Fluent event collector}
