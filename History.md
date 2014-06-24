@@ -1,6 +1,13 @@
 ## Changelog
 
-### Future
+### 0.4.0
+
+- allow sharding with custom format (shard, shard_format, shard_prefix, shard_dateformat)
+- allow insertion of custom timstamp key with a custom format (time_key, time_format)
+- move utc_index out of logstash handler
+- treat logstash_format as a shorthand for existing configuration keys
+
+### 0.3.1
 
 - do not generate @timestamp if already part of message (#35)
 
@@ -30,7 +37,6 @@
 ### 0.1.1
 
 - fix timezone in logstash key
-
 
 ### 0.1.0
 

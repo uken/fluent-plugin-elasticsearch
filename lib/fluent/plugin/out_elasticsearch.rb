@@ -8,15 +8,25 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
   config_param :host, :string,  :default => 'localhost'
   config_param :port, :integer, :default => 9200
-  config_param :logstash_format, :bool, :default => false
-  config_param :logstash_prefix, :string, :default => "logstash"
-  config_param :logstash_dateformat, :string, :default => "%Y.%m.%d"
-  config_param :utc_index, :bool, :default => true
+  config_param :time_key, :string, :default => nil
+  config_param :time_format, :string, :default => nil
   config_param :type_name, :string, :default => "fluentd"
   config_param :index_name, :string, :default => "fluentd"
   config_param :id_key, :string, :default => nil
   config_param :parent_key, :string, :default => nil
   config_param :hosts, :string, :default => nil
+
+  # Allow automatic sharding of indexes
+  config_param :shard, :bool, :default => false
+  config_param :shard_format, :string, :default => "%{prefix}-%{date}"
+  config_param :shard_prefix, :string, :default => nil
+  config_param :shard_dateformat, :string, :default => "%Y.%m.%d"
+  config_param :utc_index, :bool, :default => true
+
+  # Logstash-specific commands to create pre-defined behavior
+  config_param :logstash_format, :bool, :default => false
+  config_param :logstash_prefix, :string, :default => "logstash"
+  config_param :logstash_dateformat, :string, :default => "%Y.%m.%d"
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -67,19 +77,51 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     bulk_message = []
 
     chunk.msgpack_each do |tag, time, record|
+      target_index = @index_name
+
+      # Pre-defined logstash compatibility
       if @logstash_format
-        record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s}) unless record.has_key?("@timestamp")
-        if @utc_index
-          target_index = "#{@logstash_prefix}-#{Time.at(time).getutc.strftime("#{@logstash_dateformat}")}"
-        else
-          target_index = "#{@logstash_prefix}-#{Time.at(time).strftime("#{@logstash_dateformat}")}"
-        end
-      else
-        target_index = @index_name
+        @time_key = "@timestamp"
+        @time_format = nil
+        @shard = true
+        @shard_prefix = @logstash_prefix
+        @shard_dateformat = @logstash_dateformat
+        @shard_format = "%{prefix}-%{date}"
       end
 
+      # Merge in time key if required
+      if @time_key
+        if @time_format
+          record.merge!({@time_key => Time.at(time).strftime("#{@time_format}")}) unless record.has_key?(@time_key)
+        else
+          record.merge!({@time_key => Time.at(time).to_datetime.to_s}) unless record.has_key?(@time_key)
+        end
+      end
+
+      # Merge in tag key if required
       if @include_tag_key
         record.merge!(@tag_key => tag)
+      end
+
+      # Shard index key if required
+      if @shard
+        shard_time = Time.at(time)
+        if @utc_index
+          shard_time.utc
+        end
+
+        # If shard_prefix is nil, we inherit the index_name
+        if @shard_prefix.nil?
+          @shard_prefix = @index_name
+        end
+
+        shard_index_context = {
+            prefix: @shard_prefix,
+            date: shard_time.strftime("#{@shard_dateformat}"),
+            index: @index_name,
+            type: @type_name
+        }
+        target_index = @shard_format % shard_index_context
       end
 
       meta = { "index" => {"_index" => target_index, "_type" => type_name} }
