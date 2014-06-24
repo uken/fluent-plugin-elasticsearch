@@ -158,8 +158,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_writes_with_sharding
-    driver.configure("index_name myindex\n")
-    driver.configure("shard true\n")
+    driver.configure("index_name myindex
+                      shard true")
     time = Time.parse Date.today.to_s
     shard_index = "myindex-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
@@ -170,8 +170,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_writes_with_sharding_with_specified_prefix
-    driver.configure("shard true\n")
-    driver.configure("shard_prefix myprefix\n")
+    driver.configure("shard true
+                      shard_prefix myprefix")
     time = Time.parse Date.today.to_s
     shard_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
