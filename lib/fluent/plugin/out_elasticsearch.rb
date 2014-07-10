@@ -78,11 +78,16 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         target_index = @index_name
       end
 
+      meta = { "index" => {"_index" => target_index, "_type" => type_name} }
+
       if @include_tag_key
-        record.merge!(@tag_key => tag)
+         if @tag_key == "_type"
+           meta = { "index" => {"_index" => target_index, "_type" => tag} }
+         else
+           record.merge!(@tag_key => tag)
+         end
       end
 
-      meta = { "index" => {"_index" => target_index, "_type" => type_name} }
       if @id_key && record[@id_key]
         meta['index']['_id'] = record[@id_key]
       end
