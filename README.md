@@ -42,6 +42,21 @@ If you specify multiple hosts, plugin writes to elasticsearch with load balanced
 If you specify this option, host and port options are ignored.
 
 ```
+user demo
+password secret
+```
+
+You can specify user and password for HTTP basic auth. This is also compatible with `hosts` key above, which you can specify in the following form:
+
+```
+hosts host1:port1:user1:password1,host2:port2,host3:port3
+```
+
+`user` and `password` would be used by default, if they are not provided in a host definition string.
+
+*Note:* it is not possible to have a host-specific password with either `,` or `:` charcters in it.
+
+```
 logstash_format true # defaults to false
 ```
 
@@ -57,7 +72,7 @@ By default, the records inserted into index `logstash-YYMMDD`. This option allow
 logstash_dateformat %Y.%m. # defaults to "%Y.%m.%d"
 ```
 
-By default, when inserting records in logstash format, @timestamp is dynamically created with the time at log ingestion. If you'd like to use a custom time. Include an @timestamp with your record. 
+By default, when inserting records in logstash format, @timestamp is dynamically created with the time at log ingestion. If you'd like to use a custom time. Include an @timestamp with your record.
 
 ```
 {"@timestamp":"2014-04-07T000:00:00-00:00"}
