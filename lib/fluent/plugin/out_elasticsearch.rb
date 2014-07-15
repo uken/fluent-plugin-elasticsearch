@@ -17,7 +17,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :id_key, :string, :default => nil
   config_param :parent_key, :string, :default => nil
   config_param :hosts, :string, :default => nil
-  config_param :timeout, :time, :default => 5
+  config_param :request_timeout, :time, :default => 5
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -42,7 +42,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
                                                                              reload_connections: true,
                                                                              retry_on_failure: 5,
                                                                              transport_options: {
-                                                                               request: { timeout: @timeout }
+                                                                               request: { timeout: @request_timeout }
                                                                              }
                                                                           }}, &adapter_conf)
       Elasticsearch::Client.new transport: transport
