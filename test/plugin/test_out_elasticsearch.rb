@@ -325,4 +325,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.run
     }
   end
+
+  def test_garbage_record_error
+    stub_elastic_ping
+    stub_elastic
+    driver.emit("some garbage string")
+    driver.run
+  end
 end
