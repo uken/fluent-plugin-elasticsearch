@@ -67,6 +67,14 @@ utc_index true
 
 By default, the records inserted into index `logstash-YYMMDD` with utc (Coordinated Universal Time). This option allows to use local time if you describe utc_index to false.
 
+```
+request_timeout 15s # defaults to 5s
+```
+
+You can specify HTTP request timeout.
+
+This is useful when Elasticsearch cannot return response for bulk request within the default of 5 seconds.
+
 ---
 
 ```
