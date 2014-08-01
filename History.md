@@ -5,7 +5,7 @@
 
 ### 0.4.0
 
-- add `request_timeout` config
+- add `request_timeout` config (#59)
 - fix lockup when non-hash values are sent (#52)
 
 ### 0.3.1
