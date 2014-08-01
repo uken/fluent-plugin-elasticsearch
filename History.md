@@ -2,6 +2,15 @@
 
 ### Future
 
+
+### 0.4.0
+
+- add `request_timeout` config
+- fix lockup when non-hash values are sent (#52)
+
+### 0.3.1
+
+- force using patron (#46)
 - do not generate @timestamp if already part of message (#35)
 
 ### 0.3.0
