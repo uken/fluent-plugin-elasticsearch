@@ -8,6 +8,8 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
   config_param :host, :string,  :default => 'localhost'
   config_param :port, :integer, :default => 9200
+  config_param :user, :string, :default => nil
+  config_param :password, :string, :default => nil
   config_param :logstash_format, :bool, :default => false
   config_param :logstash_prefix, :string, :default => "logstash"
   config_param :logstash_dateformat, :string, :default => "%Y.%m.%d"
@@ -53,10 +55,23 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
   def get_hosts
     if @hosts
-        @hosts.split(',').map {|x| hp = x.split(':'); { host: hp[0], port: hp[1] || @port } }.compact
-     else
-       [{host: @host, port: @port }]
-     end
+        @hosts.split(',').map do |x|
+          hp = x.split(':')
+          {
+            host: hp[0],
+            port: hp[1]     || @port,
+            user: hp[2]     || @user,
+            password: hp[3] || @password
+          }
+        end.compact
+    else
+      if @user
+        raise "`password` must be present if `user` is present" unless @password
+        [{host: @host, port: @port, user: @user, password: @password }]
+      else
+        [{host: @host, port: @port }]
+      end
+    end
   end
 
   def format(tag, time, record)
