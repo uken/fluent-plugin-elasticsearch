@@ -25,6 +25,10 @@ index_name fluentd
 type_name fluentd
 ```
 
+**Index templates**
+
+This plugin creates ElasticSearch indices by merely writing to them. Consider using [Index Templates](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/indices-templates.html) to gain control of what get indexed and how. See [this example](https://github.com/uken/fluent-plugin-elasticsearch/issues/33#issuecomment-38693282) for a good starting point.
+
 **More options:**
 
 ```
