@@ -35,26 +35,27 @@ This plugin creates ElasticSearch indices by merely writing to them. Consider us
 hosts host1:port1,host2:port2,host3:port3
 ```
 
+or
+
+```
+hosts https://customhost.com:443/path,https://username:password@host-failover.com:443
+```
+
 You can specify multiple elasticsearch hosts with separator ",".
 
-If you specify multiple hosts, plugin writes to elasticsearch with load balanced. (it's elasticsearch-ruby's feature, default is round-robin.)
+If you specify multiple hosts, this plugin will load balance updates to elasticsearch. This is an [elasticsearch-ruby](https://github.com/elasticsearch/elasticsearch-ruby) feature, the default strategy is round-robin.
 
 If you specify this option, host and port options are ignored.
 
 ```
 user demo
 password secret
+path /elastic_search/
+scheme https
 ```
 
-You can specify user and password for HTTP basic auth. This is also compatible with `hosts` key above, which you can specify in the following form:
+You can specify user and password for HTTP basic auth. If used in conjunction with a hosts list, then these options will be used by default i.e. if you do not provide any of these options within the hosts listed.
 
-```
-hosts host1:port1:user1:password1,host2:port2,host3:port3
-```
-
-`user` and `password` would be used by default, if they are not provided in a host definition string.
-
-*Note:* it is not possible to have a host-specific password with either `,` or `:` charcters in it.
 
 ```
 logstash_format true # defaults to false
