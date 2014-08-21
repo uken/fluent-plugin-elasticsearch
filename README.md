@@ -35,11 +35,27 @@ This plugin creates ElasticSearch indices by merely writing to them. Consider us
 hosts host1:port1,host2:port2,host3:port3
 ```
 
+or
+
+```
+hosts https://customhost.com:443/path,https://username:password@host-failover.com:443
+```
+
 You can specify multiple elasticsearch hosts with separator ",".
 
-If you specify multiple hosts, plugin writes to elasticsearch with load balanced. (it's elasticsearch-ruby's feature, default is round-robin.)
+If you specify multiple hosts, this plugin will load balance updates to elasticsearch. This is an [elasticsearch-ruby](https://github.com/elasticsearch/elasticsearch-ruby) feature, the default strategy is round-robin.
 
 If you specify this option, host and port options are ignored.
+
+```
+user demo
+password secret
+path /elastic_search/
+scheme https
+```
+
+You can specify user and password for HTTP basic auth. If used in conjunction with a hosts list, then these options will be used by default i.e. if you do not provide any of these options within the hosts listed.
+
 
 ```
 logstash_format true # defaults to false
@@ -57,7 +73,7 @@ By default, the records inserted into index `logstash-YYMMDD`. This option allow
 logstash_dateformat %Y.%m. # defaults to "%Y.%m.%d"
 ```
 
-By default, when inserting records in logstash format, @timestamp is dynamically created with the time at log ingestion. If you'd like to use a custom time. Include an @timestamp with your record. 
+By default, when inserting records in logstash format, @timestamp is dynamically created with the time at log ingestion. If you'd like to use a custom time. Include an @timestamp with your record.
 
 ```
 {"@timestamp":"2014-04-07T000:00:00-00:00"}

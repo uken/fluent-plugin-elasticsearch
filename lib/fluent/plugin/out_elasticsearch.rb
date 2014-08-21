@@ -2,12 +2,18 @@
 require 'date'
 require 'patron'
 require 'elasticsearch'
+require 'uri'
 
 class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   Fluent::Plugin.register_output('elasticsearch', self)
 
   config_param :host, :string,  :default => 'localhost'
   config_param :port, :integer, :default => 9200
+  config_param :user, :string, :default => nil
+  config_param :password, :string, :default => nil
+  config_param :path, :string, :default => nil
+  config_param :scheme, :string, :default => 'http'
+  config_param :hosts, :string, :default => nil
   config_param :logstash_format, :bool, :default => false
   config_param :logstash_prefix, :string, :default => "logstash"
   config_param :logstash_dateformat, :string, :default => "%Y.%m.%d"
@@ -16,7 +22,6 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :index_name, :string, :default => "fluentd"
   config_param :id_key, :string, :default => nil
   config_param :parent_key, :string, :default => nil
-  config_param :hosts, :string, :default => nil
   config_param :request_timeout, :time, :default => 5
 
   include Fluent::SetTagKeyMixin
@@ -37,26 +42,51 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   def client
     @_es ||= begin
       adapter_conf = lambda {|f| f.adapter :patron }
-      transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new({ hosts: get_hosts,
-                                                                           options: {
-                                                                             reload_connections: true,
-                                                                             retry_on_failure: 5,
-                                                                             transport_options: {
-                                                                               request: { timeout: @request_timeout }
-                                                                             }
-                                                                          }}, &adapter_conf)
+      transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(get_connection_options.merge(
+                                                                          options: {
+                                                                            reload_connections: true,
+                                                                            retry_on_failure: 5,
+                                                                            transport_options: {
+                                                                              request: { timeout: @request_timeout }
+                                                                            }
+                                                                          }), &adapter_conf)
       Elasticsearch::Client.new transport: transport
     end
-    raise "Can not reach Elasticsearch cluster (#{@host}:#{@port})!" unless @_es.ping
+    raise "Can not reach Elasticsearch cluster (#{get_connection_options.inspect})!" unless @_es.ping
     @_es
   end
 
-  def get_hosts
-    if @hosts
-        @hosts.split(',').map {|x| hp = x.split(':'); { host: hp[0], port: hp[1] || @port } }.compact
-     else
-       [{host: @host, port: @port }]
-     end
+  def get_connection_options
+    raise "`password` must be present if `user` is present" if @user && !@password
+
+    hosts = if @hosts
+      @hosts.split(',').map do |host_str|
+        # Support legacy hosts format host:port,host:port,host:port...
+        if host_str.match(%r{^[^:]+\:\d+$})
+          {
+            host:   host_str.split(':')[0],
+            port:   (host_str.split(':')[1] || @port).to_i,
+            scheme: @scheme
+          }
+        else
+          # New hosts format expects URLs such as http://logs.foo.com,https://john:pass@logs2.foo.com/elastic
+          uri = URI(host_str)
+          %w(user password path).inject(host: uri.host, port: uri.port, scheme: uri.scheme) do |hash, key|
+            hash[key.to_sym] = uri.public_send(key) unless uri.public_send(key).nil? || uri.public_send(key) == ''
+            hash
+          end
+        end
+      end.compact
+    else
+      [{host: @host, port: @port, scheme: @scheme}]
+    end.each do |host|
+      host.merge!(user: @user, password: @password) if !host[:user] && @user
+      host.merge!(path: @path) if !host[:path] && @path
+    end
+
+    {
+      hosts: hosts
+    }
   end
 
   def format(tag, time, record)
