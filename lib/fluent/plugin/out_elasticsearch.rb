@@ -144,6 +144,18 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   end
 
   def send(data)
-    client.bulk body: data
+    retries = 0
+    begin
+      client.bulk body: data
+    rescue Faraday::ConnectionFailed => e
+      if retries < 2
+        retries += 1
+        @_es = nil
+        log.warn "Could not push logs to Elasticsearch, resetting connection and trying again. #{e.message}"
+        sleep 2**retries
+        retry
+      end
+      raise ConnectionFailure, "Could not push logs to Elasticsearch after #{retries} retries. #{e.message}"
+    end
   end
 end
