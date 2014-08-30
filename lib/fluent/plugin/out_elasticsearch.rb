@@ -5,6 +5,8 @@ require 'elasticsearch'
 require 'uri'
 
 class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
+  class ConnectionFailure < StandardError; end
+
   Fluent::Plugin.register_output('elasticsearch', self)
 
   config_param :host, :string,  :default => 'localhost'
@@ -50,10 +52,17 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
                                                                               request: { timeout: @request_timeout }
                                                                             }
                                                                           }), &adapter_conf)
-      Elasticsearch::Client.new transport: transport
+      es = Elasticsearch::Client.new transport: transport
+
+      begin
+        raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{get_connection_options.inspect})!" unless es.ping
+      rescue Faraday::ConnectionFailed => e
+        raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{get_connection_options.inspect})! #{e.message}"
+      end
+
+      log.info "Connection opened to Elasticsearch cluster => #{get_connection_options.inspect}"
+      es
     end
-    raise "Can not reach Elasticsearch cluster (#{get_connection_options.inspect})!" unless @_es.ping
-    @_es
   end
 
   def get_connection_options
