@@ -55,12 +55,12 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       es = Elasticsearch::Client.new transport: transport
 
       begin
-        raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{get_connection_options.inspect})!" unless es.ping
+        raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description})!" unless es.ping
       rescue Faraday::ConnectionFailed => e
-        raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{get_connection_options.inspect})! #{e.message}"
+        raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description})! #{e.message}"
       end
 
-      log.info "Connection opened to Elasticsearch cluster => #{get_connection_options.inspect}"
+      log.info "Connection opened to Elasticsearch cluster => #{connection_options_description}"
       es
     end
   end
@@ -96,6 +96,14 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     {
       hosts: hosts
     }
+  end
+
+  def connection_options_description
+    get_connection_options[:hosts].map do |host_info|
+      attributes = host_info.dup
+      attributes[:password] = 'obfuscated' if attributes.has_key?(:password)
+      attributes.inspect
+    end.join(', ')
   end
 
   def format(tag, time, record)
