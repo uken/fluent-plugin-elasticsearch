@@ -155,7 +155,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     retries = 0
     begin
       client.bulk body: data
-    rescue Faraday::ConnectionFailed => e
+    rescue Faraday::ConnectionFailed, Faraday::TimeoutError => e
       if retries < 2
         retries += 1
         @_es = nil
