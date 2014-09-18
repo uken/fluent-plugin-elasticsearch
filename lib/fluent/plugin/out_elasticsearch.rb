@@ -23,6 +23,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :id_key, :string, :default => nil
   config_param :parent_key, :string, :default => nil
   config_param :request_timeout, :time, :default => 5
+  config_param :time_key, :string, :default => "timestamp"
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -111,6 +112,9 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         end
       else
         target_index = @index_name
+      end
+      if !@logstash_format and @time_key
+        record.merge!({@time_key => Time.at(time).to_datetime.to_s}) unless record.has_key?(@time_key)
       end
 
       if @include_tag_key
