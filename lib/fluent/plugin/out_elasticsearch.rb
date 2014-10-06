@@ -5,6 +5,8 @@ require 'elasticsearch'
 require 'uri'
 
 class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
+  class ConnectionFailure < StandardError; end
+
   Fluent::Plugin.register_output('elasticsearch', self)
 
   config_param :host, :string,  :default => 'localhost'
@@ -50,10 +52,17 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
                                                                               request: { timeout: @request_timeout }
                                                                             }
                                                                           }), &adapter_conf)
-      Elasticsearch::Client.new transport: transport
+      es = Elasticsearch::Client.new transport: transport
+
+      begin
+        raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description})!" unless es.ping
+      rescue Faraday::ConnectionFailed => e
+        raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description})! #{e.message}"
+      end
+
+      log.info "Connection opened to Elasticsearch cluster => #{connection_options_description}"
+      es
     end
-    raise "Can not reach Elasticsearch cluster (#{get_connection_options.inspect})!" unless @_es.ping
-    @_es
   end
 
   def get_connection_options
@@ -87,6 +96,14 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     {
       hosts: hosts
     }
+  end
+
+  def connection_options_description
+    get_connection_options[:hosts].map do |host_info|
+      attributes = host_info.dup
+      attributes[:password] = 'obfuscated' if attributes.has_key?(:password)
+      attributes.inspect
+    end.join(', ')
   end
 
   def format(tag, time, record)
@@ -135,6 +152,18 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   end
 
   def send(data)
-    client.bulk body: data
+    retries = 0
+    begin
+      client.bulk body: data
+    rescue Faraday::ConnectionFailed, Faraday::TimeoutError => e
+      if retries < 2
+        retries += 1
+        @_es = nil
+        log.warn "Could not push logs to Elasticsearch, resetting connection and trying again. #{e.message}"
+        sleep 2**retries
+        retry
+      end
+      raise ConnectionFailure, "Could not push logs to Elasticsearch after #{retries} retries. #{e.message}"
+    end
   end
 end

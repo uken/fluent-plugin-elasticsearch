@@ -413,4 +413,23 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.emit("some garbage string")
     driver.run
   end
+
+  def test_connection_failed_retry
+    connection_resets = 0
+
+    stub_elastic_ping(url="http://localhost:9200").with do |req|
+      connection_resets += 1
+    end
+
+    stub_request(:post, "http://localhost:9200/_bulk").with do |req|
+      raise Faraday::ConnectionFailed, "Test message"
+    end
+
+    driver.emit(sample_record)
+
+    assert_raise(Fluent::ElasticsearchOutput::ConnectionFailure) {
+      driver.run
+    }
+    assert_equal(connection_resets, 3)
+  end
 end
