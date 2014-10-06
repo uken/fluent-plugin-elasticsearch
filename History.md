@@ -3,6 +3,13 @@
 ### Future
 
 
+### 0.5.0
+
+- add full connection URI support (#65)
+- use `@timestamp` for index (#41)
+- add support for elasticsearch gem version 1 (#71)
+- fix connection reset & retry when connection is lost (#67)
+
 ### 0.4.0
 
 - add `request_timeout` config (#59)
@@ -39,7 +46,6 @@
 ### 0.1.1
 
 - fix timezone in logstash key
-
 
 ### 0.1.0
 
