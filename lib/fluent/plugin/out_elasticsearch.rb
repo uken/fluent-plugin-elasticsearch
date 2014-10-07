@@ -71,7 +71,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     hosts = if @hosts
       @hosts.split(',').map do |host_str|
         # Support legacy hosts format host:port,host:port,host:port...
-        if host_str.match(%r{^[^:]+\:\d+$})
+        if host_str.match(%r{^[^:]+(\:\d+)?$})
           {
             host:   host_str.split(':')[0],
             port:   (host_str.split(':')[1] || @port).to_i,

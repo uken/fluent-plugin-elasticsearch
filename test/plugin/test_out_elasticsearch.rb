@@ -76,19 +76,24 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_legacy_hosts_list
     config = %{
-      hosts    host1:50,host2:100
+      hosts    host1:50,host2:100,host3
       scheme   https
       path     /es/
+      port     123
     }
     instance = driver('test', config).instance
 
-    assert_equal 2, instance.get_connection_options[:hosts].length
-    host1, host2 = instance.get_connection_options[:hosts]
+    assert_equal 3, instance.get_connection_options[:hosts].length
+    host1, host2, host3 = instance.get_connection_options[:hosts]
 
     assert_equal 'host1', host1[:host]
     assert_equal 50, host1[:port]
     assert_equal 'https', host1[:scheme]
     assert_equal '/es/', host2[:path]
+    assert_equal 'host3', host3[:host]
+    assert_equal 123, host3[:port]
+    assert_equal 'https', host3[:scheme]
+    assert_equal '/es/', host3[:path]
   end
 
   def test_hosts_list
