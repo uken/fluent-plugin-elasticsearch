@@ -3,6 +3,10 @@
 ### Future
 
 
+### 0.5.1
+
+- fix legacy hosts option, port should be optional (#75)
+
 ### 0.5.0
 
 - add full connection URI support (#65)
