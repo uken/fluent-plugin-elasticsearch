@@ -1,7 +1,7 @@
 ## Changelog
 
 ### Future
-
+- added `reload_on_failure` and `reload_connections` flags (#78)
 
 ### 0.5.1
 
