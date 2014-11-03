@@ -3,7 +3,7 @@ $:.push File.expand_path('../lib', __FILE__)
 
 Gem::Specification.new do |s|
   s.name          = 'fluent-plugin-elasticsearch'
-  s.version       = '0.6.0'
+  s.version       = '0.6.1'
   s.authors       = ['diogo', 'pitr']
   s.email         = ['pitr@uken.com', 'diogo@uken.com']
   s.description   = %q{ElasticSearch output plugin for Fluent event collector}
@@ -16,7 +16,7 @@ Gem::Specification.new do |s|
   s.test_files    = s.files.grep(%r{^(test|spec|features)/})
   s.require_paths = ['lib']
 
-  s.add_runtime_dependency 'fluentd', '~> 0'
+  s.add_runtime_dependency 'fluentd', '>= 0.10.43'
   s.add_runtime_dependency 'patron', '~> 0'
   s.add_runtime_dependency 'elasticsearch', '>= 0'
 
