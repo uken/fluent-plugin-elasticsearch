@@ -27,6 +27,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :request_timeout, :time, :default => 5
   config_param :reload_connections, :bool, :default => true
   config_param :reload_on_failure, :bool, :default => false
+  config_param :msec_key, :string, :default => 'msec'
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -123,7 +124,10 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     chunk.msgpack_each do |tag, time, record|
       next unless record.is_a? Hash
       if @logstash_format
-        if record.has_key?("@timestamp")
+        if record[@msec_key]
+          record.merge!({"@timestamp" => Time.at(time, record[@msec_key].to_i * 1000).strftime("%Y-%m-%dT%H:%M:%S.%L%z")})
+          record.delete(@msec_key)
+        elsif record.has_key?("@timestamp")
           time = Time.parse record["@timestamp"]
         else
           record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
