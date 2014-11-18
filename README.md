@@ -110,6 +110,12 @@ reload_on_failure true # defaults to false
 Indicates that the elasticsearch-transport will try to reload the nodes addresses if there is a failure while making the
 request, this can be useful to quickly remove a dead node from the list of addresses.
 
+```
+bulk_size 1000 # defaults to 500
+```
+
+Specify how many records are inserted into ElasticSearch at once using a bulk request.
+
 ---
 
 ```
