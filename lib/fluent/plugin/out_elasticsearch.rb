@@ -27,6 +27,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :request_timeout, :time, :default => 5
   config_param :reload_connections, :bool, :default => true
   config_param :reload_on_failure, :bool, :default => false
+  config_param :bulk_size, :integer, :default => 500
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -161,7 +162,9 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   def send(data)
     retries = 0
     begin
-      client.bulk body: data
+      data.each_slice(@bulk_size) do |x|
+        client.bulk body: x
+      end
     rescue Faraday::ConnectionFailed, Faraday::TimeoutError => e
       if retries < 2
         retries += 1
