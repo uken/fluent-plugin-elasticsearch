@@ -30,7 +30,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def stub_elastic_ping(url="http://localhost:9200")
-    stub_request(:head, url).with.to_return(:status => 200, :body => "", :headers => {})
+    stub_request(:head, url).to_return(:status => 200, :body => "", :headers => {})
   end
 
   def stub_elastic(url="http://localhost:9200/_bulk")
