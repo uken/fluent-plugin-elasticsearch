@@ -27,6 +27,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :request_timeout, :time, :default => 5
   config_param :reload_connections, :bool, :default => true
   config_param :reload_on_failure, :bool, :default => false
+  config_param :time_key, :string, :default => nil
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -125,6 +126,9 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       if @logstash_format
         if record.has_key?("@timestamp")
           time = Time.parse record["@timestamp"]
+        elsif record.has_key?(@time_key)
+          time = Time.parse record[@time_key]
+          record['@timestamp'] = record[@time_key]
         else
           record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
         end
