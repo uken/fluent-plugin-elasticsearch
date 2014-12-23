@@ -79,6 +79,32 @@ By default, when inserting records in logstash format, @timestamp is dynamically
 {"@timestamp":"2014-04-07T000:00:00-00:00"}
 ```
 
+You can specify an option `time_key` (like the option described in [tail Input Plugin](http://docs.fluentd.org/articles/in_tail)) if you don't like `@timestamp`.
+
+Suppose you have settings
+
+```
+logstash_format true
+time_key vtm
+```
+
+Your input is:
+```
+{
+  "title": "developer",
+  "vtm": "2014-12-19T08:01:03Z"
+}
+```
+
+The output will be
+```
+{
+  "title": "developer",
+  "@timstamp": "2014-12-19T08:01:03Z",
+  "vtm": "2014-12-19T08:01:03Z"
+}
+```
+
 By default, the records inserted into index `logstash-YYMMDD`. This option allows to insert into specified index like `logstash-YYYYMM` for a monthly index.
 
 ```
