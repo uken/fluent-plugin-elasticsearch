@@ -2,6 +2,9 @@
 
 ### Future
 
+### 0.7.0
+- Add new option `time_key` (#85)
+
 ### 0.6.1
 - 0.10.43 is minimum version required of fluentd (#79)
 
