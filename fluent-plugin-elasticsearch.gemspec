@@ -19,6 +19,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'fluentd', '>= 0.10.43'
   s.add_runtime_dependency 'patron', '~> 0'
   s.add_runtime_dependency 'elasticsearch', '>= 0'
+  s.add_runtime_dependency "yajl-ruby", "~> 1.0"
 
   s.add_development_dependency 'rake', '~> 0'
   s.add_development_dependency 'webmock', '~> 1'

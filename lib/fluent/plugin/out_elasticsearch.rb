@@ -154,8 +154,8 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         meta['index']['_parent'] = record[@parent_key]
       end
 
-      bulk_message << meta
-      bulk_message << record
+      bulk_message << Yajl::Encoder.encode(meta)
+      bulk_message << Yajl::Encoder.encode(record)
     end
 
     send(bulk_message) unless bulk_message.empty?
