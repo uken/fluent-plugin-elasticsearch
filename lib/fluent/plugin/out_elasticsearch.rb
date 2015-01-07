@@ -153,9 +153,16 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       if @parent_key && record[@parent_key]
         meta['index']['_parent'] = record[@parent_key]
       end
+      
+      record.each_pair { |k, v|
+        if v.is_a?(String)
+          v.force_encoding('ISO-8859-1') if v.encoding == Encoding::BINARY
+          v.encode!('utf-8', 'ISO-8859-1', :invalid => :replace, :undef => :replace)
+        end
+      }
 
-      bulk_message << Yajl::Encoder.encode(meta)
-      bulk_message << Yajl::Encoder.encode(record)
+      bulk_message << meta
+      bulk_message << record
     end
 
     send(bulk_message) unless bulk_message.empty?
