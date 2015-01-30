@@ -415,6 +415,15 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert(!index_cmds[0]['index'].has_key?('_parent'))
   end
 
+  def test_uses_correct_op_type
+    driver.configure("op_type create\n")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert(index_cmds[0]['create'])
+  end
+
   def test_request_error
     stub_elastic_ping
     stub_elastic_unavailable
