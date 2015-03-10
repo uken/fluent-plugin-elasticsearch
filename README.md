@@ -70,6 +70,12 @@ logstash_prefix mylogs # defaults to "logstash"
 By default, the records inserted into index `logstash-YYMMDD`. This option allows to insert into specified index like `mylogs-YYMMDD`.
 
 ```
+logstash_prefix ${tag_parts[1]}
+```
+
+To use parts of the tag for a dynamic index, you can use the special `${tag_parts[n]}` syntax. This splits the tag on `.` & uses the specified part of the tag. You can of course use multiple tag_parts calls, e.g. `${tag_parts[1]}-${tag_parts[0]}`.
+
+```
 logstash_dateformat %Y.%m. # defaults to "%Y.%m.%d"
 ```
 
