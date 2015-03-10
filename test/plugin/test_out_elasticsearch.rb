@@ -278,6 +278,18 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
 
+  def test_writes_to_logstash_index_with_specified_interpolated_prefix
+    driver("part1.part2").configure("logstash_format true
+                      logstash_prefix ${tag_parts[1]}")
+    time = Time.parse Date.today.to_s
+    logstash_index = "part2-#{time.getutc.strftime("%Y.%m.%d")}"
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record, time)
+    driver.run
+    assert_equal(logstash_index, index_cmds.first['index']['_index'])
+  end
+
     def test_writes_to_logstash_index_with_specified_dateformat
     driver.configure("logstash_format true
                       logstash_dateformat %Y.%m")
