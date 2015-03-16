@@ -1,7 +1,8 @@
 # encoding: UTF-8
 require 'date'
-require 'patron'
+require 'curb'
 require 'elasticsearch'
+require 'elasticsearch/transport/transport/http/curb'
 require 'uri'
 
 class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
@@ -46,8 +47,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
   def client
     @_es ||= begin
-      adapter_conf = lambda {|f| f.adapter :patron }
-      transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(get_connection_options.merge(
+      transport = Elasticsearch::Transport::Transport::HTTP::Curb.new(get_connection_options.merge(
                                                                           options: {
                                                                             reload_connections: @reload_connections,
                                                                             reload_on_failure: @reload_on_failure,
@@ -55,12 +55,13 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
                                                                             transport_options: {
                                                                               request: { timeout: @request_timeout }
                                                                             }
-                                                                          }), &adapter_conf)
+                                                                          }))
+
       es = Elasticsearch::Client.new transport: transport
 
       begin
         raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description})!" unless es.ping
-      rescue Faraday::ConnectionFailed => e
+      rescue *es.transport.host_unreachable_exceptions => e
         raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description})! #{e.message}"
       end
 
@@ -166,7 +167,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     retries = 0
     begin
       client.bulk body: data
-    rescue Faraday::ConnectionFailed, Faraday::TimeoutError => e
+    rescue *client.transport.host_unreachable_exceptions => e
       if retries < 2
         retries += 1
         @_es = nil
