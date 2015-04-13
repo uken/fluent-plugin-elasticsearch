@@ -28,6 +28,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :reload_connections, :bool, :default => true
   config_param :reload_on_failure, :bool, :default => false
   config_param :time_key, :string, :default => nil
+  config_param :tag_as_type, :bool, :default => false
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -143,6 +144,12 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
       if @include_tag_key
         record.merge!(@tag_key => tag)
+      end
+
+      if @tag_as_type
+        type_name = tag.split(".").last
+      else
+        type_name = @type_name
       end
 
       meta = { "index" => {"_index" => target_index, "_type" => type_name} }

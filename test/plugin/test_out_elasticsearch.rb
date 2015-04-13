@@ -157,6 +157,15 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal('fluentd', index_cmds.first['index']['_type'])
   end
 
+  def test_writes_tag_as_type
+    driver.configure("tag_as_type true\n")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert_equal('test', index_cmds.first['index']['_type'])
+  end
+
   def test_writes_to_speficied_index
     driver.configure("index_name myindex\n")
     stub_elastic_ping
