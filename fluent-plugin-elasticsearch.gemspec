@@ -17,8 +17,9 @@ Gem::Specification.new do |s|
   s.require_paths = ['lib']
 
   s.add_runtime_dependency 'fluentd', '>= 0.10.43'
-  s.add_runtime_dependency 'patron', '~> 0'
+  s.add_runtime_dependency 'excon', '>= 0'
   s.add_runtime_dependency 'elasticsearch', '>= 0'
+
 
   s.add_development_dependency 'rake', '~> 0'
   s.add_development_dependency 'webmock', '~> 1'

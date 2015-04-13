@@ -1,6 +1,6 @@
 # encoding: UTF-8
 require 'date'
-require 'patron'
+require 'excon'
 require 'elasticsearch'
 require 'uri'
 
@@ -46,7 +46,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
   def client
     @_es ||= begin
-      adapter_conf = lambda {|f| f.adapter :patron }
+      adapter_conf = lambda {|f| f.adapter :excon }
       transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(get_connection_options.merge(
                                                                           options: {
                                                                             reload_connections: @reload_connections,
@@ -60,7 +60,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
       begin
         raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description})!" unless es.ping
-      rescue Faraday::ConnectionFailed => e
+      rescue *es.transport.host_unreachable_exceptions => e
         raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description})! #{e.message}"
       end
 
@@ -166,7 +166,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     retries = 0
     begin
       client.bulk body: data
-    rescue Faraday::ConnectionFailed, Faraday::TimeoutError => e
+    rescue *client.transport.host_unreachable_exceptions => e
       if retries < 2
         retries += 1
         @_es = nil
