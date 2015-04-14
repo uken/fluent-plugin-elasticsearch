@@ -1,6 +1,6 @@
 # encoding: UTF-8
 require 'date'
-require 'excon'
+require 'httpclient'
 require 'elasticsearch'
 require 'uri'
 
@@ -46,7 +46,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
   def client
     @_es ||= begin
-      adapter_conf = lambda {|f| f.adapter :excon }
+      adapter_conf = lambda {|f| f.adapter :httpclient }
       transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(get_connection_options.merge(
                                                                           options: {
                                                                             reload_connections: @reload_connections,
