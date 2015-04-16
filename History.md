@@ -2,6 +2,9 @@
 
 ### Future
 
+### 0.8.0
+- Replace Patron with Excon HTTP client
+
 ### 0.7.0
 - Add new option `time_key` (#85)
 
