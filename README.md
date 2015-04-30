@@ -73,6 +73,8 @@ By default, the records inserted into index `logstash-YYMMDD`. This option allow
 logstash_dateformat %Y.%m. # defaults to "%Y.%m.%d"
 ```
 
+By default, the records inserted into index `logstash-YYMMDD`. This option allows to insert into specified index like `logstash-YYYYMM` for a monthly index.
+
 By default, when inserting records in logstash format, @timestamp is dynamically created with the time at log ingestion. If you'd like to use a custom time. Include an @timestamp with your record.
 
 ```
@@ -104,8 +106,6 @@ The output will be
   "vtm": "2014-12-19T08:01:03Z"
 }
 ```
-
-By default, the records inserted into index `logstash-YYMMDD`. This option allows to insert into specified index like `logstash-YYYYMM` for a monthly index.
 
 ```
 utc_index true
