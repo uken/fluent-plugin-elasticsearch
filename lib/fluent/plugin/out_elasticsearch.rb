@@ -28,6 +28,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :reload_connections, :bool, :default => true
   config_param :reload_on_failure, :bool, :default => false
   config_param :time_key, :string, :default => nil
+  config_param :op_type, :string, :default => "index"
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -145,13 +146,13 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         record.merge!(@tag_key => tag)
       end
 
-      meta = { "index" => {"_index" => target_index, "_type" => type_name} }
+      meta = { @op_type => {"_index" => target_index, "_type" => type_name} }
       if @id_key && record[@id_key]
-        meta['index']['_id'] = record[@id_key]
+        meta[@op_type]['_id'] = record[@id_key]
       end
 
       if @parent_key && record[@parent_key]
-        meta['index']['_parent'] = record[@parent_key]
+        meta[@op_type]['_parent'] = record[@parent_key]
       end
 
       bulk_message << meta
