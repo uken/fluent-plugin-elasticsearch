@@ -19,6 +19,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :logstash_format, :bool, :default => false
   config_param :logstash_prefix, :string, :default => "logstash"
   config_param :logstash_dateformat, :string, :default => "%Y.%m.%d"
+  config_param :allow_overrides, :bool, :default => false
   config_param :utc_index, :bool, :default => true
   config_param :type_name, :string, :default => "fluentd"
   config_param :index_name, :string, :default => "fluentd"
@@ -146,13 +147,30 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       end
 
       meta = { "index" => {"_index" => target_index, "_type" => type_name} }
+      if @allow_overrides && record.has_key?("_index")
+        meta['index']['_index'] = record['_index']
+      end
+
+      if @allow_overrides && record.has_key?("_type")
+        meta['index']['_type'] = record['_type']
+      end
+
       if @id_key && record[@id_key]
         meta['index']['_id'] = record[@id_key]
+      end
+
+      if @allow_overrides && record.has_key?('_id')
+        meta['index']['_id'] = record['_id']
       end
 
       if @parent_key && record[@parent_key]
         meta['index']['_parent'] = record[@parent_key]
       end
+
+      if @allow_overrides && record.has_key?('_parent')
+        meta['index']['_parent'] = record['_parent']
+      end
+
 
       bulk_message << meta
       bulk_message << record
