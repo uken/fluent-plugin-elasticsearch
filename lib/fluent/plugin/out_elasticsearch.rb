@@ -120,6 +120,12 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     super
   end
 
+  def interpolate(tag, str)
+    tag_parts = tag.split('.')
+
+    str.gsub(/\$\{tag_parts\[(\d+)\]\}/) { |m| tag_parts[$1.to_i] }
+  end
+
   def write(chunk)
     bulk_message = []
 
@@ -134,10 +140,13 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         else
           record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
         end
+
+        logstash_prefix = interpolate(tag, @logstash_prefix)
+
         if @utc_index
-          target_index = "#{@logstash_prefix}-#{Time.at(time).getutc.strftime("#{@logstash_dateformat}")}"
+          target_index = "#{logstash_prefix}-#{Time.at(time).getutc.strftime("#{@logstash_dateformat}")}"
         else
-          target_index = "#{@logstash_prefix}-#{Time.at(time).strftime("#{@logstash_dateformat}")}"
+          target_index = "#{logstash_prefix}-#{Time.at(time).strftime("#{@logstash_dateformat}")}"
         end
       else
         target_index = @index_name
