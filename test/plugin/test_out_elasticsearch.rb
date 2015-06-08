@@ -29,6 +29,10 @@ class ElasticsearchOutput < Test::Unit::TestCase
     {'age' => 26, 'request_id' => '42', 'parent_id' => 'parent'}
   end
 
+  def sample_record_allow_overrides
+    {'_index' => 'my_index', '_type' => 'my_type', '_id' => 'my_id', '_parent' => 'my_parent_id'}
+  end
+
   def stub_elastic_ping(url="http://localhost:9200")
     stub_request(:head, url).to_return(:status => 200, :body => "", :headers => {})
   end
@@ -449,4 +453,65 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
     assert_equal(connection_resets, 3)
   end
+
+  def test_allow_override_keeps_index
+    stub_elastic_ping
+    stub_elastic
+
+    driver.configure("allow_overrides false")
+    driver.emit(sample_record_allow_overrides)
+    driver.run
+    assert_not_equal(sample_record_allow_overrides['_index'], index_cmds.first['index']['_index'])
+
+    driver.configure("allow_overrides true")
+    driver.emit(sample_record_allow_overrides)
+    driver.run
+    assert_equal(sample_record_allow_overrides['_index'], index_cmds.first['index']['_index'])
+  end
+
+  def test_allow_override_keeps_type
+    stub_elastic_ping
+    stub_elastic
+
+    driver.configure("allow_overrides false")
+    driver.emit(sample_record_allow_overrides)
+    driver.run
+    assert_not_equal(sample_record_allow_overrides['_type'], index_cmds.first['index']['_type'])
+
+    driver.configure("allow_overrides true")
+    driver.emit(sample_record_allow_overrides)
+    driver.run
+    assert_equal(sample_record_allow_overrides['_type'], index_cmds.first['index']['_type'])
+  end
+
+  def test_allow_override_keeps_id
+    stub_elastic_ping
+    stub_elastic
+
+    driver.configure("allow_overrides false")
+    driver.emit(sample_record_allow_overrides)
+    driver.run
+    assert_not_equal(sample_record_allow_overrides['_id'], index_cmds.first['index']['_id'])
+
+    driver.configure("allow_overrides true")
+    driver.emit(sample_record_allow_overrides)
+    driver.run
+    assert_equal(sample_record_allow_overrides['_id'], index_cmds.first['index']['_id'])
+  end
+
+  def test_allow_override_keeps_parent
+    stub_elastic_ping
+    stub_elastic
+
+    driver.configure("allow_overrides false")
+    driver.emit(sample_record_allow_overrides)
+    driver.run
+    assert_not_equal(sample_record_allow_overrides['_parent'], index_cmds.first['index']['_parent'])
+
+    driver.configure("allow_overrides true")
+    driver.emit(sample_record_allow_overrides)
+    driver.run
+    assert_equal(sample_record_allow_overrides['_parent'], index_cmds.first['index']['_parent'])
+  end
+
 end

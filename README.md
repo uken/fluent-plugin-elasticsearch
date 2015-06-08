@@ -202,6 +202,28 @@ Please consider using [fluent-plugin-forest](https://github.com/tagomoris/fluent
 </match>
 ```
 
+---
+
+Sometimes, though, you may not have configuration access to the collector that's pushing data to your elastic search cluster.  This can limit your options for setting your own `_id`, `_index`, `_type`, and `_parent` values which may be calculated on your own software or in your own fluentd collectors.  Setting `allow_overrides` to `true` in this plugin will allow other fluentd collectors to set these values themselves before sending them to this collector.  This plugin will modify these values if they already exist.
+
+For example, you could have one machine that injects an `_index` value of `api-2015.05.21`.  You could have another machine that injects an `_index` value of `www-2015.05.21`.  Both forward their data, for example, to the fluentd collector `es-collector` with the following config:
+
+```
+host localhost
+port 9200
+index_name fluentd
+type_name fluentd
+user demo
+password secret
+logstash_format true
+logstash_prefix mylogs
+allow_overrides true
+```
+
+For these two particular machines, they'll have their data put in the `api-2015.05.21` and `www-2015.05.21` indexes respectively.  For all other machines forwarding to this `es-collector`, they'd have their data put in the `mylogs-2015.05.21`.  This allows there to be a collector that deals with pushing to elastic search when it comes ot host names, ports, passwords, and etc, yet allows the option for determining the index, id, parent, and type on a different machine.
+
+---
+
 ## Contributing
 
 1. Fork it
