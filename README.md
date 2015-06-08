@@ -31,6 +31,8 @@ This plugin creates ElasticSearch indices by merely writing to them. Consider us
 
 **More options:**
 
+**hosts**
+
 ```
 hosts host1:port1,host2:port2,host3:port3
 ```
@@ -45,6 +47,8 @@ You can specify multiple elasticsearch hosts with separator ",".
 
 If you specify multiple hosts, this plugin will load balance updates to elasticsearch. This is an [elasticsearch-ruby](https://github.com/elasticsearch/elasticsearch-ruby) feature, the default strategy is round-robin.
 
+**user, password, path, scheme, ssl_verify**
+
 If you specify this option, host and port options are ignored.
 
 ```
@@ -56,6 +60,9 @@ scheme https
 
 You can specify user and password for HTTP basic auth. If used in conjunction with a hosts list, then these options will be used by default i.e. if you do not provide any of these options within the hosts listed.
 
+Specify `ssl_verify false` to skip ssl verification (defaults to true)
+
+**logstash_format**
 
 ```
 logstash_format true # defaults to false
@@ -63,17 +70,21 @@ logstash_format true # defaults to false
 
 This is meant to make writing data into elasticsearch compatible to what logstash writes. By doing this, one could take advantade of [kibana](http://kibana.org/).
 
+**logstash_prefix**
+
 ```
 logstash_prefix mylogs # defaults to "logstash"
 ```
 
-By default, the records inserted into index `logstash-YYMMDD`. This option allows to insert into specified index like `mylogs-YYMMDD`.
+**logstash_dateformat**
+
+By default, the records inserted into index `logstash-YYMMDD`. This option allows to insert into specified index like `mylogs-YYYYMM` for a monthly index.
 
 ```
 logstash_dateformat %Y.%m. # defaults to "%Y.%m.%d"
 ```
 
-By default, the records inserted into index `logstash-YYMMDD`. This option allows to insert into specified index like `logstash-YYYYMM` for a monthly index.
+**time_key**
 
 By default, when inserting records in logstash format, @timestamp is dynamically created with the time at log ingestion. If you'd like to use a custom time. Include an @timestamp with your record.
 
@@ -107,11 +118,15 @@ The output will be
 }
 ```
 
+**utc_index**
+
 ```
 utc_index true
 ```
 
 By default, the records inserted into index `logstash-YYMMDD` with utc (Coordinated Universal Time). This option allows to use local time if you describe utc_index to false.
+
+**request_timeout**
 
 ```
 request_timeout 15s # defaults to 5s
@@ -121,13 +136,15 @@ You can specify HTTP request timeout.
 
 This is useful when Elasticsearch cannot return response for bulk request within the default of 5 seconds.
 
+**reload_connections**
+
 ```
 reload_connections false # defaults to true
 ```
 
-You can tune how the elasticsearch-transport host reloading feature works. By default it will reload the host list from the server
-every 10,000th request to spread the load. This can be an issue if your ElasticSearch cluster is behind a Reverse Proxy,
-as fluentd process may not have direct network access to the ElasticSearch nodes.
+**reload_on_failure**
+
+You can tune how the elasticsearch-transport host reloading feature works. By default it will reload the host list from the server every 10,000th request to spread the load. This can be an issue if your ElasticSearch cluster is behind a Reverse Proxy, as fluentd process may not have direct network access to the ElasticSearch nodes.
 
 ```
 reload_on_failure true # defaults to false
@@ -136,7 +153,7 @@ reload_on_failure true # defaults to false
 Indicates that the elasticsearch-transport will try to reload the nodes addresses if there is a failure while making the
 request, this can be useful to quickly remove a dead node from the list of addresses.
 
----
+**include_tag_key, tag_key**
 
 ```
 include_tag_key true # defaults to false
@@ -159,7 +176,7 @@ The record inserted into elasticsearch would be
 {"_key":"my.logs", "name":"Johnny Doeie"}
 ```
 
----
+**id_key**
 
 ```
 id_key request_id # use "request_id" field as a record id in ES
@@ -174,7 +191,7 @@ This following record `{"name":"Johnny","request_id":"87d89af7daffad6"}` will tr
 { "name": "Johnny", "request_id": "87d89af7daffad6" }
 ```
 
----
+**Buffered output options**
 
 fluentd-plugin-elasticsearch is a buffered output that uses elasticseach's bulk API. So additional buffer configuration would be (with default values):
 
@@ -186,9 +203,9 @@ retry_wait 1.0
 num_threads 1
 ```
 
----
+**Not seeing a config you need?**
 
-Please consider using [fluent-plugin-forest](https://github.com/tagomoris/fluent-plugin-forest) to send multiple logs to multiple ElasticSearch indices:
+We try to keep the scope of this plugin small. If you need more configuration options, please consider using [fluent-plugin-forest](https://github.com/tagomoris/fluent-plugin-forest). For example, to configure multiple tags to be sent to different ElasticSearch indices:
 
 ```
 <match my.logs.*>
