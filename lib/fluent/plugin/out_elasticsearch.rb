@@ -127,10 +127,21 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       next unless record.is_a? Hash
       if @logstash_format
         if record.has_key?("@timestamp")
-          time = Time.parse record["@timestamp"]
+          begin
+            time = Time.parse record["@timestamp"]
+          rescue ArgumentError, TypeError => e
+            log.warn "Invalid @timestamp value in log data - error: #{e.message}, record: #{record}"
+            record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
+          end
         elsif record.has_key?(@time_key)
-          time = Time.parse record[@time_key]
-          record['@timestamp'] = record[@time_key]
+          begin
+            time = Time.parse record[@time_key]
+            record["@timestamp"] = record[@time_key]
+          rescue ArgumentError, TypeError => e
+            log.warn "Invalid time key #{@time_key} value in log data - error: #{e.message}, record: #{record}"
+            record[@time_key] = Time.at(time).to_datetime.to_s
+            record["@timestamp"] = record[@time_key]
+          end
         else
           record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
         end

@@ -345,6 +345,72 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(index_cmds[1]['@timestamp'], ts)
   end
 
+  def test_handles_logstash_timestamp_nil_conversion_error
+    driver.configure("logstash_format true")
+    time = Time.parse Date.today.to_s
+    logstash_index = "logstash-#{time.getutc.strftime("%Y.%m.%d")}"
+
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record.merge('@timestamp' => nil), time)
+    driver.run
+
+    assert_equal(logstash_index, index_cmds.first['index']['_index'])
+    assert_equal(index_cmds[1]['@timestamp'], time.to_datetime.to_s)
+  end
+
+  def test_handles_logstash_timestamp_parse_error
+    driver.configure("logstash_format true")
+    time = Time.parse Date.today.to_s
+    logstash_index = "logstash-#{time.getutc.strftime("%Y.%m.%d")}"
+
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record.merge('@timestamp' => "garbage"), time)
+    driver.run
+
+    assert_equal(logstash_index, index_cmds.first['index']['_index'])
+    assert_equal(index_cmds[1]['@timestamp'], time.to_datetime.to_s)
+  end
+
+  def test_handles_logstash_time_key_nil_conversion_error
+    driver.configure(%{
+      logstash_format true
+      time_key mytime
+    })
+
+    time = Time.parse Date.today.to_s
+    logstash_index = "logstash-#{time.getutc.strftime("%Y.%m.%d")}"
+
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record.merge('mytime' => nil), time)
+    driver.run
+
+    assert_equal(logstash_index, index_cmds.first['index']['_index'])
+    assert_equal(index_cmds[1]['@timestamp'], time.to_datetime.to_s)
+  end
+
+  def test_handles_logstash_time_key_parse_error
+    stub_elastic_ping
+    stub_elastic
+    driver.configure(%{
+      logstash_format true
+      time_key mytime
+    })
+
+    time = Time.parse Date.today.to_s
+    logstash_index = "logstash-#{time.getutc.strftime("%Y.%m.%d")}"
+
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record.merge('mytime' => "garbage"), time)
+    driver.run
+
+    assert_equal(logstash_index, index_cmds.first['index']['_index'])
+    assert_equal(index_cmds[1]['@timestamp'], time.to_datetime.to_s)
+  end
+
   def test_doesnt_add_tag_key_by_default
     stub_elastic_ping
     stub_elastic
@@ -449,4 +515,5 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
     assert_equal(connection_resets, 3)
   end
+
 end
