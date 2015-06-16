@@ -28,6 +28,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :reload_connections, :bool, :default => true
   config_param :reload_on_failure, :bool, :default => false
   config_param :time_key, :string, :default => nil
+  config_param :ssl_verify , :bool, :default => true
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -53,7 +54,8 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
                                                                             reload_on_failure: @reload_on_failure,
                                                                             retry_on_failure: 5,
                                                                             transport_options: {
-                                                                              request: { timeout: @request_timeout }
+                                                                              request: { timeout: @request_timeout },
+                                                                              ssl: { verify: @ssl_verify }
                                                                             }
                                                                           }), &adapter_conf)
       es = Elasticsearch::Client.new transport: transport
