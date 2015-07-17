@@ -3,6 +3,7 @@ require 'date'
 require 'excon'
 require 'elasticsearch'
 require 'uri'
+require 'objspace'
 
 class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   class ConnectionFailure < StandardError; end
@@ -29,6 +30,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :reload_on_failure, :bool, :default => false
   config_param :time_key, :string, :default => nil
   config_param :ssl_verify , :bool, :default => true
+  config_param :max_size, :integer, :default => 32000
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -156,8 +158,12 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         meta['index']['_parent'] = record[@parent_key]
       end
 
-      bulk_message << meta
-      bulk_message << record
+      if ObjectSpace.memsize_of(record) < @max_size
+        bulk_message << meta
+        bulk_message << record
+      else
+        log.info "Could not send log to Elasticsearch: the size of log exceeded max_size"
+      end
     end
 
     send(bulk_message) unless bulk_message.empty?
