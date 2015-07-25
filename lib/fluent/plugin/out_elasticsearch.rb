@@ -12,7 +12,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :host, :string,  :default => 'localhost'
   config_param :port, :integer, :default => 9200
   config_param :user, :string, :default => nil
-  config_param :password, :string, :default => nil
+  config_param :password, :string, :default => nil, :secret => true
   config_param :path, :string, :default => nil
   config_param :scheme, :string, :default => 'http'
   config_param :hosts, :string, :default => nil
