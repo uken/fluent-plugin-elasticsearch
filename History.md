@@ -2,6 +2,9 @@
 
 ### Future
 
+### 1.0.0
+- password config param is now marked as secret and won't be displayed in logs.
+
 ### 0.9.0
 - Add `ssl_verify` option (#108)
 
