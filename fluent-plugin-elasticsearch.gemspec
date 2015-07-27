@@ -23,4 +23,6 @@ Gem::Specification.new do |s|
 
   s.add_development_dependency 'rake', '~> 0'
   s.add_development_dependency 'webmock', '~> 1'
+  s.add_development_dependency 'test-unit', '~> 3.1.0'
+  s.add_development_dependency 'minitest', '~> 5.7.0'
 end
