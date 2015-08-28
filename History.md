@@ -1,6 +1,7 @@
 ## Changelog
 
 ### Future
+- Support SSL client verification and custom CA file (#123)
 
 ### 1.0.0
 - password config param is now marked as secret and won't be displayed in logs.
