@@ -203,6 +203,20 @@ retry_wait 1.0
 num_threads 1
 ```
 
+**Client/host certificate options**
+
+Need to verify ElasticSearch's certificate?  You can use the following parameter to specify a CA instead of using an environment variable.
+```
+ca_file /path/to/your/ca/cert
+```
+
+Does your ElasticSearch cluster want to verify client connections?  You can specify the following parameters to use your client certificate, key, and key password for your connection.
+```
+client_cert /path/to/your/client/cert
+client_key /path/to/your/private/key
+client_key_pass password
+```
+
 **Not seeing a config you need?**
 
 We try to keep the scope of this plugin small. If you need more configuration options, please consider using [fluent-plugin-forest](https://github.com/tagomoris/fluent-plugin-forest). For example, to configure multiple tags to be sent to different ElasticSearch indices:
