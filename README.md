@@ -76,6 +76,23 @@ This is meant to make writing data into elasticsearch compatible to what logstas
 logstash_prefix mylogs # defaults to "logstash"
 ```
 
+**logstash_prefix_key**
+
+When present, read a dynamic prefix defined by this key in the input record
+instead of using `logstash_prefix`, and fall back to `logstash_prefix` if the
+dynamic prefix is not defined. For example, your input record is
+
+```
+{
+  "appName": "exampleApp",
+  "message": "Hello world"
+}
+```
+
+Using `logstash_prefix_key appName` will result in index name prefixed with
+`exampleApp`, this is useful when you want to create different index per app
+name.
+
 **logstash_dateformat**
 
 By default, the records inserted into index `logstash-YYMMDD`. This option allows to insert into specified index like `mylogs-YYYYMM` for a monthly index.
