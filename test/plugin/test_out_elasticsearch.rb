@@ -29,6 +29,10 @@ class ElasticsearchOutput < Test::Unit::TestCase
     {'age' => 26, 'request_id' => '42', 'parent_id' => 'parent'}
   end
 
+  def sample_record_with_app
+    {'age' => 26, 'request_id' => '42', 'parent_id' => 'parent', 'app' => 'example_app'}
+  end
+
   def stub_elastic_ping(url="http://localhost:9200")
     stub_request(:head, url).to_return(:status => 200, :body => "", :headers => {})
   end
@@ -269,6 +273,31 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_writes_to_logstash_index_with_specified_prefix
     driver.configure("logstash_format true
                       logstash_prefix myprefix")
+    time = Time.parse Date.today.to_s
+    logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record, time)
+    driver.run
+    assert_equal(logstash_index, index_cmds.first['index']['_index'])
+  end
+
+  def test_writes_to_logstash_index_with_specified_prefix_key
+    driver.configure("logstash_format true
+                      logstash_prefix_key app")
+    time = Time.parse Date.today.to_s
+    logstash_index = "example_app-#{time.getutc.strftime("%Y.%m.%d")}"
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record_with_app, time)
+    driver.run
+    assert_equal(logstash_index, index_cmds.first['index']['_index'])
+  end
+
+  def test_writes_to_logstash_index_with_specified_prefix_key_fallback
+    driver.configure("logstash_format true
+                      logstash_prefix myprefix
+                      logstash_prefix_key app")
     time = Time.parse Date.today.to_s
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
