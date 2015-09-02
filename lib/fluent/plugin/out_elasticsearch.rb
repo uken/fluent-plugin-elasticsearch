@@ -18,6 +18,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :hosts, :string, :default => nil
   config_param :logstash_format, :bool, :default => false
   config_param :logstash_prefix, :string, :default => "logstash"
+  config_param :logstash_prefix_key, :string, :default => nil
   config_param :logstash_dateformat, :string, :default => "%Y.%m.%d"
   config_param :utc_index, :bool, :default => true
   config_param :type_name, :string, :default => "fluentd"
@@ -139,10 +140,17 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         else
           record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
         end
-        if @utc_index
-          target_index = "#{@logstash_prefix}-#{Time.at(time).getutc.strftime("#{@logstash_dateformat}")}"
+
+        if @logstash_prefix_key
+          index_prefix = record[@logstash_prefix_key] || @logstash_prefix
         else
-          target_index = "#{@logstash_prefix}-#{Time.at(time).strftime("#{@logstash_dateformat}")}"
+          index_prefix = @logstash_prefix
+        end
+
+        if @utc_index
+          target_index = "#{index_prefix}-#{Time.at(time).getutc.strftime("#{@logstash_dateformat}")}"
+        else
+          target_index = "#{index_prefix}-#{Time.at(time).strftime("#{@logstash_dateformat}")}"
         end
       else
         target_index = @index_name
