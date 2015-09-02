@@ -90,7 +90,7 @@ dynamic prefix is not defined. For example, your input record is
 ```
 
 Using `logstash_prefix_key app_name` will result in index name prefixed with
-`exampleApp`, this is useful when you want to create different index per app
+`example_app`, this is useful when you want to create different index per app
 name.
 
 **logstash_dateformat**
