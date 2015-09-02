@@ -84,12 +84,12 @@ dynamic prefix is not defined. For example, your input record is
 
 ```
 {
-  "appName": "exampleApp",
+  "app_name": "example_app",
   "message": "Hello world"
 }
 ```
 
-Using `logstash_prefix_key appName` will result in index name prefixed with
+Using `logstash_prefix_key app_name` will result in index name prefixed with
 `exampleApp`, this is useful when you want to create different index per app
 name.
 
