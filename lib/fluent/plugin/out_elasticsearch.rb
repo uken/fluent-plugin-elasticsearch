@@ -33,6 +33,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :client_cert, :string, :default => nil
   config_param :client_key_pass, :string, :default => nil
   config_param :ca_file, :string, :default => nil
+  config_param :delimiter, :string, :default => "."
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -51,16 +52,16 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
   def client
     @_es ||= begin
-      excon_options = { client_key: @client_key, client_cert: @client_cert, client_key_pass: @client_key_pass }
+      excon_options = { client_key: config['client_key'], client_cert: config['client_cert'], client_key_pass: config['client_key_pass'] }
       adapter_conf = lambda {|f| f.adapter :excon, excon_options }
       transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(get_connection_options.merge(
                                                                           options: {
-                                                                            reload_connections: @reload_connections,
-                                                                            reload_on_failure: @reload_on_failure,
+                                                                            reload_connections: config['reload_connections'],
+                                                                            reload_on_failure: config['reload_on_failure'],
                                                                             retry_on_failure: 5,
                                                                             transport_options: {
-                                                                              request: { timeout: @request_timeout },
-                                                                              ssl: { verify: @ssl_verify, ca_file: @ca_file }
+                                                                              request: { timeout: config['request_timeout'] },
+                                                                              ssl: { verify: config['ssl_verify'], ca_file: config['ca_file'] }
                                                                             }
                                                                           }), &adapter_conf)
       es = Elasticsearch::Client.new transport: transport
@@ -77,7 +78,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   end
 
   def get_connection_options
-    raise "`password` must be present if `user` is present" if @user && !@password
+    raise "`password` must be present if `user` is present" if config['user'] && !config['password']
 
     hosts = if @hosts
       @hosts.split(',').map do |host_str|
@@ -85,8 +86,8 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         if host_str.match(%r{^[^:]+(\:\d+)?$})
           {
             host:   host_str.split(':')[0],
-            port:   (host_str.split(':')[1] || @port).to_i,
-            scheme: @scheme
+            port:   (host_str.split(':')[1] || config['port']).to_i,
+            scheme: config['scheme']
           }
         else
           # New hosts format expects URLs such as http://logs.foo.com,https://john:pass@logs2.foo.com/elastic
@@ -98,10 +99,10 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         end
       end.compact
     else
-      [{host: @host, port: @port, scheme: @scheme}]
+      [{host: config['host'], port: config['port'], scheme: config['scheme']}]
     end.each do |host|
-      host.merge!(user: @user, password: @password) if !host[:user] && @user
-      host.merge!(path: @path) if !host[:path] && @path
+      host.merge!(user: config['user'], password: config['password']) if !host[:user] && config['user']
+      host.merge!(path: config['path']) if !host[:path] && config['path']
     end
 
     {
@@ -130,35 +131,49 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
     chunk.msgpack_each do |tag, time, record|
       next unless record.is_a? Hash
+
+      # evaluate all configurations here
+      config = Hash.new
+      self.instance_variables.each { |var|
+        if self.instance_variable_get(var).is_a?(String) || self.instance_variable_get(var).is_a?(TrueClass) || self.instance_variable_get(var).is_a?(FalseClass) then
+          value = expand_param(self.instance_variable_get(var), tag, record)
+
+          var = var.to_s.gsub(/@(.+)/){ $1 }
+          config[var] = value
+        end
+      }
+      # end eval all configs
+
       if @logstash_format
         if record.has_key?("@timestamp")
           time = Time.parse record["@timestamp"]
         elsif record.has_key?(@time_key)
-          time = Time.parse record[@time_key]
-          record['@timestamp'] = record[@time_key]
+          time = Time.parse record[config['time_key']]
+          record['@timestamp'] = record[config['time_key']]
         else
           record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
         end
-        if @utc_index
-          target_index = "#{@logstash_prefix}-#{Time.at(time).getutc.strftime("#{@logstash_dateformat}")}"
+
+        if config['utc_index']
+          target_index = "#{config['logstash_prefix']}-#{Time.at(time).getutc.strftime("#{config['logstash_dateformat']}")}"
         else
-          target_index = "#{@logstash_prefix}-#{Time.at(time).strftime("#{@logstash_dateformat}")}"
+          target_index = "#{config['logstash_prefix']}-#{Time.at(time).strftime("#{config['logstash_dateformat']}")}"
         end
       else
-        target_index = @index_name
+        target_index = config['index_name']
       end
 
-      if @include_tag_key
-        record.merge!(@tag_key => tag)
+      if config['include_tag_key']
+        record.merge!(config['tag_key'] => tag)
       end
 
-      meta = { "index" => {"_index" => target_index, "_type" => type_name} }
-      if @id_key && record[@id_key]
-        meta['index']['_id'] = record[@id_key]
+      meta = { "index" => {"_index" => target_index, "_type" => config['type_name']} }
+      if config['id_key'] && record[config['id_key']]
+        meta['index']['_id'] = record[config['id_key']]
       end
 
-      if @parent_key && record[@parent_key]
-        meta['index']['_parent'] = record[@parent_key]
+      if config['parent_key'] && record[config['parent_key']]
+        meta['index']['_parent'] = record[config['parent_key']]
       end
 
       bulk_message << meta
@@ -183,5 +198,22 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       end
       raise ConnectionFailure, "Could not push logs to Elasticsearch after #{retries} retries. #{e.message}"
     end
+  end
+
+  def expand_param(param, tag, record)
+
+    # check for '${ ... }'
+    #   yes => `eval`
+    #   no  => return param
+    return param if (param =~ /^\${.+}$/).nil?
+
+    # check for 'tag_parts[]'
+      # separated by a delimiter (default '.')
+    tag_parts = tag.split(@delimiter) unless (param =~ /tag_parts\[.+\]/).nil?
+
+    # pull out section between ${} then eval
+    param.gsub(/^\${(.+)}$/) {
+      eval( $1 )
+    }
   end
 end
