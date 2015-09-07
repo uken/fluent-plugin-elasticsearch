@@ -7,6 +7,15 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
 
   config_param :delimiter, :string, :default => "."
 
+  # params overloaded as strings
+  config_param :port, :string, :default => "9200"
+  config_param :logstash_format, :string, :default => "false"
+  config_param :utc_index, :string, :default => "true"
+  config_param :reload_connections, :string, :default => "true"
+  config_param :reload_on_failure, :string, :default => "false"
+  config_param :ssl_verify, :string, :default => "true"
+  config_param :include_tag_key, :string, :default => "false"
+
   def configure(conf)
     super
 
@@ -72,7 +81,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
         end
       end.compact
     else
-      [{host: @dynamic_config['host'], port: @dynamic_config['port'], scheme: @dynamic_config['scheme']}]
+      [{host: @dynamic_config['host'], port: @dynamic_config['port'].to_i, scheme: @dynamic_config['scheme']}]
     end.each do |host|
       host.merge!(user: @dynamic_config['user'], password: @dynamic_config['password']) if !host[:user] && @dynamic_config['user']
       host.merge!(path: @dynamic_config['path']) if !host[:path] && @dynamic_config['path']
@@ -92,6 +101,8 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       # evaluate all configurations here
       self.instance_variables.each { |var|
         if is_valid_expand_param_type(var)
+          # check here to determine if we should evaluate
+          if @dynamic_config[var[1,var.length-1]] != self.instance_variable_get(var)
           value = expand_param(self.instance_variable_get(var), tag, record)
 
           var = var.to_s.gsub(/@(.+)/){ $1 }
@@ -152,11 +163,18 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
 
     # pull out section between ${} then eval
     param.gsub(/^\${(.+)}$/) {
-      eval( $1 )
+      inner = $1
+      if !(inner =~ /record\[.+\]/).nil? && record.nil?
+        inner
+      elsif !(inner =~/tag_parts\[.+\]/).nil? && tag_parts.nil?
+        inner
+      else
+        eval( inner )
+      end
     }
   end
 
   def is_valid_expand_param_type(param)
-    return (self.instance_variable_get(param).is_a?(String) || self.instance_variable_get(param).is_a?(TrueClass) || self.instance_variable_get(param).is_a?(FalseClass) || self.instance_variable_get(param).is_a?(Numeric) )
+    return self.instance_variable_get(param).is_a?(String)
   end
 end
