@@ -32,11 +32,20 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     # end eval all configs
   end
 
-  def client
+  def client(host, port)
+
+    # Need to verify how this impacts legacy host connections w/ dynamic config
+    unless @_es.nil?
+      client_connection = @_es.transport.get_connection.host
+      if !client_connection[:host].eql? host || client_connection[:port] != port.to_i
+        @_es = nil
+      end
+    end
+
     @_es ||= begin
       excon_options = { client_key: @dynamic_config['client_key'], client_cert: @dynamic_config['client_cert'], client_key_pass: @dynamic_@dynamic_config['client_key_pass'] }
       adapter_conf = lambda {|f| f.adapter :excon, excon_options }
-      transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(get_connection_options.merge(
+      transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(get_connection_options(host, port).merge(
                                                                           options: {
                                                                             reload_connections: @dynamic_config['reload_connections'],
                                                                             reload_on_failure: @dynamic_config['reload_on_failure'],
@@ -49,17 +58,17 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       es = Elasticsearch::Client.new transport: transport
 
       begin
-        raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description})!" unless es.ping
+        raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description(host, port)})!" unless es.ping
       rescue *es.transport.host_unreachable_exceptions => e
-        raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description})! #{e.message}"
+        raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description(host, port)})! #{e.message}"
       end
 
-      log.info "Connection opened to Elasticsearch cluster => #{connection_options_description}"
+      log.info "Connection opened to Elasticsearch cluster => #{connection_options_description(host, port)}"
       es
     end
   end
 
-  def get_connection_options
+  def get_connection_options(host, port)
     raise "`password` must be present if `user` is present" if @dynamic_config['user'] && !@dynamic_config['password']
 
     hosts = if @hosts
@@ -68,7 +77,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
         if host_str.match(%r{^[^:]+(\:\d+)?$})
           {
             host:   host_str.split(':')[0],
-            port:   (host_str.split(':')[1] || @dynamic_config['port']).to_i,
+            port:   ((host_str.split(':')[1] || port ) || @dynamic_config['port']).to_i,
             scheme: @dynamic_config['scheme']
           }
         else
@@ -81,7 +90,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
         end
       end.compact
     else
-      [{host: @dynamic_config['host'], port: @dynamic_config['port'].to_i, scheme: @dynamic_config['scheme']}]
+      [{host: host || @dynamic_config['host'], port: (port || @dynamic_config['port']).to_i, scheme: @dynamic_config['scheme']}]
     end.each do |host|
       host.merge!(user: @dynamic_config['user'], password: @dynamic_config['password']) if !host[:user] && @dynamic_config['user']
       host.merge!(path: @dynamic_config['path']) if !host[:path] && @dynamic_config['path']
@@ -92,8 +101,16 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     }
   end
 
+  def connection_options_description(host, port)
+    get_connection_options(host, port)[:hosts].map do |host_info|
+      attributes = host_info.dup
+      attributes[:password] = 'obfuscated' if attributes.has_key?(:password)
+      attributes.inspect
+    end.join(', ')
+  end  
+
   def write(chunk)
-    bulk_message = []
+    bulk_message = Hash.new { |h,k| h[k] = Hash.new { |h2,k2| h2[k2] = [] } }
 
     chunk.msgpack_each do |tag, time, record|
       next unless record.is_a? Hash
@@ -143,35 +160,62 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
         meta['index']['_parent'] = record[@dynamic_config['parent_key']]
       end
 
-      bulk_message << meta
-      bulk_message << record
+      host = @dynamic_config['host']
+      port = @dynamic_config['port']
+      bulk_message[host][port] << meta
+      bulk_message[host][port] << record
     end
 
-    send(bulk_message) unless bulk_message.empty?
-    bulk_message.clear
+    bulk_message.each do | hKey, port |
+      port.each do | pKey, array |
+        send(array, hKey, pKey) unless array.empty?
+        array.clear
+      end
+    end
+
+  end
+
+  def send(data, host, port)
+    retries = 0
+    es = client(host, port)
+    begin
+      es.bulk body: data
+    rescue *es.transport.host_unreachable_exceptions => e
+      if retries < 2
+        retries += 1
+        @_es = nil
+        log.warn "Could not push logs to Elasticsearch, resetting connection and trying again. #{e.message}"
+        sleep 2**retries
+        retry
+      end
+      raise ConnectionFailure, "Could not push logs to Elasticsearch after #{retries} retries. #{e.message}"
+    end
   end
 
   def expand_param(param, tag, record)
     # check for '${ ... }'
     #   yes => `eval`
     #   no  => return param
-    return param if (param =~ /^\${.+}$/).nil?
+    return param if (param =~ /\${.+}/).nil?
 
     # check for 'tag_parts[]'
       # separated by a delimiter (default '.')
     tag_parts = tag.split(@delimiter) unless (param =~ /tag_parts\[.+\]/).nil?
 
     # pull out section between ${} then eval
-    param.gsub(/^\${(.+)}$/) {
-      inner = $1
-      if !(inner =~ /record\[.+\]/).nil? && record.nil?
-        inner
-      elsif !(inner =~/tag_parts\[.+\]/).nil? && tag_parts.nil?
-        inner
+    inner = param.clone
+    while inner.match(/\${.+}/)
+      to_eval = inner.match(/\${(.+?)}/){$1}
+
+      if !(to_eval =~ /record\[.+\]/).nil? && record.nil?
+        return to_eval
+      elsif !(to_eval =~/tag_parts\[.+\]/).nil? && tag_parts.nil?
+        return to_eval
       else
-        eval( inner )
+        inner.sub!(/\${.+}/, eval( to_eval )
       end
-    }
+    end
+    inner
   end
 
   def is_valid_expand_param_type(param)
