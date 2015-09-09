@@ -13,8 +13,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
   config_param :utc_index, :string, :default => "true"
   config_param :reload_connections, :string, :default => "true"
   config_param :reload_on_failure, :string, :default => "false"
-  config_param :ssl_verify, :string, :default => "true"
-  config_param :include_tag_key, :string, :default => "false"
+  config_param :ssl_verify, :string, :dfeault => "true"
 
   def configure(conf)
     super
@@ -128,7 +127,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       }
       # end eval all configs
 
-      if @dynamic_config['logstash_format']
+      if eval(@dynamic_config['logstash_format'])
         if record.has_key?("@timestamp")
           time = Time.parse record["@timestamp"]
         elsif record.has_key?(@dynamic_config['time_key'])
@@ -138,7 +137,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
           record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
         end
 
-        if @dynamic_config['utc_index']
+        if eval(@dynamic_config['utc_index'])
           target_index = "#{@dynamic_config['logstash_prefix']}-#{Time.at(time).getutc.strftime("#{@dynamic_config['logstash_dateformat']}")}"
         else
           target_index = "#{@dynamic_config['logstash_prefix']}-#{Time.at(time).strftime("#{@dynamic_config['logstash_dateformat']}")}"
@@ -147,7 +146,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
         target_index = @dynamic_config['index_name']
       end
 
-      if @dynamic_config['include_tag_key']
+      if @include_tag_key
         record.merge!(@dynamic_config['tag_key'] => tag)
       end
 
@@ -180,10 +179,9 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
 
   def send(data, host)
     retries = 0
-    es = client(host)
     begin
-      es.bulk body: data
-    rescue *es.transport.host_unreachable_exceptions => e
+      client(host).bulk body: data
+    rescue *client(host).transport.host_unreachable_exceptions => e
       if retries < 2
         retries += 1
         @_es = nil
