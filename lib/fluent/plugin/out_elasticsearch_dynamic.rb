@@ -30,22 +30,21 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       end
     }
     # end eval all configs
+    @current_config = nil
   end
 
-  def client(host, port)
+  def client(host)
 
-    # Need to verify how this impacts legacy host connections w/ dynamic config
-    unless @_es.nil?
-      client_connection = @_es.transport.get_connection.host
-      if !client_connection[:host].eql? host || client_connection[:port] != port.to_i
-        @_es = nil
-      end
-    end
+    # check here to see if we already have a client connection for the given host
+    connection_options = get_connection_options(host)
+
+    @_es = nil unless is_existing_connection(connection_options[:hosts])
 
     @_es ||= begin
+      @current_config = connection_options[:host].clone
       excon_options = { client_key: @dynamic_config['client_key'], client_cert: @dynamic_config['client_cert'], client_key_pass: @dynamic_@dynamic_config['client_key_pass'] }
       adapter_conf = lambda {|f| f.adapter :excon, excon_options }
-      transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(get_connection_options(host, port).merge(
+      transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(connection_options.merge(
                                                                           options: {
                                                                             reload_connections: @dynamic_config['reload_connections'],
                                                                             reload_on_failure: @dynamic_config['reload_on_failure'],
@@ -58,26 +57,26 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       es = Elasticsearch::Client.new transport: transport
 
       begin
-        raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description(host, port)})!" unless es.ping
+        raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description(host)})!" unless es.ping
       rescue *es.transport.host_unreachable_exceptions => e
-        raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description(host, port)})! #{e.message}"
+        raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description(host)})! #{e.message}"
       end
 
-      log.info "Connection opened to Elasticsearch cluster => #{connection_options_description(host, port)}"
+      log.info "Connection opened to Elasticsearch cluster => #{connection_options_description(host)}"
       es
     end
   end
 
-  def get_connection_options(host, port)
+  def get_connection_options(con_host)
     raise "`password` must be present if `user` is present" if @dynamic_config['user'] && !@dynamic_config['password']
 
-    hosts = if @hosts
-      @hosts.split(',').map do |host_str|
+    hosts = if con_host || @dynamic_config['hosts']
+      (con_host || @dynamic_config['hosts']).split(',').map do |host_str|
         # Support legacy hosts format host:port,host:port,host:port...
         if host_str.match(%r{^[^:]+(\:\d+)?$})
           {
             host:   host_str.split(':')[0],
-            port:   ((host_str.split(':')[1] || port ) || @dynamic_config['port']).to_i,
+            port:   (host_str.split(':')[1] || @dynamic_config['port']).to_i,
             scheme: @dynamic_config['scheme']
           }
         else
@@ -90,7 +89,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
         end
       end.compact
     else
-      [{host: host || @dynamic_config['host'], port: (port || @dynamic_config['port']).to_i, scheme: @dynamic_config['scheme']}]
+      [{host: @dynamic_config['host'], port: @dynamic_config['port'].to_i, scheme: @dynamic_config['scheme']}]
     end.each do |host|
       host.merge!(user: @dynamic_config['user'], password: @dynamic_config['password']) if !host[:user] && @dynamic_config['user']
       host.merge!(path: @dynamic_config['path']) if !host[:path] && @dynamic_config['path']
@@ -101,8 +100,8 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     }
   end
 
-  def connection_options_description(host, port)
-    get_connection_options(host, port)[:hosts].map do |host_info|
+  def connection_options_description(host)
+    get_connection_options(host)[:hosts].map do |host_info|
       attributes = host_info.dup
       attributes[:password] = 'obfuscated' if attributes.has_key?(:password)
       attributes.inspect
@@ -110,7 +109,8 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
   end  
 
   def write(chunk)
-    bulk_message = Hash.new { |h,k| h[k] = Hash.new { |h2,k2| h2[k2] = [] } }
+    
+    bulk_message = Hash.new { |h,k| h[k] = [] }
 
     chunk.msgpack_each do |tag, time, record|
       next unless record.is_a? Hash
@@ -128,10 +128,10 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       }
       # end eval all configs
 
-      if @logstash_format
+      if @dynamic_config['logstash_format']
         if record.has_key?("@timestamp")
           time = Time.parse record["@timestamp"]
-        elsif record.has_key?(@time_key)
+        elsif record.has_key?(@dynamic_config['time_key'])
           time = Time.parse record[@dynamic_config['time_key']]
           record['@timestamp'] = record[@dynamic_config['time_key']]
         else
@@ -160,24 +160,27 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
         meta['index']['_parent'] = record[@dynamic_config['parent_key']]
       end
 
-      host = @dynamic_config['host']
-      port = @dynamic_config['port']
-      bulk_message[host][port] << meta
-      bulk_message[host][port] << record
+      if @dynamic_config['hosts']
+        host = @dynamic_config['hosts']  
+      else
+        host = "#{@dynamic_config['host']}:#{@dynamic_config['port']}"
+      end
+
+      bulk_message[host] << meta
+      bulk_message[host] << record
+
     end
 
-    bulk_message.each do | hKey, port |
-      port.each do | pKey, array |
-        send(array, hKey, pKey) unless array.empty?
-        array.clear
-      end
+    bulk_message.each do | hKey, array |
+      send(array, hKey) unless array.empty?
+      array.clear
     end
 
   end
 
-  def send(data, host, port)
+  def send(data, host)
     retries = 0
-    es = client(host, port)
+    es = client(host)
     begin
       es.bulk body: data
     rescue *es.transport.host_unreachable_exceptions => e
@@ -220,5 +223,19 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
 
   def is_valid_expand_param_type(param)
     return self.instance_variable_get(param).is_a?(String)
+  end
+
+  def is_existing_connection(host)
+    # check if the host provided match the current connection
+    return false if @_es.nil?
+    return false if host.length != @current_config.length
+
+    for i in 0...host.length
+      if !host[i][:host].eql? @current_config[i][:host] || host[i][:port] != @current_config[i][:port]
+        return false
+      end
+    end
+
+    return true
   end
 end
