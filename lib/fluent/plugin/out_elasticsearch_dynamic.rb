@@ -1,5 +1,5 @@
 # encoding: UTF-8
-require '/fluent/plugin/out_elasticsearch'
+require_relative 'out_elasticsearch'
 
 class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
 
@@ -22,7 +22,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     @dynamic_config = Hash.new
     self.instance_variables.each { |var|
       if is_valid_expand_param_type(var)
-        value = expand_param(self.instance_variable_get(var), nil, nil)
+        value = expand_param(self.instance_variable_get(var), nil, nil, nil)
 
         var = var.to_s.gsub(/@(.+)/){ $1 }
         @dynamic_config[var] = value
@@ -40,8 +40,8 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     @_es = nil unless is_existing_connection(connection_options[:hosts])
 
     @_es ||= begin
-      @current_config = connection_options[:host].clone
-      excon_options = { client_key: @dynamic_config['client_key'], client_cert: @dynamic_config['client_cert'], client_key_pass: @dynamic_@dynamic_config['client_key_pass'] }
+      @current_config = connection_options[:hosts].clone
+      excon_options = { client_key: @dynamic_config['client_key'], client_cert: @dynamic_config['client_cert'], client_key_pass: @dynamic_config['client_key_pass'] }
       adapter_conf = lambda {|f| f.adapter :excon, excon_options }
       transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(connection_options.merge(
                                                                           options: {
@@ -119,10 +119,10 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
         if is_valid_expand_param_type(var)
           # check here to determine if we should evaluate
           if @dynamic_config[var[1,var.length-1]] != self.instance_variable_get(var)
-          value = expand_param(self.instance_variable_get(var), tag, record)
-
-          var = var.to_s.gsub(/@(.+)/){ $1 }
-          @dynamic_config[var] = value
+            value = expand_param(self.instance_variable_get(var), tag, time, record)
+            var = var.to_s.gsub(/@(.+)/){ $1 }
+            @dynamic_config[var] = value
+          end
         end
       }
       # end eval all configs
@@ -193,7 +193,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     end
   end
 
-  def expand_param(param, tag, record)
+  def expand_param(param, tag, time, record)
     # check for '${ ... }'
     #   yes => `eval`
     #   no  => return param
@@ -201,7 +201,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
 
     # check for 'tag_parts[]'
       # separated by a delimiter (default '.')
-    tag_parts = tag.split(@delimiter) unless (param =~ /tag_parts\[.+\]/).nil?
+    tag_parts = tag.split(@delimiter) unless (param =~ /tag_parts\[.+\]/).nil? || tag.nil?
 
     # pull out section between ${} then eval
     inner = param.clone
@@ -212,8 +212,10 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
         return to_eval
       elsif !(to_eval =~/tag_parts\[.+\]/).nil? && tag_parts.nil?
         return to_eval
+      elsif !(to_eval =~/time/).nil? && time.nil?
+        return to_eval
       else
-        inner.sub!(/\${.+}/, eval( to_eval )
+        inner.sub!(/\${.+?}/, eval( to_eval ))
       end
     end
     inner
