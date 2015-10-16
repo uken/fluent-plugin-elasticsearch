@@ -217,6 +217,20 @@ client_key /path/to/your/private/key
 client_key_pass password
 ```
 
+## Dynamic configuration
+
+If you want to take advantage of the data that's available to the elasticsearch plugin you can now do so.  In your fluentd configration, use `type elasticsearch_dynamic`. Using this experimental variation of the elasticsearch plugin allows configuration values to be specified in ways such as the below:
+
+```
+`hosts ${record['host1']}:9200,${record['host2']}:9200`
+`index_name my_index.${Time.at(time).getutc.strftime(@logstash_dateformat)}`
+`logstash_prefix ${tag_parts[3]}`
+`port ${9200+rand(4)}`
+`index_name ${tag_parts[2]}-${Time.at(time).getutc.strftime(@logstash_dateformat)}`
+```
+
+**Please note, this is experimental and due to the nature of evaluating while parsing data for each record, may increase the processing time of your data.**
+
 **Not seeing a config you need?**
 
 We try to keep the scope of this plugin small. If you need more configuration options, please consider using [fluent-plugin-forest](https://github.com/tagomoris/fluent-plugin-forest). For example, to configure multiple tags to be sent to different ElasticSearch indices:
