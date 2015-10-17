@@ -13,20 +13,20 @@ I wrote this so you can search logs routed through Fluentd.
   + [Index templates](#index-templates)
 * [Configuration](#configuration)
   + [hosts](#hosts)
-  + [user, password, path, scheme, ssl_verify](#user--password--path--scheme--ssl-verify)
-  + [logstash_format](#logstash-format)
-  + [logstash_prefix](#logstash-prefix)
-  + [logstash_dateformat](#logstash-dateformat)
-  + [time_key](#time-key)
-  + [utc_index](#utc-index)
-  + [request_timeout](#request-timeout)
-  + [reload_connections](#reload-connections)
-  + [reload_on_failure](#reload-on-failure)
-  + [include_tag_key, tag_key](#include-tag-key--tag-key)
-  + [id_key](#id-key)
-  + [Client/host certificate options](#client-host-certificate-options)
+  + [user, password, path, scheme, ssl_verify](#user-password-path-scheme-ssl_verify)
+  + [logstash_format](#logstash_format)
+  + [logstash_prefix](#logstash_prefix)
+  + [logstash_dateformat](#logstash_dateformat)
+  + [time_key](#time_key)
+  + [utc_index](#utc_index)
+  + [request_timeout](#request_timeout)
+  + [reload_connections](#reload_connections)
+  + [reload_on_failure](#reload_on_failure)
+  + [include_tag_key, tag_key](#include_tag_key-tag_key)
+  + [id_key](#id_key)
+  + [Client/host certificate options](#clienthost-certificate-options)
   + [Buffered output options](#buffered-output-options)
-  + [Not seeing a config you need?](#not-seeing-a-config-you-need-)
+  + [Not seeing a config you need?](#not-seeing-a-config-you-need)
   + [Dynamic configuration](#dynamic-configuration)
 * [Contact](#contact)
 * [Contributing](#contributing)
@@ -91,7 +91,7 @@ Specify `ssl_verify false` to skip ssl verification (defaults to true)
 logstash_format true # defaults to false
 ```
 
-This is meant to make writing data into ElasticSearch compatible to what Logstash writes. By doing this, one could take advantage of [Kibana](https://www.elastic.co/products/kibana).
+This is meant to make writing data into ElasticSearch compatible to what [Logstash](https://www.elastic.co/products/logstash) writes. By doing this, one could take advantage of [Kibana](https://www.elastic.co/products/kibana).
 
 ### logstash_prefix
 
@@ -109,13 +109,13 @@ logstash_dateformat %Y.%m. # defaults to "%Y.%m.%d"
 
 ### time_key
 
-By default, when inserting records in Logstash format, @timestamp is dynamically created with the time at log ingestion. If you'd like to use a custom time. Include an @timestamp with your record.
+By default, when inserting records in [Logstash](https://www.elastic.co/products/logstash) format, `@timestamp` is dynamically created with the time at log ingestion. If you'd like to use a custom time, include an `@timestamp` with your record.
 
 ```
 {"@timestamp":"2014-04-07T000:00:00-00:00"}
 ```
 
-You can specify an option `time_key` (like the option described in [tail Input Plugin](http://docs.fluentd.org/articles/in_tail)) if you don't like `@timestamp`.
+You can specify an option `time_key` (like the option described in [tail Input Plugin](http://docs.fluentd.org/articles/in_tail)) to replace `@timestamp` key.
 
 Suppose you have settings
 
@@ -230,7 +230,7 @@ client_key_pass password
 
 ### Buffered output options
 
-fluentd-plugin-elasticsearch is a buffered output that uses ElasticSearch's bulk API. So additional buffer configuration would be (with default values):
+`fluentd-plugin-elasticsearch` extends [Fluentd's builtin Buffered Output plugin](http://docs.fluentd.org/articles/buffer-plugin-overview). It adds the following options:
 
 ```
 buffer_type memory
