@@ -6,6 +6,4 @@ rvm:
   - 2.1
   - 2.2
 
-script:
-  - bundle exec ruby -S -Itest test/plugin/test_out_elasticsearch.rb
-  - bundle exec ruby -S -Itest test/plugin/test_out_elasticsearch_dynamic.rb
+script: bundle exec rake test

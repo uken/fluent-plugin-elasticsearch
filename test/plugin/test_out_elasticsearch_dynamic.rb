@@ -13,7 +13,7 @@ require 'helper'
 
 WebMock.disable_net_connect!
 
-class ElasticsearchOutput < Test::Unit::TestCase
+class ElasticsearchOutputDynamic < Test::Unit::TestCase
   attr_accessor :index_cmds, :index_command_counts
 
   def setup
