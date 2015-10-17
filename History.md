@@ -1,7 +1,10 @@
 ## Changelog
 
 ### Future
+
+### 1.1.0
 - Support SSL client verification and custom CA file (#123)
+- Release experimental `type elasticsearch_dynamic` (#127)
 
 ### 1.0.0
 - password config param is now marked as secret and won't be displayed in logs.
