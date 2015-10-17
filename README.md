@@ -8,46 +8,69 @@
 
 I wrote this so you can search logs routed through Fluentd.
 
+* [Installation](#installation)
+* [Usage](#usage)
+  + [Index templates](#index-templates)
+* [Configuration](#configuration)
+  + [hosts](#hosts)
+  + [user, password, path, scheme, ssl_verify](#user--password--path--scheme--ssl-verify)
+  + [logstash_format](#logstash-format)
+  + [logstash_prefix](#logstash-prefix)
+  + [logstash_dateformat](#logstash-dateformat)
+  + [time_key](#time-key)
+  + [utc_index](#utc-index)
+  + [request_timeout](#request-timeout)
+  + [reload_connections](#reload-connections)
+  + [reload_on_failure](#reload-on-failure)
+  + [include_tag_key, tag_key](#include-tag-key--tag-key)
+  + [id_key](#id-key)
+  + [Client/host certificate options](#client-host-certificate-options)
+  + [Buffered output options](#buffered-output-options)
+  + [Not seeing a config you need?](#not-seeing-a-config-you-need-)
+  + [Dynamic configuration](#dynamic-configuration)
+* [Contact](#contact)
+* [Contributing](#contributing)
+* [Running tests](#running-tests)
+
 ## Installation
 
-    $ gem install fluent-plugin-elasticsearch
-
-* prerequisite : You need to install [libcurl (libcurl-devel)](http://curl.haxx.se/libcurl/) to work with.
+```sh
+$ gem install fluent-plugin-elasticsearch
+```
 
 ## Usage
 
-In your fluentd configration, use `type elasticsearch`. Additional configuration is optional, default values would look like this:
+In your Fluentd configuration, use `type elasticsearch`. Additional configuration is optional, default values would look like this:
 
 ```
-host localhost
-port 9200
-index_name fluentd
-type_name fluentd
+<match my.logs>
+  type elasticsearch
+  host localhost
+  port 9200
+  index_name fluentd
+  type_name fluentd
+</match>
 ```
 
-**Index templates**
+### Index templates
 
-This plugin creates ElasticSearch indices by merely writing to them. Consider using [Index Templates](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/indices-templates.html) to gain control of what get indexed and how. See [this example](https://github.com/uken/fluent-plugin-elasticsearch/issues/33#issuecomment-38693282) for a good starting point.
+This plugin creates ElasticSearch indices by merely writing to them. Consider using [Index Templates](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html) to gain control of what get indexed and how. See [this example](https://github.com/uken/fluent-plugin-elasticsearch/issues/33#issuecomment-38693282) for a good starting point.
 
-**More options:**
+## Configuration
 
-**hosts**
+### hosts
 
 ```
 hosts host1:port1,host2:port2,host3:port3
-```
-
-or
-
-```
+# or
 hosts https://customhost.com:443/path,https://username:password@host-failover.com:443
 ```
 
-You can specify multiple elasticsearch hosts with separator ",".
+You can specify multiple ElasticSearch hosts with separator ",".
 
-If you specify multiple hosts, this plugin will load balance updates to elasticsearch. This is an [elasticsearch-ruby](https://github.com/elasticsearch/elasticsearch-ruby) feature, the default strategy is round-robin.
+If you specify multiple hosts, this plugin will load balance updates to ElasticSearch. This is an [elasticsearch-ruby](https://github.com/elasticsearch/elasticsearch-ruby) feature, the default strategy is round-robin.
 
-**user, password, path, scheme, ssl_verify**
+### user, password, path, scheme, ssl_verify
 
 If you specify this option, host and port options are ignored.
 
@@ -62,21 +85,21 @@ You can specify user and password for HTTP basic auth. If used in conjunction wi
 
 Specify `ssl_verify false` to skip ssl verification (defaults to true)
 
-**logstash_format**
+### logstash_format
 
 ```
 logstash_format true # defaults to false
 ```
 
-This is meant to make writing data into elasticsearch compatible to what logstash writes. By doing this, one could take advantade of [kibana](http://kibana.org/).
+This is meant to make writing data into ElasticSearch compatible to what Logstash writes. By doing this, one could take advantage of [Kibana](https://www.elastic.co/products/kibana).
 
-**logstash_prefix**
+### logstash_prefix
 
 ```
 logstash_prefix mylogs # defaults to "logstash"
 ```
 
-**logstash_dateformat**
+### logstash_dateformat
 
 By default, the records inserted into index `logstash-YYMMDD`. This option allows to insert into specified index like `mylogs-YYYYMM` for a monthly index.
 
@@ -84,9 +107,9 @@ By default, the records inserted into index `logstash-YYMMDD`. This option allow
 logstash_dateformat %Y.%m. # defaults to "%Y.%m.%d"
 ```
 
-**time_key**
+### time_key
 
-By default, when inserting records in logstash format, @timestamp is dynamically created with the time at log ingestion. If you'd like to use a custom time. Include an @timestamp with your record.
+By default, when inserting records in Logstash format, @timestamp is dynamically created with the time at log ingestion. If you'd like to use a custom time. Include an @timestamp with your record.
 
 ```
 {"@timestamp":"2014-04-07T000:00:00-00:00"}
@@ -118,33 +141,33 @@ The output will be
 }
 ```
 
-**utc_index**
+### utc_index
 
 ```
 utc_index true
 ```
 
-By default, the records inserted into index `logstash-YYMMDD` with utc (Coordinated Universal Time). This option allows to use local time if you describe utc_index to false.
+By default, the records inserted into index `logstash-YYMMDD` with UTC (Coordinated Universal Time). This option allows to use local time if you describe utc_index to false.
 
-**request_timeout**
+### request_timeout
+
+You can specify HTTP request timeout.
+
+This is useful when ElasticSearch cannot return response for bulk request within the default of 5 seconds.
 
 ```
 request_timeout 15s # defaults to 5s
 ```
 
-You can specify HTTP request timeout.
-
-This is useful when Elasticsearch cannot return response for bulk request within the default of 5 seconds.
-
-**reload_connections**
+### reload_connections
 
 ```
 reload_connections false # defaults to true
 ```
 
-**reload_on_failure**
+### reload_on_failure
 
-You can tune how the elasticsearch-transport host reloading feature works. By default it will reload the host list from the server every 10,000th request to spread the load. This can be an issue if your ElasticSearch cluster is behind a Reverse Proxy, as fluentd process may not have direct network access to the ElasticSearch nodes.
+You can tune how the elasticsearch-transport host reloading feature works. By default it will reload the host list from the server every 10,000th request to spread the load. This can be an issue if your ElasticSearch cluster is behind a Reverse Proxy, as Fluentd process may not have direct network access to the ElasticSearch nodes.
 
 ```
 reload_on_failure true # defaults to false
@@ -153,14 +176,14 @@ reload_on_failure true # defaults to false
 Indicates that the elasticsearch-transport will try to reload the nodes addresses if there is a failure while making the
 request, this can be useful to quickly remove a dead node from the list of addresses.
 
-**include_tag_key, tag_key**
+### include_tag_key, tag_key
 
 ```
 include_tag_key true # defaults to false
 tag_key tag # defaults to tag
 ```
 
-This will add the fluentd tag in the json record. For instance, if you have a config like this:
+This will add the Fluentd tag in the JSON record. For instance, if you have a config like this:
 
 ```
 <match my.logs>
@@ -170,19 +193,19 @@ This will add the fluentd tag in the json record. For instance, if you have a co
 </match>
 ```
 
-The record inserted into elasticsearch would be
+The record inserted into ElasticSearch would be
 
 ```
 {"_key":"my.logs", "name":"Johnny Doeie"}
 ```
 
-**id_key**
+### id_key
 
 ```
 id_key request_id # use "request_id" field as a record id in ES
 ```
 
-By default, all records inserted into elasticsearch get a random _id. This option allows to use a field in the record as an identifier.
+By default, all records inserted into ElasticSearch get a random _id. This option allows to use a field in the record as an identifier.
 
 This following record `{"name":"Johnny","request_id":"87d89af7daffad6"}` will trigger the following ElasticSearch command
 
@@ -191,19 +214,7 @@ This following record `{"name":"Johnny","request_id":"87d89af7daffad6"}` will tr
 { "name": "Johnny", "request_id": "87d89af7daffad6" }
 ```
 
-**Buffered output options**
-
-fluentd-plugin-elasticsearch is a buffered output that uses elasticseach's bulk API. So additional buffer configuration would be (with default values):
-
-```
-buffer_type memory
-flush_interval 60
-retry_limit 17
-retry_wait 1.0
-num_threads 1
-```
-
-**Client/host certificate options**
+### Client/host certificate options
 
 Need to verify ElasticSearch's certificate?  You can use the following parameter to specify a CA instead of using an environment variable.
 ```
@@ -217,23 +228,23 @@ client_key /path/to/your/private/key
 client_key_pass password
 ```
 
-## Dynamic configuration
+### Buffered output options
 
-If you want to take advantage of the data that's available to the elasticsearch plugin you can now do so.  In your fluentd configration, use `type elasticsearch_dynamic`. Using this experimental variation of the elasticsearch plugin allows configuration values to be specified in ways such as the below:
+fluentd-plugin-elasticsearch is a buffered output that uses ElasticSearch's bulk API. So additional buffer configuration would be (with default values):
 
 ```
-`hosts ${record['host1']}:9200,${record['host2']}:9200`
-`index_name my_index.${Time.at(time).getutc.strftime(@logstash_dateformat)}`
-`logstash_prefix ${tag_parts[3]}`
-`port ${9200+rand(4)}`
-`index_name ${tag_parts[2]}-${Time.at(time).getutc.strftime(@logstash_dateformat)}`
+buffer_type memory
+flush_interval 60
+retry_limit 17
+retry_wait 1.0
+num_threads 1
 ```
 
-**Please note, this is experimental and due to the nature of evaluating while parsing data for each record, may increase the processing time of your data.**
+### Not seeing a config you need?
 
-**Not seeing a config you need?**
+We try to keep the scope of this plugin small and not add too many configuration options. If you think an option would be useful to others, feel free to open an issue or contribute a Pull Request.
 
-We try to keep the scope of this plugin small. If you need more configuration options, please consider using [fluent-plugin-forest](https://github.com/tagomoris/fluent-plugin-forest). For example, to configure multiple tags to be sent to different ElasticSearch indices:
+Alternatively, consider using [fluent-plugin-forest](https://github.com/tagomoris/fluent-plugin-forest). For example, to configure multiple tags to be sent to different ElasticSearch indices:
 
 ```
 <match my.logs.*>
@@ -247,12 +258,39 @@ We try to keep the scope of this plugin small. If you need more configuration op
 </match>
 ```
 
-## Contributing
+And yet another option is described in Dynamic Configuration section.
 
-1. Fork it
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create new Pull Request
+### Dynamic configuration
+
+If you want configurations to depend on information in messages, you can use `elasticsearch_dynamic`. This is an experimental variation of the ElasticSearch plugin allows configuration values to be specified in ways such as the below:
+
+```
+<match my.logs.*>
+  type elasticsearch_dynamic
+  hosts ${record['host1']}:9200,${record['host2']}:9200
+  index_name my_index.${Time.at(time).getutc.strftime(@logstash_dateformat)}
+  logstash_prefix ${tag_parts[3]}
+  port ${9200+rand(4)}
+  index_name ${tag_parts[2]}-${Time.at(time).getutc.strftime(@logstash_dateformat)}
+</match>
+```
+
+**Please note, this uses Ruby's `eval` for every message, so there are performance and security implications.**
+
+## Contact
 
 If you have a question, [open an Issue](https://github.com/uken/fluent-plugin-elasticsearch/issues).
+
+## Contributing
+
+Pull Requests are welcomed.
+
+## Running tests
+
+Install dev dependencies:
+
+```sh
+$ gem install bundler
+$ bundle install
+$ bundle exec rake test
+```
