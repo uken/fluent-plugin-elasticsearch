@@ -19,14 +19,12 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     super
 
     # evaluate all configurations here
+    @dynamic_params = self.instance_variables.select { |var| is_valid_expand_param_type(var) }
     @dynamic_config = Hash.new
-    self.instance_variables.each { |var|
-      if is_valid_expand_param_type(var)
-        value = expand_param(self.instance_variable_get(var), nil, nil, nil)
-
-        var = var.to_s.gsub(/@(.+)/){ $1 }
-        @dynamic_config[var] = value
-      end
+    @dynamic_params.each { |var|
+      value = expand_param(self.instance_variable_get(var), nil, nil, nil)
+      var = var[1..-1]
+      @dynamic_config[var] = value
     }
     # end eval all configs
     @current_config = nil
@@ -108,21 +106,18 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
   end  
 
   def write(chunk)
-    
     bulk_message = Hash.new { |h,k| h[k] = [] }
 
     chunk.msgpack_each do |tag, time, record|
       next unless record.is_a? Hash
 
       # evaluate all configurations here
-      self.instance_variables.each { |var|
-        if is_valid_expand_param_type(var)
-          # check here to determine if we should evaluate
-          if @dynamic_config[var[1,var.length-1]] != self.instance_variable_get(var)
-            value = expand_param(self.instance_variable_get(var), tag, time, record)
-            var = var.to_s.gsub(/@(.+)/){ $1 }
-            @dynamic_config[var] = value
-          end
+      @dynamic_params.each { |var|
+        k = var[1..-1]
+        v = self.instance_variable_get(var)
+        if @dynamic_config[k] != v
+          value = expand_param(v, tag, time, record)
+          @dynamic_config[k] = value
         end
       }
       # end eval all configs
@@ -174,7 +169,6 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       send(array, hKey) unless array.empty?
       array.clear
     end
-
   end
 
   def send(data, host)
@@ -222,6 +216,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
   end
 
   def is_valid_expand_param_type(param)
+    return false if [:@buffer_type].include?(param)
     return self.instance_variable_get(param).is_a?(String)
   end
 
