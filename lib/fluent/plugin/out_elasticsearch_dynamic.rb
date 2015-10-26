@@ -19,14 +19,12 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     super
 
     # evaluate all configurations here
+    @dynamic_params = self.instance_variables.select { |var| is_valid_expand_param_type(var) }
     @dynamic_config = Hash.new
-    self.instance_variables.each { |var|
-      if is_valid_expand_param_type(var)
-        value = expand_param(self.instance_variable_get(var), nil, nil, nil)
-
-        var = var.to_s.gsub(/@(.+)/){ $1 }
-        @dynamic_config[var] = value
-      end
+    @dynamic_params.each { |var|
+      value = expand_param(self.instance_variable_get(var), nil, nil, nil)
+      var = var[1..-1]
+      @dynamic_config[var] = value
     }
     # end eval all configs
     @current_config = nil
@@ -108,61 +106,60 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
   end  
 
   def write(chunk)
-    
     bulk_message = Hash.new { |h,k| h[k] = [] }
+    dynamic_conf = @dynamic_config.clone
 
     chunk.msgpack_each do |tag, time, record|
       next unless record.is_a? Hash
 
       # evaluate all configurations here
-      self.instance_variables.each { |var|
-        if is_valid_expand_param_type(var)
-          # check here to determine if we should evaluate
-          if @dynamic_config[var[1,var.length-1]] != self.instance_variable_get(var)
-            value = expand_param(self.instance_variable_get(var), tag, time, record)
-            var = var.to_s.gsub(/@(.+)/){ $1 }
-            @dynamic_config[var] = value
-          end
+      @dynamic_params.each { |var|
+        k = var[1..-1]
+        v = self.instance_variable_get(var)
+        # check here to determine if we should evaluate
+        if dynamic_conf[k] != v
+          value = expand_param(v, tag, time, record)
+          dynamic_conf[k] = value
         end
       }
       # end eval all configs
 
-      if eval(@dynamic_config['logstash_format'])
+      if eval(dynamic_conf['logstash_format'])
         if record.has_key?("@timestamp")
           time = Time.parse record["@timestamp"]
-        elsif record.has_key?(@dynamic_config['time_key'])
-          time = Time.parse record[@dynamic_config['time_key']]
-          record['@timestamp'] = record[@dynamic_config['time_key']]
+        elsif record.has_key?(dynamic_conf['time_key'])
+          time = Time.parse record[dynamic_conf['time_key']]
+          record['@timestamp'] = record[dynamic_conf['time_key']]
         else
           record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
         end
 
-        if eval(@dynamic_config['utc_index'])
-          target_index = "#{@dynamic_config['logstash_prefix']}-#{Time.at(time).getutc.strftime("#{@dynamic_config['logstash_dateformat']}")}"
+        if eval(dynamic_conf['utc_index'])
+          target_index = "#{dynamic_conf['logstash_prefix']}-#{Time.at(time).getutc.strftime("#{dynamic_conf['logstash_dateformat']}")}"
         else
-          target_index = "#{@dynamic_config['logstash_prefix']}-#{Time.at(time).strftime("#{@dynamic_config['logstash_dateformat']}")}"
+          target_index = "#{dynamic_conf['logstash_prefix']}-#{Time.at(time).strftime("#{dynamic_conf['logstash_dateformat']}")}"
         end
       else
-        target_index = @dynamic_config['index_name']
+        target_index = dynamic_conf['index_name']
       end
 
       if @include_tag_key
-        record.merge!(@dynamic_config['tag_key'] => tag)
+        record.merge!(dynamic_conf['tag_key'] => tag)
       end
 
-      meta = { "index" => {"_index" => target_index, "_type" => @dynamic_config['type_name']} }
-      if @dynamic_config['id_key'] && record[@dynamic_config['id_key']]
-        meta['index']['_id'] = record[@dynamic_config['id_key']]
+      meta = { "index" => {"_index" => target_index, "_type" => dynamic_conf['type_name']} }
+      if dynamic_conf['id_key'] && record[dynamic_conf['id_key']]
+        meta['index']['_id'] = record[dynamic_conf['id_key']]
       end
 
-      if @dynamic_config['parent_key'] && record[@dynamic_config['parent_key']]
-        meta['index']['_parent'] = record[@dynamic_config['parent_key']]
+      if dynamic_conf['parent_key'] && record[dynamic_conf['parent_key']]
+        meta['index']['_parent'] = record[dynamic_conf['parent_key']]
       end
 
-      if @dynamic_config['hosts']
-        host = @dynamic_config['hosts']  
+      if dynamic_conf['hosts']
+        host = dynamic_conf['hosts']
       else
-        host = "#{@dynamic_config['host']}:#{@dynamic_config['port']}"
+        host = "#{dynamic_conf['host']}:#{dynamic_conf['port']}"
       end
 
       bulk_message[host] << meta
@@ -174,7 +171,6 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       send(array, hKey) unless array.empty?
       array.clear
     end
-
   end
 
   def send(data, host)
@@ -222,6 +218,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
   end
 
   def is_valid_expand_param_type(param)
+    return false if [:@buffer_type].include?(param)
     return self.instance_variable_get(param).is_a?(String)
   end
 
