@@ -6,7 +6,9 @@
 [![Coverage Status](https://coveralls.io/repos/uken/fluent-plugin-elasticsearch/badge.png)](https://coveralls.io/r/uken/fluent-plugin-elasticsearch)
 [![Code Climate](https://codeclimate.com/github/uken/fluent-plugin-elasticsearch.png)](https://codeclimate.com/github/uken/fluent-plugin-elasticsearch)
 
-I wrote this so you can search logs routed through Fluentd.
+Send your logs to ElasticSearch (and search them with Kibana maybe?)
+
+Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-elasticsearch-service](https://github.com/atomita/fluent-plugin-aws-elasticsearch-service)
 
 * [Installation](#installation)
 * [Usage](#usage)
