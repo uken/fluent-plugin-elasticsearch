@@ -27,6 +27,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :request_timeout, :time, :default => 5
   config_param :reload_connections, :bool, :default => true
   config_param :reload_on_failure, :bool, :default => false
+  config_param :resurrect_after, :time, :default => 5
   config_param :time_key, :string, :default => nil
   config_param :ssl_verify , :bool, :default => true
   config_param :client_key, :string, :default => nil
@@ -57,6 +58,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
                                                                           options: {
                                                                             reload_connections: @reload_connections,
                                                                             reload_on_failure: @reload_on_failure,
+                                                                            resurrect_after: @resurrect_after,
                                                                             retry_on_failure: 5,
                                                                             transport_options: {
                                                                               request: { timeout: @request_timeout },
