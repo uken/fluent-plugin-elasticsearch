@@ -2,6 +2,10 @@
 
 ### Future
 
+### 1.2.0
+- out_elasticsearch_dynamic get memory improvement and fix for race condition (#133)
+- Add `resurrect_after` option (#136)
+
 ### 1.1.0
 - Support SSL client verification and custom CA file (#123)
 - Release experimental `type elasticsearch_dynamic` (#127)

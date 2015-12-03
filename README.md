@@ -181,7 +181,7 @@ request, this can be useful to quickly remove a dead node from the list of addre
 
 ### resurrect_after
 
-You can set in the elasticsearch-transport how often dead connections from the elasticsearch-transport's pool will be resurrected. 
+You can set in the elasticsearch-transport how often dead connections from the elasticsearch-transport's pool will be resurrected.
 
 ```
 resurrect_after 5 # defaults to 60s
@@ -251,7 +251,7 @@ retry_wait 1.0
 num_threads 1
 ```
 
-The value for option `buffer_chunk_limit` should not exceed value `http.max_content_length` in your Elasticsearch setup (by default it is 104857600 bytes). 
+The value for option `buffer_chunk_limit` should not exceed value `http.max_content_length` in your Elasticsearch setup (by default it is 104857600 bytes).
 
 ### Not seeing a config you need?
 
