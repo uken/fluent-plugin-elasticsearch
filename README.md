@@ -181,7 +181,7 @@ request, this can be useful to quickly remove a dead node from the list of addre
 
 ### resurrect_after
 
-You can set in the elasticsearch-transport how often dead connections from pool will be resurrected. 
+You can set in the elasticsearch-transport how often dead connections from the elasticsearch-transport's pool will be resurrected. 
 
 ```
 resurrect_after 5 # defaults to 60s
