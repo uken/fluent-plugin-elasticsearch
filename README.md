@@ -242,6 +242,8 @@ retry_wait 1.0
 num_threads 1
 ```
 
+The value for option `buffer_chunk_limit` should not exceed value `http.max_content_length` in your Elasticsearch setup (by default it is 104857600 bytes). 
+
 ### Not seeing a config you need?
 
 We try to keep the scope of this plugin small and not add too many configuration options. If you think an option would be useful to others, feel free to open an issue or contribute a Pull Request.
