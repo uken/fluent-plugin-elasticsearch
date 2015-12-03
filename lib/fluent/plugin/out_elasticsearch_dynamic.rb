@@ -13,6 +13,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
   config_param :utc_index, :string, :default => "true"
   config_param :reload_connections, :string, :default => "true"
   config_param :reload_on_failure, :string, :default => "false"
+  config_param :resurrect_after, :string, :default => "60"
   config_param :ssl_verify, :string, :dfeault => "true"
 
   def configure(conf)
@@ -45,6 +46,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
                                                                           options: {
                                                                             reload_connections: @dynamic_config['reload_connections'],
                                                                             reload_on_failure: @dynamic_config['reload_on_failure'],
+                                                                            resurrect_after: @dynamic_config['resurrect_after'],
                                                                             retry_on_failure: 5,
                                                                             transport_options: {
                                                                               request: { timeout: @dynamic_config['request_timeout'] },
@@ -103,7 +105,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       attributes[:password] = 'obfuscated' if attributes.has_key?(:password)
       attributes.inspect
     end.join(', ')
-  end  
+  end
 
   def write(chunk)
     bulk_message = Hash.new { |h,k| h[k] = [] }
