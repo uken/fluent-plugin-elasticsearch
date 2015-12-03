@@ -24,6 +24,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [request_timeout](#request_timeout)
   + [reload_connections](#reload_connections)
   + [reload_on_failure](#reload_on_failure)
+  + [resurrect_after](#resurrect_after)
   + [include_tag_key, tag_key](#include_tag_key-tag_key)
   + [id_key](#id_key)
   + [Client/host certificate options](#clienthost-certificate-options)
@@ -177,6 +178,14 @@ reload_on_failure true # defaults to false
 
 Indicates that the elasticsearch-transport will try to reload the nodes addresses if there is a failure while making the
 request, this can be useful to quickly remove a dead node from the list of addresses.
+
+### resurrect_after
+
+You can set in the elasticsearch-transport how often dead connections from pool will be resurrected. 
+
+```
+resurrect_after 5 # defaults to 60s
+```
 
 ### include_tag_key, tag_key
 
