@@ -46,7 +46,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
                                                                           options: {
                                                                             reload_connections: @dynamic_config['reload_connections'],
                                                                             reload_on_failure: @dynamic_config['reload_on_failure'],
-                                                                            resurrect_after: @dynamic_config['resurrect_after'],
+                                                                            resurrect_after: @dynamic_config['resurrect_after'].to_i,
                                                                             retry_on_failure: 5,
                                                                             transport_options: {
                                                                               request: { timeout: @dynamic_config['request_timeout'] },

@@ -2,6 +2,9 @@
 
 ### Future
 
+### 1.2.1
+- fix `resurrect_after` in out_elasticsearch_dynamic
+
 ### 1.2.0
 - out_elasticsearch_dynamic get memory improvement and fix for race condition (#133)
 - Add `resurrect_after` option (#136)
