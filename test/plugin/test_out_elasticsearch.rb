@@ -1,17 +1,8 @@
-require 'test/unit'
-
-require 'fluent/test'
-require 'fluent/plugin/out_elasticsearch'
-
-require 'webmock/test_unit'
-require 'date'
-
-$:.push File.expand_path("../..", __FILE__)
-$:.push File.dirname(__FILE__)
-
 require 'helper'
 
-WebMock.disable_net_connect!
+require 'fluent/plugin/out_elasticsearch'
+
+require 'date'
 
 class ElasticsearchOutput < Test::Unit::TestCase
   attr_accessor :index_cmds, :index_command_counts
