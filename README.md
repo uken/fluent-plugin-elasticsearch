@@ -1,7 +1,6 @@
 # Fluent::Plugin::Elasticsearch, a plugin for [Fluentd](http://fluentd.org)
 
 [![Gem Version](https://badge.fury.io/rb/fluent-plugin-elasticsearch.png)](http://badge.fury.io/rb/fluent-plugin-elasticsearch)
-[![Dependency Status](https://gemnasium.com/uken/guard-sidekiq.png)](https://gemnasium.com/uken/fluent-plugin-elasticsearch)
 [![Build Status](https://travis-ci.org/uken/fluent-plugin-elasticsearch.png?branch=master)](https://travis-ci.org/uken/fluent-plugin-elasticsearch)
 [![Coverage Status](https://coveralls.io/repos/uken/fluent-plugin-elasticsearch/badge.png)](https://coveralls.io/r/uken/fluent-plugin-elasticsearch)
 [![Code Climate](https://codeclimate.com/github/uken/fluent-plugin-elasticsearch.png)](https://codeclimate.com/github/uken/fluent-plugin-elasticsearch)
