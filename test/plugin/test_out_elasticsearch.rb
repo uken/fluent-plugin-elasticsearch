@@ -1,7 +1,4 @@
 require 'helper'
-
-require 'fluent/plugin/out_elasticsearch'
-
 require 'date'
 
 class ElasticsearchOutput < Test::Unit::TestCase
@@ -9,6 +6,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def setup
     Fluent::Test.setup
+    require 'fluent/plugin/out_elasticsearch'
     @driver = nil
   end
 
