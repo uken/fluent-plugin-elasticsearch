@@ -34,25 +34,28 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
   def client(host)
 
     # check here to see if we already have a client connection for the given host
-    connection_options = get_connection_options(host)
+    @_hosts = hosts(host)
 
-    @_es = nil unless is_existing_connection(connection_options[:hosts])
+    @_es = nil unless is_existing_connection(@_hosts)
 
     @_es ||= begin
-      @current_config = connection_options[:hosts].clone
-      excon_options = { client_key: @dynamic_config['client_key'], client_cert: @dynamic_config['client_cert'], client_key_pass: @dynamic_config['client_key_pass'] }
-      adapter_conf = lambda {|f| f.adapter :excon, excon_options }
-      transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(connection_options.merge(
-                                                                          options: {
-                                                                            reload_connections: @dynamic_config['reload_connections'],
-                                                                            reload_on_failure: @dynamic_config['reload_on_failure'],
-                                                                            resurrect_after: @dynamic_config['resurrect_after'].to_i,
-                                                                            retry_on_failure: 5,
-                                                                            transport_options: {
-                                                                              request: { timeout: @dynamic_config['request_timeout'] },
-                                                                              ssl: { verify: @dynamic_config['ssl_verify'], ca_file: @dynamic_config['ca_file'] }
-                                                                            }
-                                                                          }), &adapter_conf)
+      @current_config = @_hosts.clone
+      transport = TRANSPORT_CLASS.new(hosts: @_hosts, options: {
+        reload_connections: @dynamic_config['reload_connections'],
+        reload_on_failure: @dynamic_config['reload_on_failure'],
+        resurrect_after: @dynamic_config['resurrect_after'].to_i,
+        retry_on_failure: 5,
+        transport_options: {
+          request: { timeout: @dynamic_config['request_timeout'] },
+          ssl: { verify: @dynamic_config['ssl_verify'], ca_file: @dynamic_config['ca_file'] }
+        }
+      }) do |f|
+        f.adapter :excon, {
+          client_key: @dynamic_config['client_key'],
+          client_cert: @dynamic_config['client_cert'],
+          client_key_pass: @dynamic_config['client_key_pass']
+        }
+      end
       es = Elasticsearch::Client.new transport: transport
 
       begin
@@ -66,41 +69,28 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     end
   end
 
-  def get_connection_options(con_host)
+  def hosts(con_host)
     raise "`password` must be present if `user` is present" if @dynamic_config['user'] && !@dynamic_config['password']
 
     hosts = if con_host || @dynamic_config['hosts']
-      (con_host || @dynamic_config['hosts']).split(',').map do |host_str|
-        # Support legacy hosts format host:port,host:port,host:port...
-        if host_str.match(%r{^[^:]+(\:\d+)?$})
-          {
-            host:   host_str.split(':')[0],
-            port:   (host_str.split(':')[1] || @dynamic_config['port']).to_i,
-            scheme: @dynamic_config['scheme']
-          }
-        else
-          # New hosts format expects URLs such as http://logs.foo.com,https://john:pass@logs2.foo.com/elastic
-          uri = URI(host_str)
-          %w(user password path).inject(host: uri.host, port: uri.port, scheme: uri.scheme) do |hash, key|
-            hash[key.to_sym] = uri.public_send(key) unless uri.public_send(key).nil? || uri.public_send(key) == ''
-            hash
-          end
-        end
-      end.compact
+      parse_hosts(con_host || @dynamic_config['hosts'], @dynamic_config['port'], @dynamic_config['scheme'])
     else
       [{host: @dynamic_config['host'], port: @dynamic_config['port'].to_i, scheme: @dynamic_config['scheme']}]
-    end.each do |host|
-      host.merge!(user: @dynamic_config['user'], password: @dynamic_config['password']) if !host[:user] && @dynamic_config['user']
-      host.merge!(path: @dynamic_config['path']) if !host[:path] && @dynamic_config['path']
     end
 
-    {
-      hosts: hosts
-    }
+    hosts.each do |host|
+      if !host[:user] && @dynamic_config['user']
+        host[:user] = @dynamic_config['user']
+        host[:password] = @dynamic_config['password']
+      end
+      host[:path] = @dynamic_config['path'] if !host[:path] && @dynamic_config['path']
+    end
+
+    hosts
   end
 
   def connection_options_description(host)
-    get_connection_options(host)[:hosts].map do |host_info|
+    hosts(host).map do |host_info|
       attributes = host_info.dup
       attributes[:password] = 'obfuscated' if attributes.has_key?(:password)
       attributes.inspect
