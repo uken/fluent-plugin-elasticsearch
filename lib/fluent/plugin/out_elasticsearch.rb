@@ -95,15 +95,19 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         [{host: @host, port: @port, scheme: @scheme}]
       end
 
-      hosts.each do |host|
-        if !host[:user] && @user
-          host[:user] = @user
-          host[:password] = @password
-        end
-        host[:path] = @path if !host[:path] && @path
-      end
+      augment_hosts!(hosts, @user, @password, @path)
 
       hosts
+    end
+  end
+
+  def augment_hosts!(hosts, user, password, path)
+    hosts.each do |host|
+      if !host[:user] && user
+        host[:user] = user
+        host[:password] = password
+      end
+      host[:path] = path if !host[:path] && path
     end
   end
 
@@ -113,13 +117,17 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       if host_str.match(/^([^:]+)(:(\d+))?$/)
         {host: $1, port: ($3 || port).to_i, scheme: scheme}
       else
-        # New hosts format expects URLs such as http://logs.foo.com,https://john:pass@logs2.foo.com/elastic
-        uri = URI(host_str)
-        %w(user password path).inject(host: uri.host, port: uri.port, scheme: uri.scheme) do |hash, key|
-          hash[key.to_sym] = uri.public_send(key) unless uri.public_send(key).nil? || uri.public_send(key) == ''
-          hash
-        end
+        parse_hosts_new_format(host_str)
       end
+    end
+  end
+
+  def parse_hosts_new_format(host_str)
+    # New hosts format expects URLs such as http://logs.foo.com,https://john:pass@logs2.foo.com/elastic
+    uri = URI(host_str)
+    %w(user password path).inject(host: uri.host, port: uri.port, scheme: uri.scheme) do |hash, key|
+      hash[key.to_sym] = uri.public_send(key) unless uri.public_send(key).nil? || uri.public_send(key) == ''
+      hash
     end
   end
 
@@ -193,10 +201,16 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   end
 
   def send(data)
+    retriable(client.transport.host_unreachable_exceptions) do
+      client.bulk body: data
+    end
+  end
+
+  def retriable(exceptions)
     retries = 0
     begin
-      client.bulk body: data
-    rescue *client.transport.host_unreachable_exceptions => e
+      yield
+    rescue *exceptions => e
       if retries < 2
         retries += 1
         @_es = nil

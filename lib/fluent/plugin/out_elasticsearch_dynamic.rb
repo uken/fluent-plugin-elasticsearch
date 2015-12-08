@@ -78,13 +78,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       [{host: @dynamic_config['host'], port: @dynamic_config['port'].to_i, scheme: @dynamic_config['scheme']}]
     end
 
-    hosts.each do |host|
-      if !host[:user] && @dynamic_config['user']
-        host[:user] = @dynamic_config['user']
-        host[:password] = @dynamic_config['password']
-      end
-      host[:path] = @dynamic_config['path'] if !host[:path] && @dynamic_config['path']
-    end
+    augment_hosts!(hosts, @dynamic_config['user'], @dynamic_config['password'], @dynamic_config['path'])
 
     hosts
   end
@@ -166,18 +160,8 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
   end
 
   def send(data, host)
-    retries = 0
-    begin
+    retriable(client(host).transport.host_unreachable_exceptions) do
       client(host).bulk body: data
-    rescue *client(host).transport.host_unreachable_exceptions => e
-      if retries < 2
-        retries += 1
-        @_es = nil
-        log.warn "Could not push logs to Elasticsearch, resetting connection and trying again. #{e.message}"
-        sleep 2**retries
-        retry
-      end
-      raise ConnectionFailure, "Could not push logs to Elasticsearch after #{retries} retries. #{e.message}"
     end
   end
 
