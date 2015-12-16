@@ -165,20 +165,20 @@ request_timeout 15s # defaults to 5s
 
 ### reload_connections
 
+You can tune how the elasticsearch-transport host reloading feature works. By default it will reload the host list from the server every 10,000th request to spread the load. This can be an issue if your ElasticSearch cluster is behind a Reverse Proxy, as Fluentd process may not have direct network access to the ElasticSearch nodes.
+
 ```
 reload_connections false # defaults to true
 ```
 
 ### reload_on_failure
 
-You can tune how the elasticsearch-transport host reloading feature works. By default it will reload the host list from the server every 10,000th request to spread the load. This can be an issue if your ElasticSearch cluster is behind a Reverse Proxy, as Fluentd process may not have direct network access to the ElasticSearch nodes.
+Indicates that the elasticsearch-transport will try to reload the nodes addresses if there is a failure while making the
+request, this can be useful to quickly remove a dead node from the list of addresses.
 
 ```
 reload_on_failure true # defaults to false
 ```
-
-Indicates that the elasticsearch-transport will try to reload the nodes addresses if there is a failure while making the
-request, this can be useful to quickly remove a dead node from the list of addresses.
 
 ### resurrect_after
 
