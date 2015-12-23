@@ -72,8 +72,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
     instance = driver('test', config).instance
 
-    assert_equal 3, instance.get_connection_options[:hosts].length
-    host1, host2, host3 = instance.get_connection_options[:hosts]
+    assert_equal 3, instance.hosts.length
+    host1, host2, host3 = instance.hosts
 
     assert_equal 'host1', host1[:host]
     assert_equal 50, host1[:port]
@@ -94,8 +94,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
     instance = driver('test', config).instance
 
-    assert_equal 2, instance.get_connection_options[:hosts].length
-    host1, host2 = instance.get_connection_options[:hosts]
+    assert_equal 2, instance.hosts.length
+    host1, host2 = instance.hosts
 
     assert_equal 'host1', host1[:host]
     assert_equal 443, host1[:port]
@@ -119,8 +119,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
     instance = driver('test', config).instance
 
-    assert_equal 1, instance.get_connection_options[:hosts].length
-    host1 = instance.get_connection_options[:hosts][0]
+    assert_equal 1, instance.hosts.length
+    host1 = instance.hosts[0]
 
     assert_equal 'logs.google.com', host1[:host]
     assert_equal 9200, host1[:port]

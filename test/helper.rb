@@ -5,8 +5,8 @@ SimpleCov.start do
   end
 end
 
-require 'coveralls'
-Coveralls.wear!
+# require 'coveralls'
+# Coveralls.wear!
 
 # needs to be after simplecov but before test/unit, because fluentd sets default
 # encoding to ASCII-8BIT, but coverall might load git data which could contain a
