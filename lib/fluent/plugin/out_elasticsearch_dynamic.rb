@@ -164,7 +164,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
         host = "#{dynamic_conf['host']}:#{dynamic_conf['port']}"
       end
 
-      if dynamic_conf["partial"]
+      if @partial
         if meta.has_key?("_id")
           bulk_message[host] << { "update" => meta }
           bulk_message[host] << { "doc" => record, "doc_as_upsert" => true }
