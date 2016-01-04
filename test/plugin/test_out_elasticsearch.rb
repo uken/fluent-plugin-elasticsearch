@@ -438,4 +438,23 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
     assert_equal(connection_resets, 3)
   end
+  
+  def test_partial_should_not_write_if_theres_no_id
+    driver.configure("partial true\n")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert_nil(index_cmds)
+  end
+
+  def test_partial_should_write_update_op
+    driver.configure("partial true 
+                      id_key request_id")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert(index_cmds.first.has_key?("update"))
+  end
 end

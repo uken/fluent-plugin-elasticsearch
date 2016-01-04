@@ -23,6 +23,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :type_name, :string, :default => "fluentd"
   config_param :index_name, :string, :default => "fluentd"
   config_param :id_key, :string, :default => nil
+  config_param :partial, :bool, :default => false
   config_param :parent_key, :string, :default => nil
   config_param :request_timeout, :time, :default => 5
   config_param :reload_connections, :bool, :default => true
@@ -154,17 +155,24 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         record.merge!(@tag_key => tag)
       end
 
-      meta = { "index" => {"_index" => target_index, "_type" => type_name} }
+      meta = {"_index" => target_index, "_type" => type_name}
       if @id_key && record[@id_key]
-        meta['index']['_id'] = record[@id_key]
+        meta['_id'] = record[@id_key]
       end
 
       if @parent_key && record[@parent_key]
-        meta['index']['_parent'] = record[@parent_key]
+        meta['_parent'] = record[@parent_key]
       end
 
-      bulk_message << meta
-      bulk_message << record
+      if @partial
+        if meta.has_key?("_id")
+          bulk_message << { "update" => meta }
+          bulk_message << { "doc" => record, "doc_as_upsert" => true }
+        end
+      else
+        bulk_message << { "index" => meta }
+        bulk_message << record
+      end
     end
 
     send(bulk_message) unless bulk_message.empty?
