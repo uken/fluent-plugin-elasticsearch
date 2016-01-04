@@ -28,6 +28,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [resurrect_after](#resurrect_after)
   + [include_tag_key, tag_key](#include_tag_key-tag_key)
   + [id_key](#id_key)
+  + [partial](#partial)
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Buffered output options](#buffered-output-options)
   + [Not seeing a config you need?](#not-seeing-a-config-you-need)
@@ -224,6 +225,14 @@ This following record `{"name":"Johnny","request_id":"87d89af7daffad6"}` will tr
 ```
 { "index" : { "_index" : "logstash-2013.01.01, "_type" : "fluentd", "_id" : "87d89af7daffad6" } }
 { "name": "Johnny", "request_id": "87d89af7daffad6" }
+```
+
+### partial
+
+You can specify if you want to index a document entirely or update partial fields only.
+
+```
+partial true # defaults to false
 ```
 
 ### Client/host certificate options
