@@ -1,6 +1,7 @@
 ## Changelog
 
-### Future
+### 1.3.0
+- add `write_operation`
 
 ### 1.2.1
 - fix `resurrect_after` in out_elasticsearch_dynamic
