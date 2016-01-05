@@ -23,7 +23,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :type_name, :string, :default => "fluentd"
   config_param :index_name, :string, :default => "fluentd"
   config_param :id_key, :string, :default => nil
-  config_param :partial, :bool, :default => false
+  config_param :write_operation, :string, :default => "index"
   config_param :parent_key, :string, :default => nil
   config_param :request_timeout, :time, :default => 5
   config_param :reload_connections, :bool, :default => true
@@ -164,12 +164,17 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         meta['_parent'] = record[@parent_key]
       end
 
-      if @partial
+      if @write_operation == "update" || @write_operation == "upsert"
         if meta.has_key?("_id")
           bulk_message << { "update" => meta }
-          bulk_message << { "doc" => record, "doc_as_upsert" => true }
+          bulk_message << { "doc" => record, "doc_as_upsert" => @write_operation == "upsert" }
         end
-      else
+      elsif @write_operation == "create"
+        if meta.has_key?("_id")
+          bulk_message << { "create" => meta }
+          bulk_message << record
+        end        
+      elsif @write_operation == "index"
         bulk_message << { "index" => meta }
         bulk_message << record
       end
