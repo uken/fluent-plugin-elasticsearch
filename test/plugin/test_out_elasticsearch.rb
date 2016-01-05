@@ -438,4 +438,64 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
     assert_equal(connection_resets, 3)
   end
+
+  def test_update_should_not_write_if_theres_no_id
+    driver.configure("write_operation update\n")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert_nil(index_cmds)
+  end
+
+  def test_upsert_should_not_write_if_theres_no_id
+    driver.configure("write_operation upsert\n")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert_nil(index_cmds)
+  end
+
+  def test_create_should_not_write_if_theres_no_id
+    driver.configure("write_operation create\n")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert_nil(index_cmds)
+  end
+
+  def test_update_should_write_update_op_and_doc_as_upsert_is_false
+    driver.configure("write_operation update 
+                      id_key request_id")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert(index_cmds[0].has_key?("update"))
+    assert(!index_cmds[1]["doc_as_upsert"])
+  end
+
+  def test_upsert_should_write_update_op_and_doc_as_upsert_is_true
+    driver.configure("write_operation upsert 
+                      id_key request_id")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert(index_cmds[0].has_key?("update"))
+    assert(index_cmds[1]["doc_as_upsert"])
+  end
+
+  def test_create_should_write_create_op
+    driver.configure("write_operation create 
+                      id_key request_id")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert(index_cmds[0].has_key?("create"))
+  end
+
 end

@@ -28,6 +28,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [resurrect_after](#resurrect_after)
   + [include_tag_key, tag_key](#include_tag_key-tag_key)
   + [id_key](#id_key)
+  + [write_operation](#write_operation)
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Buffered output options](#buffered-output-options)
   + [Not seeing a config you need?](#not-seeing-a-config-you-need)
@@ -225,6 +226,19 @@ This following record `{"name":"Johnny","request_id":"87d89af7daffad6"}` will tr
 { "index" : { "_index" : "logstash-2013.01.01, "_type" : "fluentd", "_id" : "87d89af7daffad6" } }
 { "name": "Johnny", "request_id": "87d89af7daffad6" }
 ```
+
+### write_operation
+
+The write_operation can be any of: 
+
+| Operation | Description          |
+| ------------- | ----------- |
+| index (default)      | new data is added while existing data (based on its id) is replaced (reindexed).|
+| create      | adds new data - if the data already exists (based on its id), the op is skipped.|
+| update      | updates existing data (based on its id). If no data is found, the op is skipped.|
+| upsert      | known as merge or insert if the data does not exist, updates if the data exists (based on its id).|
+
+**Please note, id is required in create, update, and upsert scenario. Without id, the message will be dropped.**
 
 ### Client/host certificate options
 

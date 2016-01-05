@@ -149,13 +149,13 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
         record.merge!(dynamic_conf['tag_key'] => tag)
       end
 
-      meta = { "index" => {"_index" => target_index, "_type" => dynamic_conf['type_name']} }
+      meta = {"_index" => target_index, "_type" => dynamic_conf['type_name']}
       if dynamic_conf['id_key'] && record[dynamic_conf['id_key']]
-        meta['index']['_id'] = record[dynamic_conf['id_key']]
+        meta['_id'] = record[dynamic_conf['id_key']]
       end
 
       if dynamic_conf['parent_key'] && record[dynamic_conf['parent_key']]
-        meta['index']['_parent'] = record[dynamic_conf['parent_key']]
+        meta['_parent'] = record[dynamic_conf['parent_key']]
       end
 
       if dynamic_conf['hosts']
@@ -164,9 +164,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
         host = "#{dynamic_conf['host']}:#{dynamic_conf['port']}"
       end
 
-      bulk_message[host] << meta
-      bulk_message[host] << record
-
+      append_record_to_messages(dynamic_conf["write_operation"], meta, record, bulk_message[host])
     end
 
     bulk_message.each do | hKey, array |

@@ -23,6 +23,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :type_name, :string, :default => "fluentd"
   config_param :index_name, :string, :default => "fluentd"
   config_param :id_key, :string, :default => nil
+  config_param :write_operation, :string, :default => "index"
   config_param :parent_key, :string, :default => nil
   config_param :request_timeout, :time, :default => 5
   config_param :reload_connections, :bool, :default => true
@@ -127,6 +128,24 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     super
   end
 
+  def append_record_to_messages(op, meta, record, msgs)
+    case op
+    when "update", "upsert"
+      if meta.has_key?("_id")
+        msgs << { "update" => meta }
+        msgs << { "doc" => record, "doc_as_upsert" => op == "upsert" }
+      end
+    when "create"
+      if meta.has_key?("_id")
+        msgs << { "create" => meta }
+        msgs << record
+      end        
+    when "index"
+      msgs << { "index" => meta }
+      msgs << record
+    end
+  end
+
   def write(chunk)
     bulk_message = []
 
@@ -154,17 +173,16 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         record.merge!(@tag_key => tag)
       end
 
-      meta = { "index" => {"_index" => target_index, "_type" => type_name} }
+      meta = {"_index" => target_index, "_type" => type_name}
       if @id_key && record[@id_key]
-        meta['index']['_id'] = record[@id_key]
+        meta['_id'] = record[@id_key]
       end
 
       if @parent_key && record[@parent_key]
-        meta['index']['_parent'] = record[@parent_key]
+        meta['_parent'] = record[@parent_key]
       end
 
-      bulk_message << meta
-      bulk_message << record
+      append_record_to_messages(@write_operation, meta, record, bulk_message)
     end
 
     send(bulk_message) unless bulk_message.empty?
