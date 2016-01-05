@@ -128,6 +128,24 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     super
   end
 
+  def append_record_to_messages(op, meta, record, msgs)
+    case op
+    when "update", "upsert"
+      if meta.has_key?("_id")
+        msgs << { "update" => meta }
+        msgs << { "doc" => record, "doc_as_upsert" => op == "upsert" }
+      end
+    when "create"
+      if meta.has_key?("_id")
+        msgs << { "create" => meta }
+        msgs << record
+      end        
+    when "index"
+      msgs << { "index" => meta }
+      msgs << record
+    end
+  end
+
   def write(chunk)
     bulk_message = []
 
@@ -164,20 +182,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         meta['_parent'] = record[@parent_key]
       end
 
-      if @write_operation == "update" || @write_operation == "upsert"
-        if meta.has_key?("_id")
-          bulk_message << { "update" => meta }
-          bulk_message << { "doc" => record, "doc_as_upsert" => @write_operation == "upsert" }
-        end
-      elsif @write_operation == "create"
-        if meta.has_key?("_id")
-          bulk_message << { "create" => meta }
-          bulk_message << record
-        end        
-      elsif @write_operation == "index"
-        bulk_message << { "index" => meta }
-        bulk_message << record
-      end
+      append_record_to_messages(@write_operation, meta, record, bulk_message)
     end
 
     send(bulk_message) unless bulk_message.empty?

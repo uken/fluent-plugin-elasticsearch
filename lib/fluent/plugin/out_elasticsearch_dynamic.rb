@@ -164,21 +164,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
         host = "#{dynamic_conf['host']}:#{dynamic_conf['port']}"
       end
 
-      if dynamic_conf["write_operation"] == "update" || dynamic_conf["write_operation"] == "upsert"
-        if meta.has_key?("_id")
-          bulk_message[host] << { "update" => meta }
-          bulk_message[host] << { "doc" => record, "doc_as_upsert" => dynamic_conf["write_operation"] == "upsert" }
-        end
-      elsif dynamic_conf["write_operation"] == "create"
-        if meta.has_key?("_id")
-          bulk_message[host] << { "create" => meta }
-          bulk_message[host] << record
-        end
-      elsif dynamic_conf["write_operation"] == "index"
-        bulk_message[host] << { "index" => meta }
-        bulk_message[host] << record
-      end
-
+      append_record_to_messages(dynamic_conf["write_operation"], meta, record, bulk_message[host])
     end
 
     bulk_message.each do | hKey, array |
