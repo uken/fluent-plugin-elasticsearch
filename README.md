@@ -45,11 +45,11 @@ $ gem install fluent-plugin-elasticsearch
 
 ## Usage
 
-In your Fluentd configuration, use `type elasticsearch`. Additional configuration is optional, default values would look like this:
+In your Fluentd configuration, use `@type elasticsearch`. Additional configuration is optional, default values would look like this:
 
 ```
 <match my.logs>
-  type elasticsearch
+  @type elasticsearch
   host localhost
   port 9200
   index_name fluentd
@@ -200,7 +200,7 @@ This will add the Fluentd tag in the JSON record. For instance, if you have a co
 
 ```
 <match my.logs>
-  type elasticsearch
+  @type elasticsearch
   include_tag_key true
   tag_key _key
 </match>
@@ -277,7 +277,7 @@ Alternatively, consider using [fluent-plugin-forest](https://github.com/tagomori
 ```
 <match my.logs.*>
   type forest
-  subtype elasticsearch
+  sub@type elasticsearch
   remove_prefix my.logs
   <template>
     logstash_prefix ${tag}
@@ -294,7 +294,7 @@ If you want configurations to depend on information in messages, you can use `el
 
 ```
 <match my.logs.*>
-  type elasticsearch_dynamic
+  @type elasticsearch_dynamic
   hosts ${record['host1']}:9200,${record['host2']}:9200
   index_name my_index.${Time.at(time).getutc.strftime(@logstash_dateformat)}
   logstash_prefix ${tag_parts[3]}
