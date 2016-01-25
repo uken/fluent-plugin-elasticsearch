@@ -313,6 +313,8 @@ If you have a question, [open an Issue](https://github.com/uken/fluent-plugin-el
 
 Pull Requests are welcomed.
 
+[![Pull Request Graph](https://graphs.waffle.io/uken/fluent-plugin-elasticsearch/throughput.svg)](https://waffle.io/uken/fluent-plugin-elasticsearch/metrics)
+
 ## Running tests
 
 Install dev dependencies:
