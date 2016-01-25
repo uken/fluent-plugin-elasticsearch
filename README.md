@@ -276,8 +276,8 @@ Alternatively, consider using [fluent-plugin-forest](https://github.com/tagomori
 
 ```
 <match my.logs.*>
-  type forest
-  sub@type elasticsearch
+  @type forest
+  subtype elasticsearch
   remove_prefix my.logs
   <template>
     logstash_prefix ${tag}
