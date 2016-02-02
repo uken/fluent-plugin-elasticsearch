@@ -165,15 +165,19 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         else
           target_index = "#{@logstash_prefix}-#{Time.at(time).strftime("#{@logstash_dateformat}")}"
         end
+        target_type = @type_name
       else
-        target_index = @index_name
+	target_index = record.fetch("_index", @index_name)
+        target_type = record.fetch("_type", @type_name)
+        record.delete("_index")
+        record.delete("_type")
       end
 
       if @include_tag_key
         record.merge!(@tag_key => tag)
       end
 
-      meta = {"_index" => target_index, "_type" => type_name}
+      meta = {"_index" => target_index, "_type" => target_type}
       if @id_key && record[@id_key]
         meta['_id'] = record[@id_key]
       end
