@@ -3,6 +3,7 @@ require 'date'
 require 'excon'
 require 'elasticsearch'
 require 'uri'
+require 'strptime'
 
 class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   class ConnectionFailure < StandardError; end
@@ -17,6 +18,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :scheme, :string, :default => 'http'
   config_param :hosts, :string, :default => nil
   config_param :target_index_key, :string, :default => nil
+  config_param :time_key_format, :string, :default => nil
   config_param :logstash_format, :bool, :default => false
   config_param :logstash_prefix, :string, :default => "logstash"
   config_param :logstash_dateformat, :string, :default => "%Y.%m.%d"
@@ -42,14 +44,34 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
   def initialize
     super
+    @time_parser = _make_time_praser(@time_key_format)
   end
 
   def configure(conf)
     super
+    @time_parser = _make_time_praser(@time_key_format)
   end
 
   def start
     super
+  end
+
+  # once fluent v0.14 is released we might be able to use
+  # Fluent::Parser::TimeParser, but it doesn't quite do what we want - if gives
+  # [sec,nsec] where as we want something we can call `strftime` on...
+  def _make_time_praser(time_key_format)
+    if time_key_format
+      begin
+        # Strptime doesn't support all formats, but for those it does it's
+        # blazingly fast.
+        strptime = Strptime.new(time_key_format)
+        Proc.new { |value| strptime.exec(value).to_datetime }
+      rescue
+        Proc.new { |value| DateTime.strptime(value, time_key_format) }
+      end
+    else
+      Proc.new { |value| DateTime.parse(value) }
+    end
   end
 
   def client
@@ -156,18 +178,16 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         target_index = record.delete @target_index_key
       elsif @logstash_format
         if record.has_key?("@timestamp")
-          time = Time.parse record["@timestamp"]
+          dt = @time_parser.call(record["@timestamp"]) rescue Time.at(time).to_datetime
         elsif record.has_key?(@time_key)
-          time = Time.parse record[@time_key]
+          dt = @time_parser.call(record[@time_key]) rescue Time.at(time).to_datetime
           record['@timestamp'] = record[@time_key]
         else
-          record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
+          dt = Time.at(time).to_datetime
+          record.merge!({"@timestamp" => dt.to_s})
         end
-        if @utc_index
-          target_index = "#{@logstash_prefix}-#{Time.at(time).getutc.strftime("#{@logstash_dateformat}")}"
-        else
-          target_index = "#{@logstash_prefix}-#{Time.at(time).strftime("#{@logstash_dateformat}")}"
-        end
+        dt = dt.new_offset(0) if @utc_index
+        target_index = "#{@logstash_prefix}-#{dt.strftime(@logstash_dateformat)}"
       else
         target_index = @index_name
       end

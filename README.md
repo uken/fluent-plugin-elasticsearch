@@ -20,6 +20,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [logstash_format](#logstash_format)
   + [logstash_prefix](#logstash_prefix)
   + [logstash_dateformat](#logstash_dateformat)
+  + [time_key_format](#time_key_format)
   + [time_key](#time_key)
   + [utc_index](#utc_index)
   + [target_index_key](#target_index_key)
@@ -97,7 +98,7 @@ Specify `ssl_verify false` to skip ssl verification (defaults to true)
 logstash_format true # defaults to false
 ```
 
-This is meant to make writing data into ElasticSearch compatible to what [Logstash](https://www.elastic.co/products/logstash) writes. By doing this, one could take advantage of [Kibana](https://www.elastic.co/products/kibana).
+This is meant to make writing data into ElasticSearch indices compatible to what [Logstash](https://www.elastic.co/products/logstash) calls them. By doing this, one could take advantage of [Kibana](https://www.elastic.co/products/kibana). See logstash_prefix and logstash_dateformat to customize this index name pattern. The index name will be `#{logstash_prefix}-#{formated_date}`
 
 ### logstash_prefix
 
@@ -107,10 +108,22 @@ logstash_prefix mylogs # defaults to "logstash"
 
 ### logstash_dateformat
 
-By default, the records inserted into index `logstash-YYMMDD`. This option allows to insert into specified index like `mylogs-YYYYMM` for a monthly index.
+The strftime format to generate index target index name when `logstash_format` is set to true. By default, the records are inserted into index `logstash-YYYY.MM.DD`. This option, alongwith `logstash_prefix` lets us insert into specified index like `mylogs-YYYYMM` for a monthly index.
 
 ```
 logstash_dateformat %Y.%m. # defaults to "%Y.%m.%d"
+```
+
+### time_key_format
+
+The format of the time stamp field (`@timestamp` or what you specify with [time_key][#time_key]). This parameter only has an effect when [logstash_format][#logstash_format] is true as it only affects the name of the index we write to. Please see [Time#strftime](http://ruby-doc.org/core-1.9.3/Time.html#method-i-strftime) for information about the value of this format.
+
+Setting this to a known format can vastly improve your log ingestion speed if all most of your logs are in the same format. If there is an error parsing this format the timestamp will default to the ingestion time.
+
+For example to parse ISO8601 times with sub-second precision:
+
+```
+time_key_format %Y-%m-%dT%H:%M:%S.%N%z
 ```
 
 ### time_key

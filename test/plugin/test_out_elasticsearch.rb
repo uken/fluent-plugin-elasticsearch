@@ -277,25 +277,29 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_writes_to_logstash_index
     driver.configure("logstash_format true\n")
-    time = Time.parse Date.today.to_s
-    logstash_index = "logstash-#{time.getutc.strftime("%Y.%m.%d")}"
+    #
+    # This is 1 second past midnight in BST, so the UTC index should be the day before
+    dt = DateTime.new(2015, 6, 1, 0, 0, 1, "+01:00")
+    logstash_index = "logstash-2015.05.31"
     stub_elastic_ping
     stub_elastic
-    driver.emit(sample_record, time)
+    driver.emit(sample_record, dt.to_time)
     driver.run
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
 
-  def test_writes_to_logstash_utc_index
+  def test_writes_to_logstash_non_utc_index
     driver.configure("logstash_format true
                       utc_index false")
-    time = Time.parse Date.today.to_s
-    utc_index = "logstash-#{time.strftime("%Y.%m.%d")}"
+    # When using `utc_index false` the index time will be the local day of
+    # ingestion time
+    time = Date.today.to_time
+    index = "logstash-#{time.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
     driver.emit(sample_record, time)
     driver.run
-    assert_equal(utc_index, index_cmds.first['index']['_index'])
+    assert_equal(index, index_cmds.first['index']['_index'])
   end
 
   def test_writes_to_logstash_index_with_specified_prefix
@@ -373,6 +377,33 @@ class ElasticsearchOutput < Test::Unit::TestCase
     ts = DateTime.new(2001,2,3).to_s
     driver.emit(sample_record.merge!('vtm' => ts))
     driver.run
+    assert(index_cmds[1].has_key? '@timestamp')
+    assert_equal(index_cmds[1]['@timestamp'], ts)
+  end
+
+
+  def test_uses_custom_time_key_format
+    driver.configure("logstash_format true
+                      time_key_format %Y-%m-%dT%H:%M:%S.%N%z\n")
+    stub_elastic_ping
+    stub_elastic
+    ts = "2001-02-03T13:14:01.673+02:00"
+    driver.emit(sample_record.merge!('@timestamp' => ts))
+    driver.run
+    assert_equal("logstash-2001.02.03", index_cmds[0]['index']['_index'])
+    assert(index_cmds[1].has_key? '@timestamp')
+    assert_equal(index_cmds[1]['@timestamp'], ts)
+  end
+
+  def test_uses_custom_time_key_format_obscure_format
+    driver.configure("logstash_format true
+                      time_key_format %a %b %d %H:%M:%S %Z %Y\n")
+    stub_elastic_ping
+    stub_elastic
+    ts = "Thu Nov 29 14:33:20 GMT 2001"
+    driver.emit(sample_record.merge!('@timestamp' => ts))
+    driver.run
+    assert_equal("logstash-2001.11.29", index_cmds[0]['index']['_index'])
     assert(index_cmds[1].has_key? '@timestamp')
     assert_equal(index_cmds[1]['@timestamp'], ts)
   end
