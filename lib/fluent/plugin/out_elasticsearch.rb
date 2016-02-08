@@ -16,6 +16,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :path, :string, :default => nil
   config_param :scheme, :string, :default => 'http'
   config_param :hosts, :string, :default => nil
+  config_param :target_index_key, :string, :default => nil
   config_param :logstash_format, :bool, :default => false
   config_param :logstash_prefix, :string, :default => "logstash"
   config_param :logstash_dateformat, :string, :default => "%Y.%m.%d"
@@ -151,7 +152,9 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
     chunk.msgpack_each do |tag, time, record|
       next unless record.is_a? Hash
-      if @logstash_format
+      if @target_index_key && record[@target_index_key]
+        target_index = record.delete @target_index_key
+      elsif @logstash_format
         if record.has_key?("@timestamp")
           time = Time.parse record["@timestamp"]
         elsif record.has_key?(@time_key)

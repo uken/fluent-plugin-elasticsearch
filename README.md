@@ -22,6 +22,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [logstash_dateformat](#logstash_dateformat)
   + [time_key](#time_key)
   + [utc_index](#utc_index)
+  + [target_index_key](#target_index_key)
   + [request_timeout](#request_timeout)
   + [reload_connections](#reload_connections)
   + [reload_on_failure](#reload_on_failure)
@@ -141,7 +142,7 @@ The output will be
 ```
 {
   "title": "developer",
-  "@timstamp": "2014-12-19T08:01:03Z",
+  "@timestamp": "2014-12-19T08:01:03Z",
   "vtm": "2014-12-19T08:01:03Z"
 }
 ```
@@ -153,6 +154,39 @@ utc_index true
 ```
 
 By default, the records inserted into index `logstash-YYMMDD` with UTC (Coordinated Universal Time). This option allows to use local time if you describe utc_index to false.
+
+### target_index_key
+
+Tell this plugin to find the index name to write to in the record under this key in preference to other mechanisms.
+
+If it is present in the record (and the value is non falsey) the value will be used as the index name to write to and then removed from the record before output; if it is not found then it will use logstash_format or index_name settings as configured.
+
+Suppose you have the following settings
+
+```
+target_index_key @target_index
+index_name fallback
+```
+
+If your input is:
+```
+{
+  "title": "developer",
+  "@timestamp": "2014-12-19T08:01:03Z",
+  "@target_index": "logstash-2014.12.19"
+}
+```
+
+The output would be
+
+```
+{
+  "title": "developer",
+  "@timestamp": "2014-12-19T08:01:03Z",
+}
+```
+
+and this record will be written to the specified index (`logstash-2014.12.19`) rather than `fallback`.
 
 ### request_timeout
 
