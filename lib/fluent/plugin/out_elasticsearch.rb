@@ -3,7 +3,10 @@ require 'date'
 require 'excon'
 require 'elasticsearch'
 require 'uri'
-require 'strptime'
+begin
+  require 'strptime'
+rescue LoadError
+end
 
 class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   class ConnectionFailure < StandardError; end
@@ -67,6 +70,9 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         strptime = Strptime.new(time_key_format)
         Proc.new { |value| strptime.exec(value).to_datetime }
       rescue
+        # Can happen if Strptime doesn't recognize the format; or
+        # if strptime couldn't be required (because it's not installed -- it's
+        # ruby 2 only)
         Proc.new { |value| DateTime.strptime(value, time_key_format) }
       end
     else
