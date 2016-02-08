@@ -1,5 +1,8 @@
 ## Changelog
 
+### Future
+- add `target_index_key` (#153)
+
 ### 1.3.0
 - add `write_operation`
 
