@@ -22,6 +22,8 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :utc_index, :bool, :default => true
   config_param :type_name, :string, :default => "fluentd"
   config_param :index_name, :string, :default => "fluentd"
+  config_param :index_name_from_record, :string, :default => nil
+  config_param :type_name_from_record, :string, :default => nil
   config_param :id_key, :string, :default => nil
   config_param :write_operation, :string, :default => "index"
   config_param :parent_key, :string, :default => nil
@@ -167,10 +169,14 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         end
         target_type = @type_name
       else
-	target_index = record.fetch("_index", @index_name)
-        target_type = record.fetch("_type", @type_name)
-        record.delete("_index")
-        record.delete("_type")
+	if @index_name_from_record
+	  target_index = record.fetch(@index_name_from_record, @index_name)
+          record.delete("_index")
+	end
+	if @type_name_from_record
+          target_type = record.fetch(@type_name_from_record, @type_name)
+          record.delete(@type_name_from_record)
+	end
       end
 
       if @include_tag_key
