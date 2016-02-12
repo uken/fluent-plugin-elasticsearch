@@ -8,6 +8,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
     Fluent::Test.setup
     require 'fluent/plugin/out_elasticsearch'
     @driver = nil
+    log = Fluent::Engine.log
+    log.out.logs.slice!(0, log.out.logs.length)
   end
 
   def driver(tag='test', conf='')
@@ -394,6 +396,28 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert(index_cmds[1].has_key? '@timestamp')
     assert_equal(index_cmds[1]['@timestamp'], ts)
   end
+
+  def test_uses_custom_time_key_format_logs_an_error
+    driver.configure("logstash_format true
+                      time_key_format %Y-%m-%dT%H:%M:%S.%N%z\n")
+    stub_elastic_ping
+    stub_elastic
+
+    ts = "2001/02/03 13:14:01,673+02:00"
+    index = "logstash-#{Date.today.strftime("%Y.%m.%d")}"
+
+    driver.emit(sample_record.merge!('@timestamp' => ts))
+    driver.run
+
+    log = driver.instance.router.emit_error_handler.log
+    errors = log.out.logs.grep /tag="Fluent::ElasticsearchOutput::TimeParser.error"/
+    assert_equal(1, errors.length, "Error was logged for timestamp parse failure")
+
+    assert_equal(index, index_cmds[0]['index']['_index'])
+    assert(index_cmds[1].has_key? '@timestamp')
+    assert_equal(index_cmds[1]['@timestamp'], ts)
+  end
+
 
   def test_uses_custom_time_key_format_obscure_format
     driver.configure("logstash_format true
