@@ -31,6 +31,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [id_key](#id_key)
   + [write_operation](#write_operation)
   + [Client/host certificate options](#clienthost-certificate-options)
+  + [Proxy Support](#proxy-support)
   + [Buffered output options](#buffered-output-options)
   + [Not seeing a config you need?](#not-seeing-a-config-you-need)
   + [Dynamic configuration](#dynamic-configuration)
@@ -287,6 +288,10 @@ client_cert /path/to/your/client/cert
 client_key /path/to/your/private/key
 client_key_pass password
 ```
+
+### Proxy Support
+
+Starting with version 0.8.0, this gem uses excon, which supports proxy with environment variables - https://github.com/excon/excon#proxy-support
 
 ### Buffered output options
 
