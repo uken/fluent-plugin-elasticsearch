@@ -264,7 +264,7 @@ This following record `{"name":"Johnny","request_id":"87d89af7daffad6"}` will tr
 
 ### write_operation
 
-The write_operation can be any of: 
+The write_operation can be any of:
 
 | Operation | Description          |
 | ------------- | ----------- |
@@ -349,6 +349,8 @@ If you want configurations to depend on information in messages, you can use `el
 If you have a question, [open an Issue](https://github.com/uken/fluent-plugin-elasticsearch/issues).
 
 ## Contributing
+
+There are usually a few feature requests, tagged [Easy](https://github.com/uken/fluent-plugin-elasticsearch/issues?q=is%3Aissue+is%3Aopen+label%3Alevel%3AEasy), [Normal](https://github.com/uken/fluent-plugin-elasticsearch/issues?q=is%3Aissue+is%3Aopen+label%3Alevel%3ANormal) and [Hard](https://github.com/uken/fluent-plugin-elasticsearch/issues?q=is%3Aissue+is%3Aopen+label%3Alevel%3AHard). Feel free to work on any one of them.
 
 Pull Requests are welcomed.
 
