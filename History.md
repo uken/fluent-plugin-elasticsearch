@@ -1,7 +1,10 @@
 ## Changelog
 
 ### Future
-- add `target_index_key` (#153)
+
+### 1.4.0
+- add `target_index_key` to specify target index (#153)
+- add `time_key_format` for faster time format parsing (#154)
 
 ### 1.3.0
 - add `write_operation`
