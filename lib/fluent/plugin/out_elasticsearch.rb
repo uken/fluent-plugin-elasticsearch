@@ -23,6 +23,8 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :utc_index, :bool, :default => true
   config_param :type_name, :string, :default => "fluentd"
   config_param :index_name, :string, :default => "fluentd"
+  config_param :index_name_from_record, :string, :default => nil
+  config_param :type_name_from_record, :string, :default => nil
   config_param :id_key, :string, :default => nil
   config_param :write_operation, :string, :default => "index"
   config_param :parent_key, :string, :default => nil
@@ -168,15 +170,23 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
         else
           target_index = "#{@logstash_prefix}-#{Time.at(time).strftime("#{@logstash_dateformat}")}"
         end
+        target_type = @type_name
       else
-        target_index = @index_name
+	if @index_name_from_record
+	  target_index = record.fetch(@index_name_from_record, @index_name)
+          record.delete("_index")
+	end
+	if @type_name_from_record
+          target_type = record.fetch(@type_name_from_record, @type_name)
+          record.delete(@type_name_from_record)
+	end
       end
 
       if @include_tag_key
         record.merge!(@tag_key => tag)
       end
 
-      meta = {"_index" => target_index, "_type" => type_name}
+      meta = {"_index" => target_index, "_type" => target_type}
       if @id_key && record[@id_key]
         meta['_id'] = record[@id_key]
       end
