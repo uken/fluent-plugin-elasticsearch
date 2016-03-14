@@ -275,6 +275,30 @@ This following record `{"name":"Johnny","request_id":"87d89af7daffad6"}` will tr
 { "name": "Johnny", "request_id": "87d89af7daffad6" }
 ```
 
+### parent_key
+
+```
+parent_key a_parent # use "a_parent" field value to set _parent in elasticsearch command
+```
+
+If your input is
+```
+{ "name": "Johnny", "a_parent": "my_parent" }
+```
+
+ElasticSearch command would be
+
+```
+{ "index" : { "_index" : "****", "_type" : "****", "_id" : "****", "_parent" : "my_parent" } }
+{ "name": "Johnny", "a_parent": "my_parent" }
+```
+
+if `parent_key` is not configed or the `parent_key` is absent in input record, nothing will happen.
+
+### routing_key
+
+Similar to `parent_key` config, will add `_routing` into elasticsearch command if `routing_key` is set and the field does exist in input event.
+
 ### write_operation
 
 The write_operation can be any of:

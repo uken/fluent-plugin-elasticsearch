@@ -31,6 +31,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :id_key, :string, :default => nil
   config_param :write_operation, :string, :default => "index"
   config_param :parent_key, :string, :default => nil
+  config_param :routing_key, :string, :default => nil
   config_param :request_timeout, :time, :default => 5
   config_param :reload_connections, :bool, :default => true
   config_param :reload_on_failure, :bool, :default => false
@@ -215,12 +216,11 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       end
 
       meta = {"_index" => target_index, "_type" => type_name}
-      if @id_key && record[@id_key]
-        meta['_id'] = record[@id_key]
-      end
 
-      if @parent_key && record[@parent_key]
-        meta['_parent'] = record[@parent_key]
+      @meta_config_map ||= { 'id_key' => '_id', 'parent_key' => '_parent', 'routing_key' => '_routing' }
+      @meta_config_map.each_pair do |config_name, meta_key|
+        record_key = self.instance_variable_get("@#{config_name}")
+        meta[meta_key] = record[record_key] if record_key && record[record_key]
       end
 
       append_record_to_messages(@write_operation, meta, record, bulk_message)
