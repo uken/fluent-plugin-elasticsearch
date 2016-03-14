@@ -30,6 +30,8 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [resurrect_after](#resurrect_after)
   + [include_tag_key, tag_key](#include_tag_key-tag_key)
   + [id_key](#id_key)
+  + [parent_key](#parent_key)
+  + [routing_key](#routing_key)
   + [write_operation](#write_operation)
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Proxy Support](#proxy-support)
