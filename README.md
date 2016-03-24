@@ -33,6 +33,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [id_key](#id_key)
   + [parent_key](#parent_key)
   + [routing_key](#routing_key)
+  + [remove_keys](#remove_keys)
   + [write_operation](#write_operation)
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Proxy Support](#proxy-support)
@@ -311,6 +312,14 @@ if `parent_key` is not configed or the `parent_key` is absent in input record, n
 ### routing_key
 
 Similar to `parent_key` config, will add `_routing` into elasticsearch command if `routing_key` is set and the field does exist in input event.
+
+### remove_keys
+
+```
+parent_key a_parent
+routing_key a_routing
+remove_keys a_parent, a_routing # a_parent and a_routing fileds wont be sent to elasticsearch
+```
 
 ### write_operation
 
