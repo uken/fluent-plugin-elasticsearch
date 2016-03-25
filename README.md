@@ -117,7 +117,7 @@ logstash_dateformat %Y.%m. # defaults to "%Y.%m.%d"
 
 ### time_key_format
 
-The format of the time stamp field (`@timestamp` or what you specify with [time_key][#time_key]). This parameter only has an effect when [logstash_format][#logstash_format] is true as it only affects the name of the index we write to. Please see [Time#strftime](http://ruby-doc.org/core-1.9.3/Time.html#method-i-strftime) for information about the value of this format.
+The format of the time stamp field (`@timestamp` or what you specify with [time_key](#time_key)). This parameter only has an effect when [logstash_format](#logstash_format) is true as it only affects the name of the index we write to. Please see [Time#strftime](http://ruby-doc.org/core-1.9.3/Time.html#method-i-strftime) for information about the value of this format.
 
 Setting this to a known format can vastly improve your log ingestion speed if all most of your logs are in the same format. If there is an error parsing this format the timestamp will default to the ingestion time. If you are on Ruby 2.0 or later you can get a further performance improvment by installing the "strptime" gem: `fluent-gem install strptime`.
 
