@@ -15,7 +15,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   end
 
   def sample_record
-    {'age' => 26, 'request_id' => '42', 'parent_id' => 'parent'}
+    {'age' => 26, 'request_id' => '42', 'parent_id' => 'parent', 'routing_id' => 'routing'}
   end
 
   def stub_elastic_ping(url="http://localhost:9200")
@@ -404,6 +404,31 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert(!index_cmds[0]['index'].has_key?('_parent'))
   end
 
+  def test_adds_routing_key_when_configured
+    driver.configure("routing_key routing_id\n")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert_equal(index_cmds[0]['index']['_routing'], 'routing')
+  end
+
+  def test_doesnt_add_routing_key_if_missing_when_configured
+    driver.configure("routing_key another_routing_id\n")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert(!index_cmds[0]['index'].has_key?('_routing'))
+  end
+
+  def test_adds_routing_key_when_not_configured
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert(!index_cmds[0]['index'].has_key?('_routing'))
+  end
   def test_request_error
     stub_elastic_ping
     stub_elastic_unavailable

@@ -150,12 +150,12 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       end
 
       meta = {"_index" => target_index, "_type" => dynamic_conf['type_name']}
-      if dynamic_conf['id_key'] && record[dynamic_conf['id_key']]
-        meta['_id'] = record[dynamic_conf['id_key']]
-      end
 
-      if dynamic_conf['parent_key'] && record[dynamic_conf['parent_key']]
-        meta['_parent'] = record[dynamic_conf['parent_key']]
+      @meta_config_map ||= { 'id_key' => '_id', 'parent_key' => '_parent', 'routing_key' => '_routing' }
+      @meta_config_map.each_pair do |config_name, meta_key|
+        if dynamic_conf[config_name] && record[dynamic_conf[config_name]]
+          meta[meta_key] = record[dynamic_conf[config_name]]
+        end
       end
 
       if dynamic_conf['hosts']
