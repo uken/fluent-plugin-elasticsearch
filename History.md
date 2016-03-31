@@ -1,6 +1,7 @@
 ## Changelog
 
 ### Future
+- add `routing_key` (#158)
 
 ### 1.4.0
 - add `target_index_key` to specify target index (#153)
