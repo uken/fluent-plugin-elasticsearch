@@ -11,6 +11,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
   config_param :port, :string, :default => "9200"
   config_param :logstash_format, :string, :default => "false"
   config_param :utc_index, :string, :default => "true"
+  config_param :time_key_exclude_timestamp, :bool, :default => false
   config_param :reload_connections, :string, :default => "true"
   config_param :reload_on_failure, :string, :default => "false"
   config_param :resurrect_after, :string, :default => "60"
@@ -131,7 +132,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
           time = Time.parse record["@timestamp"]
         elsif record.has_key?(dynamic_conf['time_key'])
           time = Time.parse record[dynamic_conf['time_key']]
-          record['@timestamp'] = record[dynamic_conf['time_key']]
+          record['@timestamp'] = record[dynamic_conf['time_key']] unless time_key_exclude_timestamp
         else
           record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
         end

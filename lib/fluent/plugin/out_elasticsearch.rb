@@ -37,6 +37,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :reload_on_failure, :bool, :default => false
   config_param :resurrect_after, :time, :default => 60
   config_param :time_key, :string, :default => nil
+  config_param :time_key_exclude_timestamp, :bool, :default => false
   config_param :ssl_verify , :bool, :default => true
   config_param :client_key, :string, :default => nil
   config_param :client_cert, :string, :default => nil
@@ -200,7 +201,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
           dt = @time_parser.parse(record["@timestamp"], time)
         elsif record.has_key?(@time_key)
           dt = @time_parser.parse(record[@time_key], time)
-          record['@timestamp'] = record[@time_key]
+          record['@timestamp'] = record[@time_key] unless time_key_exclude_timestamp
         else
           dt = Time.at(time).to_datetime
           record.merge!({"@timestamp" => dt.to_s})

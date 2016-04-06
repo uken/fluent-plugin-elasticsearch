@@ -22,6 +22,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [logstash_dateformat](#logstash_dateformat)
   + [time_key_format](#time_key_format)
   + [time_key](#time_key)
+  + [time_key_exclude_timestamp](#time_key_exclude_timestamp)
   + [utc_index](#utc_index)
   + [target_index_key](#target_index_key)
   + [request_timeout](#request_timeout)
@@ -162,6 +163,16 @@ The output will be
   "vtm": "2014-12-19T08:01:03Z"
 }
 ```
+
+See `time_key_exclude_timestamp` to avoid adding `@timestamp`.
+
+### time_key_exclude_timestamp
+
+```
+time_key_exclude_timestamp false
+```
+
+By default, setting `time_key` will copy the value to an additional field `@timestamp`. When setting `time_key_exclude_timestamp true`, no additional field will be added.
 
 ### utc_index
 
