@@ -383,6 +383,17 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(index_cmds[1]['@timestamp'], ts)
   end
 
+  def test_uses_custom_time_key_exclude_timekey
+    driver.configure("logstash_format true
+                      time_key vtm
+                      time_key_exclude_timestamp true\n")
+    stub_elastic_ping
+    stub_elastic
+    ts = DateTime.new(2001,2,3).to_s
+    driver.emit(sample_record.merge!('vtm' => ts))
+    driver.run
+    assert(!index_cmds[1].key?('@timestamp'), '@timestamp should be messing')
+  end
 
   def test_uses_custom_time_key_format
     driver.configure("logstash_format true
