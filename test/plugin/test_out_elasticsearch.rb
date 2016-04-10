@@ -156,6 +156,17 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run
     assert_equal('myindex', index_cmds.first['index']['_index'])
   end
+  
+  def test_writes_to_speficied_index_uppercase
+    driver.configure("index_name MyIndex\n")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+	# Allthough index_name has upper-case characters,
+	# it should be set as lower-case when sent to elasticsearch.
+    assert_equal('myindex', index_cmds.first['index']['_index'])
+  end
 
   def test_writes_to_target_index_key
     driver.configure("target_index_key @target_index\n")
@@ -176,6 +187,19 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record.merge('@target_index' => 'local-override'), time)
     driver.run
+    assert_equal('local-override', index_cmds.first['index']['_index'])
+  end
+  
+   def test_writes_to_target_index_key_logstash_uppercase
+    driver.configure("target_index_key @target_index\n")
+    driver.configure("logstash_format true\n")
+    time = Time.parse Date.today.to_s
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record.merge('@target_index' => 'Local-Override'), time)
+    driver.run
+	# Allthough @target_index has upper-case characters,
+	# it should be set as lower-case when sent to elasticsearch.
     assert_equal('local-override', index_cmds.first['index']['_index'])
   end
 
@@ -313,6 +337,20 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit(sample_record, time)
     driver.run
+    assert_equal(logstash_index, index_cmds.first['index']['_index'])
+  end
+  
+  def test_writes_to_logstash_index_with_specified_prefix_uppercase
+    driver.configure("logstash_format true
+                      logstash_prefix MyPrefix")
+    time = Time.parse Date.today.to_s
+    logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record, time)
+    driver.run
+	# Allthough logstash_prefix has upper-case characters,
+	# it should be set as lower-case when sent to elasticsearch.
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
 
