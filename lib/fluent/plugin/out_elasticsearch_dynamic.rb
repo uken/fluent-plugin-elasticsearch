@@ -145,7 +145,11 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       else
         target_index = dynamic_conf['index_name']
       end
-
+    
+      # Change target_index to lower-case since Elasticsearch doesn't
+      # allow upper-case characters in index names.
+      target_index = target_index.downcase
+       
       if @include_tag_key
         record.merge!(dynamic_conf['tag_key'] => tag)
       end
