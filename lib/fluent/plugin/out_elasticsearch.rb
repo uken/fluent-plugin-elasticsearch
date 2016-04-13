@@ -211,7 +211,11 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       else
         target_index = @index_name
       end
-
+      
+      # Change target_index to lower-case since Elasticsearch doesn't
+      # allow upper-case characters in index names.
+      target_index = target_index.downcase
+      
       if @include_tag_key
         record.merge!(@tag_key => tag)
       end
