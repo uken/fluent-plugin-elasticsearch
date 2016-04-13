@@ -3,6 +3,7 @@
 ### Future
 - add `routing_key` (#158)
 - add `time_key_exclude_timestamp` to exclude `@timestamp` (#161)
+- convert index names to lowercase (#163)
 
 ### 1.4.0
 - add `target_index_key` to specify target index (#153)
