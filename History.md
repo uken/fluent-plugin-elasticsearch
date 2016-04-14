@@ -1,4 +1,4 @@
-## Changelog
+## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### Future
 - add `routing_key` (#158)
