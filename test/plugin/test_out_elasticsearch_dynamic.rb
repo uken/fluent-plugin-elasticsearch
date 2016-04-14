@@ -462,6 +462,27 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     driver.run
     assert(!index_cmds[0]['index'].has_key?('_routing'))
   end
+
+  def test_remove_one_key
+    driver.configure("remove_keys key1\n")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record.merge('key1' => 'v1', 'key2' => 'v2'))
+    driver.run
+    assert(!index_cmds[1].has_key?('key1'))
+    assert(index_cmds[1].has_key?('key2'))
+  end
+
+  def test_remove_multi_keys
+    driver.configure("remove_keys key1, key2\n")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record.merge('key1' => 'v1', 'key2' => 'v2'))
+    driver.run
+    assert(!index_cmds[1].has_key?('key1'))
+    assert(!index_cmds[1].has_key?('key2'))
+  end
+
   def test_request_error
     stub_elastic_ping
     stub_elastic_unavailable

@@ -43,6 +43,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :client_cert, :string, :default => nil
   config_param :client_key_pass, :string, :default => nil
   config_param :ca_file, :string, :default => nil
+  config_param :remove_keys, :string, :default => nil
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -55,6 +56,10 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   def configure(conf)
     super
     @time_parser = TimeParser.new(@time_key_format, @router)
+
+    if @remove_keys
+      @remove_keys = @remove_keys.split(/\s*,\s*/)
+    end
   end
 
   def start
@@ -226,6 +231,10 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       @meta_config_map.each_pair do |config_name, meta_key|
         record_key = self.instance_variable_get("@#{config_name}")
         meta[meta_key] = record[record_key] if record_key && record[record_key]
+      end
+
+      if @remove_keys
+        @remove_keys.each { |key| record.delete(key) }
       end
 
       append_record_to_messages(@write_operation, meta, record, bulk_message)

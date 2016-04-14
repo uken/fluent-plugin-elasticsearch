@@ -169,6 +169,10 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
         host = "#{dynamic_conf['host']}:#{dynamic_conf['port']}"
       end
 
+      if @remove_keys
+        @remove_keys.each { |key| record.delete(key) }
+      end
+
       append_record_to_messages(dynamic_conf["write_operation"], meta, record, bulk_message[host])
     end
 
