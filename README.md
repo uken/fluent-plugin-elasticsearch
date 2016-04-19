@@ -38,6 +38,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Proxy Support](#proxy-support)
   + [Buffered output options](#buffered-output-options)
+  + [Hash flattening](#hash-flattening)
   + [Not seeing a config you need?](#not-seeing-a-config-you-need)
   + [Dynamic configuration](#dynamic-configuration)
 * [Contact](#contact)
@@ -365,6 +366,25 @@ num_threads 1
 ```
 
 The value for option `buffer_chunk_limit` should not exceed value `http.max_content_length` in your Elasticsearch setup (by default it is 100mb).
+
+### Hash flattening
+
+Elasticsearch will complain if you send object and concrete values to the same field. For example, you might have logs that look this, from different places:
+
+{"people" => 100}
+{"people" => {"some" => "thing"}}
+
+The second log line will be rejected by the Elasticsearch parser because objects and concrete values can't live in the same field. To combat this, you can enable hash flattening.
+
+```
+flatten_hashes true
+flatten_hashes_separator _
+```
+
+This will produce elasticsearch output that looks like this:
+{"people_some" => "thing"}
+
+Note that the flattener does not deal with arrays at this time.
 
 ### Not seeing a config you need?
 
