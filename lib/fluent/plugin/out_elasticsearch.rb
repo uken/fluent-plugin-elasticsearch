@@ -44,6 +44,8 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :client_key_pass, :string, :default => nil
   config_param :ca_file, :string, :default => nil
   config_param :remove_keys, :string, :default => nil
+  config_param :flatten_hashes, :bool, :default => false
+  config_param :flatten_hashes_separator, :string, :default => "_"
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -193,10 +195,29 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     end
   end
 
+  def flatten_record(record, prefix=[])
+    ret = {}
+    if record.is_a? Hash
+      record.each { |key, value|
+        ret.merge! flatten_record(value, prefix + [key.to_s])
+      }
+    elsif record.is_a? Array
+      # Don't mess with arrays, leave them unprocessed
+      ret.merge!({prefix.join(@flatten_hashes_separator) => record})
+    else
+      return {prefix.join(@flatten_hashes_separator) => record}
+    end
+    ret
+  end
+
   def write(chunk)
     bulk_message = []
 
     chunk.msgpack_each do |tag, time, record|
+      if @flatten_hashes
+        record = flatten_record(record)
+      end
+
       next unless record.is_a? Hash
       if @target_index_key && record[@target_index_key]
         target_index = record.delete @target_index_key
