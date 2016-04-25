@@ -5,6 +5,7 @@
 - add `time_key_exclude_timestamp` to exclude `@timestamp` (#161)
 - convert index names to lowercase (#163)
 - add `remove_keys` (#164)
+- add `flatten_hashes` (#168)
 
 ### 1.4.0
 - add `target_index_key` to specify target index (#153)
