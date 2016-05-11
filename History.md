@@ -1,6 +1,8 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### Future
+
+### 1.5.0
 - add `routing_key` (#158)
 - add `time_key_exclude_timestamp` to exclude `@timestamp` (#161)
 - convert index names to lowercase (#163)
