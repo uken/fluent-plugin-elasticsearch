@@ -25,6 +25,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [time_key_exclude_timestamp](#time_key_exclude_timestamp)
   + [utc_index](#utc_index)
   + [target_index_key](#target_index_key)
+  + [target_type_key](#target_type_key)
   + [request_timeout](#request_timeout)
   + [reload_connections](#reload_connections)
   + [reload_on_failure](#reload_on_failure)
@@ -216,6 +217,10 @@ The output would be
 ```
 
 and this record will be written to the specified index (`logstash-2014.12.19`) rather than `fallback`.
+
+### target_type_key
+
+Similar to `target_index_key` config, find the type name to write to in the record under this key. If key not found in record - fallback to `type_name` (default "fluentd").
 
 ### request_timeout
 
