@@ -21,6 +21,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :scheme, :string, :default => 'http'
   config_param :hosts, :string, :default => nil
   config_param :target_index_key, :string, :default => nil
+  config_param :target_type_key, :string, :default => nil
   config_param :time_key_format, :string, :default => nil
   config_param :logstash_format, :bool, :default => false
   config_param :logstash_prefix, :string, :default => "logstash"
@@ -245,8 +246,14 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       if @include_tag_key
         record.merge!(@tag_key => tag)
       end
-
-      meta = {"_index" => target_index, "_type" => type_name}
+      
+      if @target_type_key && record[@target_type_key]
+        target_type = record.delete @target_type_key
+      else
+        target_type = @type_name
+      end
+      
+      meta = {"_index" => target_index, "_type" => target_type}
 
       @meta_config_map ||= { 'id_key' => '_id', 'parent_key' => '_parent', 'routing_key' => '_routing' }
       @meta_config_map.each_pair do |config_name, meta_key|

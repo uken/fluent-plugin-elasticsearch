@@ -233,6 +233,36 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal('mytype', index_cmds.first['index']['_type'])
   end
 
+  def test_writes_to_target_type_key
+    driver.configure("target_type_key @target_type\n")
+    stub_elastic_ping
+    stub_elastic
+    record = sample_record.clone
+    driver.emit(sample_record.merge('@target_type' => 'local-override'))
+    driver.run
+    assert_equal('local-override', index_cmds.first['index']['_type'])
+    assert_nil(index_cmds[1]['@target_type'])
+  end
+
+  def test_writes_to_target_type_key_fallack_to_default
+    driver.configure("target_type_key @target_type\n")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert_equal('fluentd', index_cmds.first['index']['_type'])
+  end
+
+  def test_writes_to_target_type_key_fallack_to_type_name
+    driver.configure("target_type_key @target_type\n")
+    driver.configure("type_name mytype\n")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert_equal('mytype', index_cmds.first['index']['_type'])
+  end
+
   def test_writes_to_speficied_host
     driver.configure("host 192.168.33.50\n")
     stub_elastic_ping("http://192.168.33.50:9200")
