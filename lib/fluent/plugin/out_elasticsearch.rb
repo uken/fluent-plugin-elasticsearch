@@ -183,7 +183,11 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     when "update", "upsert"
       if meta.has_key?("_id")
         msgs << { "update" => meta }
-        msgs << { "doc" => record, "doc_as_upsert" => op == "upsert" }
+        if record.has_key?("script")
+          msgs << record
+        else
+          msgs << { "doc" => record, "doc_as_upsert" => op == "upsert" }
+        end
       end
     when "create"
       if meta.has_key?("_id")
