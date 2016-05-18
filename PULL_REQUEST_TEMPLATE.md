@@ -1,4 +1,4 @@
-Pull Request Description HERE
+DESCRIPTION HERE
 
 (check all that apply)
 - [ ] tests added
