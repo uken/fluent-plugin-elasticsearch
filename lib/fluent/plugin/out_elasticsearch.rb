@@ -63,6 +63,14 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     if @remove_keys
       @remove_keys = @remove_keys.split(/\s*,\s*/)
     end
+    
+    if @target_index_key
+      @target_index_key = @target_index_key.split '.'
+    end
+    
+    if @target_type_key
+      @target_type_key = @target_type_key.split '.'
+    end
   end
 
   def start
@@ -220,8 +228,9 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       end
 
       next unless record.is_a? Hash
-      if @target_index_key && record[@target_index_key]
-        target_index = record.delete @target_index_key
+      target_index_parent, target_index_child_key = get_parent_of(record, @target_index_key)
+      if target_index_parent && target_index_parent[target_index_child_key]
+        target_index = target_index_parent.delete(target_index_child_key)
       elsif @logstash_format
         if record.has_key?("@timestamp")
           dt = record["@timestamp"]
@@ -242,13 +251,13 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       # Change target_index to lower-case since Elasticsearch doesn't
       # allow upper-case characters in index names.
       target_index = target_index.downcase
-      
       if @include_tag_key
         record.merge!(@tag_key => tag)
       end
       
-      if @target_type_key && record[@target_type_key]
-        target_type = record.delete @target_type_key
+      target_type_parent, target_type_child_key = get_parent_of(record, @target_type_key)
+      if target_type_parent && target_type_parent[target_type_child_key]
+        target_type = target_type_parent.delete(target_type_child_key)
       else
         target_type = @type_name
       end
@@ -270,6 +279,15 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
     send(bulk_message) unless bulk_message.empty?
     bulk_message.clear
+  end
+  
+  # returns [parent, child_key] of child described by path array in record's tree
+  # returns [nil, child_key] if path doesnt exist in record
+  def get_parent_of(record, path)
+    return [nil, nil] unless path
+    
+    parent_object = path[0..-2].reduce(record) { |a, e| a.is_a?(Hash) ? a[e] : nil }
+    [parent_object, path[-1]]
   end
 
   def send(data)
