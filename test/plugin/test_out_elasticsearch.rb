@@ -156,7 +156,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run
     assert_equal('myindex', index_cmds.first['index']['_index'])
   end
-  
+
   def test_writes_to_speficied_index_uppercase
     driver.configure("index_name MyIndex\n")
     stub_elastic_ping
@@ -178,7 +178,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal('local-override', index_cmds.first['index']['_index'])
     assert_nil(index_cmds[1]['@target_index'])
   end
-  
+
   def test_writes_to_target_index_key_logstash
     driver.configure("target_index_key @target_index\n")
     driver.configure("logstash_format true\n")
@@ -189,7 +189,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run
     assert_equal('local-override', index_cmds.first['index']['_index'])
   end
-  
+
    def test_writes_to_target_index_key_logstash_uppercase
     driver.configure("target_index_key @target_index\n")
     driver.configure("logstash_format true\n")
@@ -261,6 +261,33 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.emit(sample_record)
     driver.run
     assert_equal('mytype', index_cmds.first['index']['_type'])
+  end
+
+  def test_writes_to_target_type_key_nested
+    driver.configure("target_type_key kubernetes.labels.log_type\n")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record.merge('kubernetes' => {
+      'labels' => {
+        'log_type' => 'local-override'
+      }
+    }))
+    driver.run
+    assert_equal('local-override', index_cmds.first['index']['_type'])
+    assert_nil(index_cmds[1]['kubernetes']['labels']['log_type'])
+  end
+
+  def test_writes_to_target_type_key_fallack_to_default_nested
+    driver.configure("target_type_key kubernetes.labels.log_type\n")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record.merge('kubernetes' => {
+      'labels' => {
+        'other_labels' => 'test'
+      }
+    }))
+    driver.run
+    assert_equal('fluentd', index_cmds.first['index']['_type'])
   end
 
   def test_writes_to_speficied_host
@@ -403,7 +430,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
-  
+
   def test_writes_to_logstash_index_with_specified_prefix_uppercase
     driver.configure("logstash_format true
                       logstash_prefix MyPrefix")
@@ -724,7 +751,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_update_should_write_update_op_and_doc_as_upsert_is_false
-    driver.configure("write_operation update 
+    driver.configure("write_operation update
                       id_key request_id")
     stub_elastic_ping
     stub_elastic
@@ -735,7 +762,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_upsert_should_write_update_op_and_doc_as_upsert_is_true
-    driver.configure("write_operation upsert 
+    driver.configure("write_operation upsert
                       id_key request_id")
     stub_elastic_ping
     stub_elastic
@@ -746,7 +773,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_create_should_write_create_op
-    driver.configure("write_operation create 
+    driver.configure("write_operation create
                       id_key request_id")
     stub_elastic_ping
     stub_elastic
