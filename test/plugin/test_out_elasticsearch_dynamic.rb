@@ -154,7 +154,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     driver.run
     assert_equal('myindex', index_cmds.first['index']['_index'])
   end
-  
+
   def test_writes_to_speficied_index_uppercase
     driver.configure("index_name MyIndex\n")
     stub_elastic_ping
@@ -247,7 +247,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     logstash_index = "logstash-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
-    driver.emit(sample_record, time)
+    driver.emit(sample_record, time.to_i)
     driver.run
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
@@ -259,7 +259,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     utc_index = "logstash-#{time.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
-    driver.emit(sample_record, time)
+    driver.emit(sample_record, time.to_i)
     driver.run
     assert_equal(utc_index, index_cmds.first['index']['_index'])
   end
@@ -271,11 +271,11 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
-    driver.emit(sample_record, time)
+    driver.emit(sample_record, time.to_i)
     driver.run
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
-  
+
   def test_writes_to_logstash_index_with_specified_prefix_uppercase
     driver.configure("logstash_format true
                       logstash_prefix MyPrefix")
@@ -283,7 +283,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
-    driver.emit(sample_record, time)
+    driver.emit(sample_record, time.to_i)
     driver.run
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
@@ -295,7 +295,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     logstash_index = "logstash-#{time.getutc.strftime("%Y.%m")}"
     stub_elastic_ping
     stub_elastic
-    driver.emit(sample_record, time)
+    driver.emit(sample_record, time.to_i)
     driver.run
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
@@ -308,7 +308,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m")}"
     stub_elastic_ping
     stub_elastic
-    driver.emit(sample_record, time)
+    driver.emit(sample_record, time.to_i)
     driver.run
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
@@ -546,7 +546,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   end
 
   def test_update_should_write_update_op_and_doc_as_upsert_is_false
-    driver.configure("write_operation update 
+    driver.configure("write_operation update
                       id_key request_id")
     stub_elastic_ping
     stub_elastic
@@ -557,7 +557,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   end
 
   def test_upsert_should_write_update_op_and_doc_as_upsert_is_true
-    driver.configure("write_operation upsert 
+    driver.configure("write_operation upsert
                       id_key request_id")
     stub_elastic_ping
     stub_elastic
@@ -568,7 +568,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   end
 
   def test_create_should_write_create_op
-    driver.configure("write_operation create 
+    driver.configure("write_operation create
                       id_key request_id")
     stub_elastic_ping
     stub_elastic
