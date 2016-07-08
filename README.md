@@ -187,7 +187,7 @@ By default, the records inserted into index `logstash-YYMMDD` with UTC (Coordina
 
 ### target_index_key
 
-Tell this plugin to find the index name to write to in the record under this key in preference to other mechanisms.
+Tell this plugin to find the index name to write to in the record under this key in preference to other mechanisms. Key can be specified as path to nested record using dot ('.') as a separator.
 
 If it is present in the record (and the value is non falsey) the value will be used as the index name to write to and then removed from the record before output; if it is not found then it will use logstash_format or index_name settings as configured.
 
@@ -220,7 +220,7 @@ and this record will be written to the specified index (`logstash-2014.12.19`) r
 
 ### target_type_key
 
-Similar to `target_index_key` config, find the type name to write to in the record under this key. If key not found in record - fallback to `type_name` (default "fluentd").
+Similar to `target_index_key` config, find the type name to write to in the record under this key (or nested record). If key not found in record - fallback to `type_name` (default "fluentd").
 
 ### request_timeout
 
