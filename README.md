@@ -324,7 +324,7 @@ Similar to `parent_key` config, will add `_routing` into elasticsearch command i
 ```
 parent_key a_parent
 routing_key a_routing
-remove_keys a_parent, a_routing # a_parent and a_routing fileds wont be sent to elasticsearch
+remove_keys a_parent, a_routing # a_parent and a_routing fields won't be sent to elasticsearch
 ```
 
 ### write_operation
