@@ -1,6 +1,8 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### Future
+- add support for dot separated `target_index_key` and `target_type_key` (#175)
+- remove support for fluentd v0.14 for now (PR is welcomed)
 
 ### 1.5.0
 - add `routing_key` (#158)
