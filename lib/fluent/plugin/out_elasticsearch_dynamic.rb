@@ -21,7 +21,8 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     super
 
     # evaluate all configurations here
-    @dynamic_params = self.instance_variables.select { |var| is_valid_expand_param_type(var) }
+    @dynamic_params ||= []
+    @dynamic_params += self.instance_variables.select { |var| is_valid_expand_param_type(var) }
     @dynamic_config = Hash.new
     @dynamic_params.each { |var|
       value = expand_param(self.instance_variable_get(var), nil, nil, nil)
@@ -76,7 +77,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
         if host_str.match(%r{^[^:]+(\:\d+)?$})
           {
             host:   host_str.split(':')[0],
-            port:   (host_str.split(':')[1] || @dynamic_config['port']).to_i,
+            port:   (host_str.split(':')[1] || @dynamic_config['port'] || @port).to_i,
             scheme: @dynamic_config['scheme']
           }
         else
@@ -127,7 +128,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       }
       # end eval all configs
 
-      if eval(dynamic_conf['logstash_format'])
+      if eval_or_val(dynamic_conf['logstash_format'])
         if record.has_key?("@timestamp")
           time = Time.parse record["@timestamp"]
         elsif record.has_key?(dynamic_conf['time_key'])
@@ -137,7 +138,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
           record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
         end
 
-        if eval(dynamic_conf['utc_index'])
+        if eval_or_val(dynamic_conf['utc_index'])
           target_index = "#{dynamic_conf['logstash_prefix']}-#{Time.at(time).getutc.strftime("#{dynamic_conf['logstash_dateformat']}")}"
         else
           target_index = "#{dynamic_conf['logstash_prefix']}-#{Time.at(time).strftime("#{dynamic_conf['logstash_dateformat']}")}"
@@ -145,11 +146,11 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       else
         target_index = dynamic_conf['index_name']
       end
-    
+
       # Change target_index to lower-case since Elasticsearch doesn't
       # allow upper-case characters in index names.
       target_index = target_index.downcase
-       
+
       if @include_tag_key
         record.merge!(dynamic_conf['tag_key'] => tag)
       end
@@ -196,6 +197,11 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       end
       raise ConnectionFailure, "Could not push logs to Elasticsearch after #{retries} retries. #{e.message}"
     end
+  end
+
+  def eval_or_val(var)
+    return var unless var.is_a?(String)
+    eval(var)
   end
 
   def expand_param(param, tag, time, record)
