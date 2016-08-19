@@ -759,6 +759,19 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run
     assert(index_cmds[0].has_key?("update"))
     assert(!index_cmds[1]["doc_as_upsert"])
+    assert(!index_cmds[1]["upsert"])
+  end
+
+  def test_update_should_remove_keys_from_doc_when_keys_are_skipped
+    driver.configure("write_operation update
+                      id_key request_id
+                      remove_keys_on_update parent_id")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert(index_cmds[1]["doc"])
+    assert(!index_cmds[1]["doc"]["parent_id"])
   end
 
   def test_upsert_should_write_update_op_and_doc_as_upsert_is_true
@@ -770,6 +783,107 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run
     assert(index_cmds[0].has_key?("update"))
     assert(index_cmds[1]["doc_as_upsert"])
+    assert(!index_cmds[1]["upsert"])
+  end
+
+  def test_upsert_should_write_update_op_upsert_and_doc_when_keys_are_skipped
+    driver.configure("write_operation upsert
+                      id_key request_id
+                      remove_keys_on_update parent_id")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert(index_cmds[0].has_key?("update"))
+    assert(!index_cmds[1]["doc_as_upsert"])
+    assert(index_cmds[1]["upsert"])
+    assert(index_cmds[1]["doc"])
+  end
+
+  def test_upsert_should_remove_keys_from_doc_when_keys_are_skipped
+    driver.configure("write_operation upsert
+                      id_key request_id
+                      remove_keys_on_update parent_id")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert(index_cmds[1]["upsert"] != index_cmds[1]["doc"])
+    assert(!index_cmds[1]["doc"]["parent_id"])
+    assert(index_cmds[1]["upsert"]["parent_id"])
+  end
+
+  def test_upsert_should_remove_multiple_keys_when_keys_are_skipped
+    driver.configure("write_operation upsert
+                      id_key id
+                      remove_keys_on_update foo,baz")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit("id" => 1, "foo" => "bar", "baz" => "quix", "zip" => "zam")
+    driver.run
+    assert(
+      index_cmds[1]["doc"] == {
+        "id" => 1,
+        "zip" => "zam",
+      }
+    )
+    assert(
+      index_cmds[1]["upsert"] == {
+        "id" => 1,
+        "foo" => "bar",
+        "baz" => "quix",
+        "zip" => "zam",
+      }
+    )
+  end
+
+  def test_upsert_should_remove_keys_from_when_the_keys_are_in_the_record
+    driver.configure("write_operation upsert
+                      id_key id
+                      remove_keys_on_update_key keys_to_skip")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit("id" => 1, "foo" => "bar", "baz" => "quix", "keys_to_skip" => ["baz"])
+    driver.run
+    assert(
+      index_cmds[1]["doc"] == {
+        "id" => 1,
+        "foo" => "bar",
+      }
+    )
+    assert(
+      index_cmds[1]["upsert"] == {
+        "id" => 1,
+        "foo" => "bar",
+        "baz" => "quix",
+      }
+    )
+  end
+
+  def test_upsert_should_remove_keys_from_key_on_record_has_higher_presedence_than_config
+    driver.configure("write_operation upsert
+                      id_key id
+                      remove_keys_on_update foo,bar
+                      remove_keys_on_update_key keys_to_skip")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit("id" => 1, "foo" => "bar", "baz" => "quix", "keys_to_skip" => ["baz"])
+    driver.run
+    assert(
+      index_cmds[1]["doc"] == {
+        "id" => 1,
+        # we only expect baz to be stripped here, if the config was more important
+        # foo would be stripped too.
+        "foo" => "bar",
+      }
+    )
+    assert(
+      index_cmds[1]["upsert"] == {
+        "id" => 1,
+        "foo" => "bar",
+        "baz" => "quix",
+      }
+    )
   end
 
   def test_create_should_write_create_op

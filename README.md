@@ -35,6 +35,8 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [parent_key](#parent_key)
   + [routing_key](#routing_key)
   + [remove_keys](#remove_keys)
+  + [remove_keys_on_update](#remove_keys_on_update)
+  + [remove_keys_on_update_key](#remove_keys_on_update_key)
   + [write_operation](#write_operation)
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Proxy Support](#proxy-support)
@@ -325,6 +327,29 @@ Similar to `parent_key` config, will add `_routing` into elasticsearch command i
 parent_key a_parent
 routing_key a_routing
 remove_keys a_parent, a_routing # a_parent and a_routing fields won't be sent to elasticsearch
+```
+
+### remove_keys_on_update
+
+Remove keys on update will not update the configured keys in elasticsearch when a record is being updated.  
+This setting only has any effect if the write operation is update or upsert.
+
+If the write setting is upsert then these keys are only removed if the record is being
+updated, if the record does not exist (by id) then all of the keys are indexed.
+
+```
+remove_keys_on_update foo,bar
+```
+
+### remove_keys_on_update_key
+
+This setting allows `remove_keys_on_update` to be configured with a key in each record, in much the same way as `target_index_key` works.
+The configured key is removed before indexing in elasticsearch. If both `remove_keys_on_update` and `remove_keys_on_update_key` is
+present in the record then the keys in record are used, if the `remove_keys_on_update_key` is not present then the value of
+`remove_keys_on_update` is used as a fallback.
+
+```
+remove_keys_on_update_key keys_to_skip
 ```
 
 ### write_operation

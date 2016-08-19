@@ -45,6 +45,8 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :client_key_pass, :string, :default => nil
   config_param :ca_file, :string, :default => nil
   config_param :remove_keys, :string, :default => nil
+  config_param :remove_keys_on_update, :string, :default => ""
+  config_param :remove_keys_on_update_key, :string, :default => nil
   config_param :flatten_hashes, :bool, :default => false
   config_param :flatten_hashes_separator, :string, :default => "_"
 
@@ -70,6 +72,10 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
     if @target_type_key && @target_type_key.is_a?(String)
       @target_type_key = @target_type_key.split '.'
+    end
+
+    if @remove_keys_on_update && @remove_keys_on_update.is_a?(String)
+      @remove_keys_on_update = @remove_keys_on_update.split ','
     end
   end
 
@@ -191,7 +197,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     when "update", "upsert"
       if meta.has_key?("_id")
         msgs << { "update" => meta }
-        msgs << { "doc" => record, "doc_as_upsert" => op == "upsert" }
+        msgs << update_body(record, op)
       end
     when "create"
       if meta.has_key?("_id")
@@ -202,6 +208,28 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       msgs << { "index" => meta }
       msgs << record
     end
+  end
+
+  def update_body(record, op)
+    update = remove_keys(record)
+    body = { "doc" => update }
+    if  op == "upsert"
+      if update == record
+        body["doc_as_upsert"] = true
+      else
+        body["upsert"] = record
+      end
+    end
+    body
+  end
+
+  def remove_keys(record)
+    keys = record[@remove_keys_on_update_key] || @remove_keys_on_update || []
+    record.delete(@remove_keys_on_update_key)
+    return record unless keys.any?
+    record = record.dup
+    keys.each { |key| record.delete(key) }
+    record
   end
 
   def flatten_record(record, prefix=[])
