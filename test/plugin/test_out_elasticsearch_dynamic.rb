@@ -56,7 +56,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     instance = driver('test', config).instance
 
     assert_equal 'logs.google.com', instance.host
-    assert_equal "777", instance.port
+    assert_equal 777, instance.port
     assert_equal 'https', instance.scheme
     assert_equal '/es/', instance.path
     assert_equal 'john', instance.user
