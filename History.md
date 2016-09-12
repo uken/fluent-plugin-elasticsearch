@@ -2,6 +2,9 @@
 
 ### Future
 
+### 1.7.0
+- add support for `template_name` and `template_file` (#194)
+
 ### 1.6.0
 - add support for dot separated `target_index_key` and `target_type_key` (#175)
 - add `remove_keys_on_update` and `remove_keys_on_update_key` (#189)
