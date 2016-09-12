@@ -65,6 +65,80 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal 'doe', instance.password
   end
 
+  def test_template_already_present
+    config = %{
+      host            logs.google.com
+      port            777
+      scheme          https
+      path            /es/
+      user            john
+      password        doe
+      template_name   logstash
+      template_file   /abc123
+    }
+
+    # connection start
+    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+      to_return(:status => 200, :body => "", :headers => {})
+    # check if template exists
+    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash").
+      to_return(:status => 200, :body => "", :headers => {})
+
+    driver('test', config)
+  end
+
+  def test_template_create
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_template.json')
+
+    config = %{
+      host            logs.google.com
+      port            777
+      scheme          https
+      path            /es/
+      user            john
+      password        doe
+      template_name   logstash
+      template_file   #{template_file}
+    }
+
+    # connection start
+    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+      to_return(:status => 200, :body => "", :headers => {})
+    # check if template exists
+    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash").
+      to_return(:status => 404, :body => "", :headers => {})
+    # creation
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash").
+      to_return(:status => 200, :body => "", :headers => {})
+
+    driver('test', config)
+  end
+
+  def test_template_create_invalid_filename
+    config = %{
+      host            logs.google.com
+      port            777
+      scheme          https
+      path            /es/
+      user            john
+      password        doe
+      template_name   logstash
+      template_file   /abc123
+    }
+
+    # connection start
+    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+      to_return(:status => 200, :body => "", :headers => {})
+    # check if template exists
+    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash").
+      to_return(:status => 404, :body => "", :headers => {})
+
+    assert_raise(RuntimeError) {
+      driver('test', config)
+    }
+  end
+
   def test_legacy_hosts_list
     config = %{
       hosts    host1:50,host2:100,host3

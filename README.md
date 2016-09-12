@@ -26,6 +26,8 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [utc_index](#utc_index)
   + [target_index_key](#target_index_key)
   + [target_type_key](#target_type_key)
+  + [template_name](#template_name)
+  + [template_file](#template_file)
   + [request_timeout](#request_timeout)
   + [reload_connections](#reload_connections)
   + [reload_on_failure](#reload_on_failure)
@@ -223,6 +225,20 @@ and this record will be written to the specified index (`logstash-2014.12.19`) r
 ### target_type_key
 
 Similar to `target_index_key` config, find the type name to write to in the record under this key (or nested record). If key not found in record - fallback to `type_name` (default "fluentd").
+
+### template_name
+
+The name of the template to define. If a template by the name given is already present, it will be left unchanged.
+
+This parameter along with template_file allow the plugin to behave similarly to Logstash (it installs a template at creation time) so that raw records are available. See [https://github.com/uken/fluent-plugin-elasticsearch/issues/33](https://github.com/uken/fluent-plugin-elasticsearch/issues/33).
+
+[template_file](#template_file) must also be specified.
+
+### template_file
+
+The path to the file containing the template to install.
+
+[template_name](#template_name) must also be specified.
 
 ### request_timeout
 
