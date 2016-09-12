@@ -1,4 +1,4 @@
-module Fluent::ElasticsearchOutputTemplate
+module Fluent::ElasticsearchIndexTemplate
 
   def get_template(template_file)
     if !File.exists?(template_file)

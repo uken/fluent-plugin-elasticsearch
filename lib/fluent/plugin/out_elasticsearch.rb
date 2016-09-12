@@ -9,7 +9,7 @@ begin
 rescue LoadError
 end
 
-require_relative 'out_elasticsearch_template'
+require_relative 'elasticsearch_index_template'
 
 class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   class ConnectionFailure < StandardError; end
@@ -56,7 +56,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :template_file, :string, :default => nil
 
   include Fluent::SetTagKeyMixin
-  include Fluent::ElasticsearchOutputTemplate
+  include Fluent::ElasticsearchIndexTemplate
   config_set_default :include_tag_key, false
 
   def initialize
