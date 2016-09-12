@@ -2,11 +2,14 @@
 require 'date'
 require 'excon'
 require 'elasticsearch'
+require 'json'
 require 'uri'
 begin
   require 'strptime'
 rescue LoadError
 end
+
+require_relative 'out_elasticsearch_template'
 
 class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   class ConnectionFailure < StandardError; end
@@ -49,8 +52,11 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :remove_keys_on_update_key, :string, :default => nil
   config_param :flatten_hashes, :bool, :default => false
   config_param :flatten_hashes_separator, :string, :default => "_"
+  config_param :template_name, :string, :default => nil
+  config_param :template_file, :string, :default => nil
 
   include Fluent::SetTagKeyMixin
+  include Fluent::ElasticsearchOutputTemplate
   config_set_default :include_tag_key, false
 
   def initialize
@@ -76,6 +82,10 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
     if @remove_keys_on_update && @remove_keys_on_update.is_a?(String)
       @remove_keys_on_update = @remove_keys_on_update.split ','
+    end
+
+    if @template_name && @template_file
+      template_install(@template_name, @template_file)
     end
   end
 
