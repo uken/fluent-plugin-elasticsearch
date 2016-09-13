@@ -54,6 +54,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :flatten_hashes_separator, :string, :default => "_"
   config_param :template_name, :string, :default => nil
   config_param :template_file, :string, :default => nil
+  config_param :templates, :hash, :default => nil
 
   include Fluent::SetTagKeyMixin
   include Fluent::ElasticsearchIndexTemplate
@@ -87,6 +88,11 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     if @template_name && @template_file
       template_install(@template_name, @template_file)
     end
+
+    if @templates
+      templates_hash_install (@templates)
+    end
+
   end
 
   def start
