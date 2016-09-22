@@ -1,6 +1,6 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
-### Future
+### [Unreleased]
 
 ### 1.7.0
 - add support for `template_name` and `template_file` (#194)
