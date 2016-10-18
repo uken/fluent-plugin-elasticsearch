@@ -15,7 +15,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
   config_param :reload_connections, :string, :default => "true"
   config_param :reload_on_failure, :string, :default => "false"
   config_param :resurrect_after, :string, :default => "60"
-  config_param :ssl_verify, :string, :dfeault => "true"
+  config_param :ssl_verify, :string, :default => "true"
 
   def configure(conf)
     super
