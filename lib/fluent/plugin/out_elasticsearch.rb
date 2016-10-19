@@ -249,7 +249,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
 
   def update_body(record, op)
     update = remove_keys(record)
-    body = {"doc".freeze => update }
+    body = {"doc".freeze => update}
     if op == UPSERT_OP
       if update == record
         body["doc_as_upsert".freeze] = true
@@ -300,15 +300,15 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
       if target_index_parent && target_index_parent[target_index_child_key]
         target_index = target_index_parent.delete(target_index_child_key)
       elsif @logstash_format
-        if record.has_key?("@timestamp")
-          dt = record["@timestamp"]
-          dt = @time_parser.parse(record["@timestamp"], time)
+        if record.has_key?(TIMESTAMP_FIELD)
+          dt = record[TIMESTAMP_FIELD]
+          dt = @time_parser.parse(record[TIMESTAMP_FIELD], time)
         elsif record.has_key?(@time_key)
           dt = @time_parser.parse(record[@time_key], time)
-          record['@timestamp'] = record[@time_key] unless time_key_exclude_timestamp
+          record[TIMESTAMP_FIELD] = record[@time_key] unless time_key_exclude_timestamp
         else
           dt = Time.at(time).to_datetime
-          record["@timestamp"] = dt.to_s
+          record[TIMESTAMP_FIELD] = dt.to_s
         end
         dt = dt.new_offset(0) if @utc_index
         target_index = "#{@logstash_prefix}-#{dt.strftime(@logstash_dateformat)}"
