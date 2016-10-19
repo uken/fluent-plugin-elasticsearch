@@ -278,7 +278,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
           record['@timestamp'] = record[@time_key] unless time_key_exclude_timestamp
         else
           dt = Time.at(time).to_datetime
-          record.merge!({"@timestamp" => dt.to_s})
+          record["@timestamp"] = dt.to_s
         end
         dt = dt.new_offset(0) if @utc_index
         target_index = "#{@logstash_prefix}-#{dt.strftime(@logstash_dateformat)}"
@@ -290,7 +290,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
       # allow upper-case characters in index names.
       target_index = target_index.downcase
       if @include_tag_key
-        record.merge!(@tag_key => tag)
+        record[@tag_key] = tag
       end
 
       target_type_parent, target_type_child_key = get_parent_of(record, @target_type_key)
