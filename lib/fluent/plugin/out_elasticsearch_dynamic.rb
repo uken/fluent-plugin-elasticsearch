@@ -33,6 +33,10 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     @current_config = nil
   end
 
+  def create_meta_config_map
+    {'id_key' => '_id', 'parent_key' => '_parent', 'routing_key' => '_routing'}
+  end
+
   def client(host)
 
     # check here to see if we already have a client connection for the given host
@@ -109,11 +113,18 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     end.join(', ')
   end
 
-  def write(chunk)
-    bulk_message = Hash.new { |h,k| h[k] = [] }
+  def write_objects(tag, chunk)
+    bulk_message = Hash.new { |h,k| h[k] = '' }
     dynamic_conf = @dynamic_config.clone
 
-    chunk.msgpack_each do |tag, time, record|
+    headers = {
+      UPDATE_OP => {},
+      UPSERT_OP => {},
+      CREATE_OP => {},
+      INDEX_OP => {}
+    }
+
+    chunk.msgpack_each do |time, record|
       next unless record.is_a? Hash
 
       # evaluate all configurations here
@@ -157,7 +168,6 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
 
       meta = {"_index" => target_index, "_type" => dynamic_conf['type_name']}
 
-      @meta_config_map ||= { 'id_key' => '_id', 'parent_key' => '_parent', 'routing_key' => '_routing' }
       @meta_config_map.each_pair do |config_name, meta_key|
         if dynamic_conf[config_name] && record[dynamic_conf[config_name]]
           meta[meta_key] = record[dynamic_conf[config_name]]
@@ -174,12 +184,13 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
         @remove_keys.each { |key| record.delete(key) }
       end
 
-      append_record_to_messages(dynamic_conf["write_operation"], meta, record, bulk_message[host])
+      write_op = dynamic_conf["write_operation"]
+      append_record_to_messages(write_op, meta, headers[write_op], record, bulk_message[host])
     end
 
-    bulk_message.each do | hKey, array |
-      send_bulk(array, hKey) unless array.empty?
-      array.clear
+    bulk_message.each do |hKey, msgs|
+      send_builk(msgs, hKey) unless msgs.empty?
+      msgs = nil
     end
   end
 
