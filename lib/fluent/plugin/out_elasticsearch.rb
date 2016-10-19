@@ -91,6 +91,12 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
       templates_hash_install (@templates)
     end
 
+    begin
+      require 'oj'
+      @dump_proc = Oj.method(:dump)
+    rescue LoadError
+      @dump_proc = Yajl.method(:dump)
+    end
   end
 
   def start
@@ -202,32 +208,43 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
     super
   end
 
-  def append_record_to_messages(op, meta, record, msgs)
+  BODY_DELIMITER = "\n".freeze
+  UPDATE_OP = "update".freeze
+  UPSERT_OP = "upsert".freeze
+  CREATE_OP = "create".freeze
+  INDEX_OP = "index".freeze
+  ID_FIELD = "_id".freeze
+  TIMESTAMP_FIELD = "@timestamp".freeze
+
+  def append_record_to_messages(op, meta, header, record, msgs)
     case op
-    when "update", "upsert"
-      if meta.has_key?("_id")
-        msgs << { "update" => meta }
-        msgs << update_body(record, op)
+    when UPDATE_OP, UPSERT_OP
+      if meta.has_key?(ID_FIELD)
+        header[UPDATE_OP] = meta
+        msgs << @dump_proc.call(header) << BODY_DELIMITER
+        msgs << @dump_proc.call(update_body(record, op)) << BODY_DELIMITER
       end
-    when "create"
-      if meta.has_key?("_id")
-        msgs << { "create" => meta }
-        msgs << record
+    when CREATE_OP
+      if meta.has_key?(ID_FIELD)
+        header[CREATE_OP] = meta
+        msgs << @dump_proc.call(header) << BODY_DELIMITER
+        msgs << @dump_proc.call(record) << BODY_DELIMITER
       end
-    when "index"
-      msgs << { "index" => meta }
-      msgs << record
+    when INDEX_OP
+      header[INDEX_OP] = meta
+      msgs << @dump_proc.call(header) << BODY_DELIMITER
+      msgs << @dump_proc.call(record) << BODY_DELIMITER
     end
   end
 
   def update_body(record, op)
     update = remove_keys(record)
-    body = { "doc" => update }
-    if  op == "upsert"
+    body = {"doc".freeze => update }
+    if op == UPSERT_OP
       if update == record
-        body["doc_as_upsert"] = true
+        body["doc_as_upsert".freeze] = true
       else
-        body["upsert"] = record
+        body[UPSERT_OP] = record
       end
     end
     body
@@ -258,9 +275,11 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   end
 
   def write_objects(tag, chunk)
-    bulk_message = []
+    bulk_message = ''
+    header = {}
+    meta = {}
 
-    chunk.msgpack_each do |tag, time, record|
+    chunk.msgpack_each do |time, record|
       if @flatten_hashes
         record = flatten_record(record)
       end
@@ -300,7 +319,9 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
         target_type = @type_name
       end
 
-      meta = {"_index" => target_index, "_type" => target_type}
+      meta.clear
+      meta["_index".freeze] = target_index
+      meta["_type".freeze] = target_type
 
       @meta_config_map ||= { 'id_key' => '_id', 'parent_key' => '_parent', 'routing_key' => '_routing' }
       @meta_config_map.each_pair do |config_name, meta_key|
@@ -312,11 +333,11 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
         @remove_keys.each { |key| record.delete(key) }
       end
 
-      append_record_to_messages(@write_operation, meta, record, bulk_message)
+      append_record_to_messages(@write_operation, meta, header, record, bulk_message)
     end
 
     send_bulk(bulk_message) unless bulk_message.empty?
-    bulk_message.clear
+    bulk_message = nil
   end
 
   # returns [parent, child_key] of child described by path array in record's tree
