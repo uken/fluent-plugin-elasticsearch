@@ -9,6 +9,7 @@ begin
 rescue LoadError
 end
 
+require 'fluent/output'
 require_relative 'elasticsearch_index_template'
 
 class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
