@@ -55,10 +55,10 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   config_param :template_name, :string, :default => nil
   config_param :template_file, :string, :default => nil
   config_param :templates, :hash, :default => nil
+  config_param :include_tag_key, :bool, :default => false
+  config_param :tag_key, :string, :default => 'tag'
 
-  include Fluent::SetTagKeyMixin
   include Fluent::ElasticsearchIndexTemplate
-  config_set_default :include_tag_key, false
 
   def initialize
     super
