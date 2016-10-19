@@ -91,12 +91,22 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
       templates_hash_install (@templates)
     end
 
+    @meta_config_map = create_meta_config_map
+
     begin
       require 'oj'
       @dump_proc = Oj.method(:dump)
     rescue LoadError
       @dump_proc = Yajl.method(:dump)
     end
+  end
+
+  def create_meta_config_map
+    result = []
+    result << [@id_key, '_id'] if @id_key
+    result << [@parent_key, '_parent'] if @parent_key
+    result << [@routing_key, '_routing'] if @routing_key
+    result
   end
 
   def start
@@ -323,10 +333,8 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
       meta["_index".freeze] = target_index
       meta["_type".freeze] = target_type
 
-      @meta_config_map ||= { 'id_key' => '_id', 'parent_key' => '_parent', 'routing_key' => '_routing' }
-      @meta_config_map.each_pair do |config_name, meta_key|
-        record_key = self.instance_variable_get("@#{config_name}")
-        meta[meta_key] = record[record_key] if record_key && record[record_key]
+      @meta_config_map.each do |record_key, meta_key|
+        meta[meta_key] = record[record_key] if record[record_key]
       end
 
       if @remove_keys
