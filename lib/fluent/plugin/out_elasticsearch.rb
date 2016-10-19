@@ -11,7 +11,7 @@ end
 
 require_relative 'elasticsearch_index_template'
 
-class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
+class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   class ConnectionFailure < StandardError; end
 
   Fluent::Plugin.register_output('elasticsearch', self)
@@ -198,10 +198,6 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     end.join(', ')
   end
 
-  def format(tag, time, record)
-    [tag, time, record].to_msgpack
-  end
-
   def shutdown
     super
   end
@@ -261,7 +257,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     ret
   end
 
-  def write(chunk)
+  def write_objects(tag, chunk)
     bulk_message = []
 
     chunk.msgpack_each do |tag, time, record|
