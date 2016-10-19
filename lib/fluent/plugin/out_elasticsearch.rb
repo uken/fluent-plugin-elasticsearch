@@ -295,7 +295,8 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
       end
 
       next unless record.is_a? Hash
-      target_index_parent, target_index_child_key = get_parent_of(record, @target_index_key)
+
+      target_index_parent, target_index_child_key = @target_index_key ? get_parent_of(record, @target_index_key) : nil
       if target_index_parent && target_index_parent[target_index_child_key]
         target_index = target_index_parent.delete(target_index_child_key)
       elsif @logstash_format
@@ -322,7 +323,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
         record[@tag_key] = tag
       end
 
-      target_type_parent, target_type_child_key = get_parent_of(record, @target_type_key)
+      target_type_parent, target_type_child_key = @target_type_key ? get_parent_of(record, @target_type_key) : nil
       if target_type_parent && target_type_parent[target_type_child_key]
         target_type = target_type_parent.delete(target_type_child_key)
       else
@@ -351,8 +352,6 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   # returns [parent, child_key] of child described by path array in record's tree
   # returns [nil, child_key] if path doesnt exist in record
   def get_parent_of(record, path)
-    return [nil, nil] unless path
-
     parent_object = path[0..-2].reduce(record) { |a, e| a.is_a?(Hash) ? a[e] : nil }
     [parent_object, path[-1]]
   end
