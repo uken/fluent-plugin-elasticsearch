@@ -291,11 +291,11 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
     meta = {}
 
     chunk.msgpack_each do |time, record|
+      next unless record.is_a? Hash
+
       if @flatten_hashes
         record = flatten_record(record)
       end
-
-      next unless record.is_a? Hash
 
       target_index_parent, target_index_child_key = @target_index_key ? get_parent_of(record, @target_index_key) : nil
       if target_index_parent && target_index_parent[target_index_child_key]
