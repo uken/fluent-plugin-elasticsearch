@@ -1,6 +1,7 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+- fix typo in defaults for ssl_verify on elasticsearch_dynamic (#202)
 
 ### 1.7.0
 - add support for `template_name` and `template_file` (#194)
