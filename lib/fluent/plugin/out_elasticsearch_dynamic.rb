@@ -189,8 +189,8 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     end
 
     bulk_message.each do |hKey, msgs|
-      send_builk(msgs, hKey) unless msgs.empty?
-      msgs = nil
+      send_bulk(msgs, hKey) unless msgs.empty?
+      msgs.clear
     end
   end
 

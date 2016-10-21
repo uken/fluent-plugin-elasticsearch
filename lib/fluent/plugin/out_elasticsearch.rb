@@ -347,7 +347,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
     end
 
     send_bulk(bulk_message) unless bulk_message.empty?
-    bulk_message = nil
+    bulk_message.clear
   end
 
   # returns [parent, child_key] of child described by path array in record's tree
