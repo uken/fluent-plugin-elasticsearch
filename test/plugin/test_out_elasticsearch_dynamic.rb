@@ -63,6 +63,26 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_equal 'doe', instance.password
   end
 
+  def test_defaults
+    config = %{
+      host     logs.google.com
+      scheme   https
+      path     /es/
+      user     john
+      password doe
+    }
+    instance = driver('test', config).instance
+
+    assert_equal "9200", instance.port
+    assert_equal "false", instance.logstash_format
+    assert_equal "true", instance.utc_index
+    assert_equal false, instance.time_key_exclude_timestamp
+    assert_equal "true", instance.reload_connections
+    assert_equal "false", instance.reload_on_failure
+    assert_equal "60", instance.resurrect_after
+    assert_equal "true", instance.ssl_verify
+  end
+
   def test_legacy_hosts_list
     config = %{
       hosts    host1:50,host2:100,host3
