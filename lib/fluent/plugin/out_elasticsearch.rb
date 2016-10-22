@@ -87,9 +87,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
 
     if @template_name && @template_file
       template_install(@template_name, @template_file)
-    end
-
-    if @templates
+    elsif @templates
       templates_hash_install (@templates)
     end
 
