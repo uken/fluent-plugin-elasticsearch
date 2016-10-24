@@ -178,12 +178,12 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     end
 
     bulk_message.each do | hKey, array |
-      send(array, hKey) unless array.empty?
+      send_bulk(array, hKey) unless array.empty?
       array.clear
     end
   end
 
-  def send(data, host)
+  def send_bulk(data, host)
     retries = 0
     begin
       client(host).bulk body: data

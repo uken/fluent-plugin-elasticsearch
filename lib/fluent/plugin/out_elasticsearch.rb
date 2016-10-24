@@ -319,7 +319,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       append_record_to_messages(@write_operation, meta, record, bulk_message)
     end
 
-    send(bulk_message) unless bulk_message.empty?
+    send_bulk(bulk_message) unless bulk_message.empty?
     bulk_message.clear
   end
 
@@ -332,7 +332,7 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     [parent_object, path[-1]]
   end
 
-  def send(data)
+  def send_bulk(data)
     retries = 0
     begin
       client.bulk body: data
