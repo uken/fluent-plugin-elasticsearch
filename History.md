@@ -1,6 +1,8 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+
+### 1.8.0
 - fix typo in defaults for ssl_verify on elasticsearch_dynamic (#202)
 - add support for `templates` (#196)
 - rename `send` method to `send_bulk` (#206)
