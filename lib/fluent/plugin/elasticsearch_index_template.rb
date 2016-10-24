@@ -28,4 +28,10 @@ module Fluent::ElasticsearchIndexTemplate
     end
   end
 
+  def templates_hash_install (templates)
+    templates.each do |key, value|
+      template_install(key, value)
+    end
+  end
+
 end

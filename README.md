@@ -28,6 +28,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [target_type_key](#target_type_key)
   + [template_name](#template_name)
   + [template_file](#template_file)
+  + [templates](#templates)
   + [request_timeout](#request_timeout)
   + [reload_connections](#reload_connections)
   + [reload_on_failure](#reload_on_failure)
@@ -239,6 +240,16 @@ This parameter along with template_file allow the plugin to behave similarly to 
 The path to the file containing the template to install.
 
 [template_name](#template_name) must also be specified.
+
+### templates
+
+Specify index templates in form of hash. Can contain multiple templates.
+
+```
+templates { "templane_name_1": "path_to_template_1_file", "templane_name_2": "path_to_template_2_file"}
+```
+
+If `template_file` and `template_name` are set, then this parameter will be ignored.
 
 ### request_timeout
 
