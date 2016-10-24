@@ -2,6 +2,8 @@
 
 ### [Unreleased]
 - fix typo in defaults for ssl_verify on elasticsearch_dynamic (#202)
+- add support for `templates` (#196)
+- rename `send` method to `send_bulk` (#206)
 
 ### 1.7.0
 - add support for `template_name` and `template_file` (#194)
