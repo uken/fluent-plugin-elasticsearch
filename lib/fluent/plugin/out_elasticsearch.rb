@@ -9,9 +9,10 @@ begin
 rescue LoadError
 end
 
+require 'fluent/output'
 require_relative 'elasticsearch_index_template'
 
-class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
+class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   class ConnectionFailure < StandardError; end
 
   Fluent::Plugin.register_output('elasticsearch', self)
@@ -55,10 +56,10 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   config_param :template_name, :string, :default => nil
   config_param :template_file, :string, :default => nil
   config_param :templates, :hash, :default => nil
+  config_param :include_tag_key, :bool, :default => false
+  config_param :tag_key, :string, :default => 'tag'
 
-  include Fluent::SetTagKeyMixin
   include Fluent::ElasticsearchIndexTemplate
-  config_set_default :include_tag_key, false
 
   def initialize
     super
@@ -91,6 +92,22 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       templates_hash_install (@templates)
     end
 
+    @meta_config_map = create_meta_config_map
+
+    begin
+      require 'oj'
+      @dump_proc = Oj.method(:dump)
+    rescue LoadError
+      @dump_proc = Yajl.method(:dump)
+    end
+  end
+
+  def create_meta_config_map
+    result = []
+    result << [@id_key, '_id'] if @id_key
+    result << [@parent_key, '_parent'] if @parent_key
+    result << [@routing_key, '_routing'] if @routing_key
+    result
   end
 
   def start
@@ -198,40 +215,47 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     end.join(', ')
   end
 
-  def format(tag, time, record)
-    [tag, time, record].to_msgpack
-  end
-
   def shutdown
     super
   end
 
-  def append_record_to_messages(op, meta, record, msgs)
+  BODY_DELIMITER = "\n".freeze
+  UPDATE_OP = "update".freeze
+  UPSERT_OP = "upsert".freeze
+  CREATE_OP = "create".freeze
+  INDEX_OP = "index".freeze
+  ID_FIELD = "_id".freeze
+  TIMESTAMP_FIELD = "@timestamp".freeze
+
+  def append_record_to_messages(op, meta, header, record, msgs)
     case op
-    when "update", "upsert"
-      if meta.has_key?("_id")
-        msgs << { "update" => meta }
-        msgs << update_body(record, op)
+    when UPDATE_OP, UPSERT_OP
+      if meta.has_key?(ID_FIELD)
+        header[UPDATE_OP] = meta
+        msgs << @dump_proc.call(header) << BODY_DELIMITER
+        msgs << @dump_proc.call(update_body(record, op)) << BODY_DELIMITER
       end
-    when "create"
-      if meta.has_key?("_id")
-        msgs << { "create" => meta }
-        msgs << record
+    when CREATE_OP
+      if meta.has_key?(ID_FIELD)
+        header[CREATE_OP] = meta
+        msgs << @dump_proc.call(header) << BODY_DELIMITER
+        msgs << @dump_proc.call(record) << BODY_DELIMITER
       end
-    when "index"
-      msgs << { "index" => meta }
-      msgs << record
+    when INDEX_OP
+      header[INDEX_OP] = meta
+      msgs << @dump_proc.call(header) << BODY_DELIMITER
+      msgs << @dump_proc.call(record) << BODY_DELIMITER
     end
   end
 
   def update_body(record, op)
     update = remove_keys(record)
-    body = { "doc" => update }
-    if  op == "upsert"
+    body = {"doc".freeze => update}
+    if op == UPSERT_OP
       if update == record
-        body["doc_as_upsert"] = true
+        body["doc_as_upsert".freeze] = true
       else
-        body["upsert"] = record
+        body[UPSERT_OP] = record
       end
     end
     body
@@ -261,28 +285,31 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
     ret
   end
 
-  def write(chunk)
-    bulk_message = []
+  def write_objects(tag, chunk)
+    bulk_message = ''
+    header = {}
+    meta = {}
 
-    chunk.msgpack_each do |tag, time, record|
+    chunk.msgpack_each do |time, record|
+      next unless record.is_a? Hash
+
       if @flatten_hashes
         record = flatten_record(record)
       end
 
-      next unless record.is_a? Hash
-      target_index_parent, target_index_child_key = get_parent_of(record, @target_index_key)
+      target_index_parent, target_index_child_key = @target_index_key ? get_parent_of(record, @target_index_key) : nil
       if target_index_parent && target_index_parent[target_index_child_key]
         target_index = target_index_parent.delete(target_index_child_key)
       elsif @logstash_format
-        if record.has_key?("@timestamp")
-          dt = record["@timestamp"]
-          dt = @time_parser.parse(record["@timestamp"], time)
+        if record.has_key?(TIMESTAMP_FIELD)
+          dt = record[TIMESTAMP_FIELD]
+          dt = @time_parser.parse(record[TIMESTAMP_FIELD], time)
         elsif record.has_key?(@time_key)
           dt = @time_parser.parse(record[@time_key], time)
-          record['@timestamp'] = record[@time_key] unless time_key_exclude_timestamp
+          record[TIMESTAMP_FIELD] = record[@time_key] unless time_key_exclude_timestamp
         else
           dt = Time.at(time).to_datetime
-          record.merge!({"@timestamp" => dt.to_s})
+          record[TIMESTAMP_FIELD] = dt.to_s
         end
         dt = dt.new_offset(0) if @utc_index
         target_index = "#{@logstash_prefix}-#{dt.strftime(@logstash_dateformat)}"
@@ -294,29 +321,29 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
       # allow upper-case characters in index names.
       target_index = target_index.downcase
       if @include_tag_key
-        record.merge!(@tag_key => tag)
+        record[@tag_key] = tag
       end
 
-      target_type_parent, target_type_child_key = get_parent_of(record, @target_type_key)
+      target_type_parent, target_type_child_key = @target_type_key ? get_parent_of(record, @target_type_key) : nil
       if target_type_parent && target_type_parent[target_type_child_key]
         target_type = target_type_parent.delete(target_type_child_key)
       else
         target_type = @type_name
       end
 
-      meta = {"_index" => target_index, "_type" => target_type}
+      meta.clear
+      meta["_index".freeze] = target_index
+      meta["_type".freeze] = target_type
 
-      @meta_config_map ||= { 'id_key' => '_id', 'parent_key' => '_parent', 'routing_key' => '_routing' }
-      @meta_config_map.each_pair do |config_name, meta_key|
-        record_key = self.instance_variable_get("@#{config_name}")
-        meta[meta_key] = record[record_key] if record_key && record[record_key]
+      @meta_config_map.each do |record_key, meta_key|
+        meta[meta_key] = record[record_key] if record[record_key]
       end
 
       if @remove_keys
         @remove_keys.each { |key| record.delete(key) }
       end
 
-      append_record_to_messages(@write_operation, meta, record, bulk_message)
+      append_record_to_messages(@write_operation, meta, header, record, bulk_message)
     end
 
     send_bulk(bulk_message) unless bulk_message.empty?
@@ -326,8 +353,6 @@ class Fluent::ElasticsearchOutput < Fluent::BufferedOutput
   # returns [parent, child_key] of child described by path array in record's tree
   # returns [nil, child_key] if path doesnt exist in record
   def get_parent_of(record, path)
-    return [nil, nil] unless path
-
     parent_object = path[0..-2].reduce(record) { |a, e| a.is_a?(Hash) ? a[e] : nil }
     [parent_object, path[-1]]
   end
