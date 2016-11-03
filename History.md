@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 1.9.0.rc.1
+- Optimize output plugins (#203)
+
 ### 1.8.0
 - fix typo in defaults for ssl_verify on elasticsearch_dynamic (#202)
 - add support for `templates` (#196)
