@@ -297,11 +297,12 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
         target_index = target_index_parent.delete(target_index_child_key)
       elsif @logstash_format
         if record.has_key?(TIMESTAMP_FIELD)
-          dt = record[TIMESTAMP_FIELD]
-          dt = parse_time(record[TIMESTAMP_FIELD], time, tag)
+          rts = record[TIMESTAMP_FIELD]
+          dt = parse_time(rts, time, tag)
         elsif record.has_key?(@time_key)
-          dt = parse_time(record[@time_key], time, tag)
-          record[TIMESTAMP_FIELD] = record[@time_key] unless time_key_exclude_timestamp
+          rts = record[@time_key]
+          dt = parse_time(rts, time, tag)
+          record[TIMESTAMP_FIELD] = rts unless @time_key_exclude_timestamp
         else
           dt = Time.at(time).to_datetime
           record[TIMESTAMP_FIELD] = dt.to_s
