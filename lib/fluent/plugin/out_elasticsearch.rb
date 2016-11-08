@@ -109,10 +109,6 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
     result
   end
 
-  def start
-    super
-  end
-
   # once fluent v0.14 is released we might be able to use
   # Fluent::Parser::TimeParser, but it doesn't quite do what we want - if gives
   # [sec,nsec] where as we want something we can call `strftime` on...
@@ -208,10 +204,6 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
       attributes[:password] = 'obfuscated' if attributes.has_key?(:password)
       attributes.inspect
     end.join(', ')
-  end
-
-  def shutdown
-    super
   end
 
   BODY_DELIMITER = "\n".freeze
