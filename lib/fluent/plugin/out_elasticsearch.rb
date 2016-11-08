@@ -63,12 +63,11 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
 
   def initialize
     super
-    @time_parser = TimeParser.new(@time_key_format, @router)
   end
 
   def configure(conf)
     super
-    @time_parser = TimeParser.new(@time_key_format, @router)
+    @time_parser = create_time_parser
 
     if @remove_keys
       @remove_keys = @remove_keys.split(/\s*,\s*/)
@@ -117,33 +116,29 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   # once fluent v0.14 is released we might be able to use
   # Fluent::Parser::TimeParser, but it doesn't quite do what we want - if gives
   # [sec,nsec] where as we want something we can call `strftime` on...
-  class TimeParser
-    def initialize(time_key_format, router)
-      @time_key_format = time_key_format
-      @router = router
-      @parser = if time_key_format
-        begin
-          # Strptime doesn't support all formats, but for those it does it's
-          # blazingly fast.
-          strptime = Strptime.new(time_key_format)
-          Proc.new { |value| strptime.exec(value).to_datetime }
-        rescue
-          # Can happen if Strptime doesn't recognize the format; or
-          # if strptime couldn't be required (because it's not installed -- it's
-          # ruby 2 only)
-          Proc.new { |value| DateTime.strptime(value, time_key_format) }
-        end
-      else
-        Proc.new { |value| DateTime.parse(value) }
+  def create_time_parser
+    if @time_key_format
+      begin
+        # Strptime doesn't support all formats, but for those it does it's
+        # blazingly fast.
+        strptime = Strptime.new(@time_key_format)
+        Proc.new { |value| strptime.exec(value).to_datetime }
+      rescue
+        # Can happen if Strptime doesn't recognize the format; or
+        # if strptime couldn't be required (because it's not installed -- it's
+        # ruby 2 only)
+        Proc.new { |value| DateTime.strptime(value, @time_key_format) }
       end
+    else
+      Proc.new { |value| DateTime.parse(value) }
     end
+  end
 
-    def parse(value, event_time)
-      @parser.call(value)
-    rescue => e
-      @router.emit_error_event("Fluent::ElasticsearchOutput::TimeParser.error", Fluent::Engine.now, {'time' => event_time, 'format' => @time_key_format, 'value' => value }, e)
-      return Time.at(event_time).to_datetime
-    end
+  def parse_time(value, event_time, tag)
+    @time_parser.call(value)
+  rescue => e
+    router.emit_error_event("Fluent::ElasticsearchOutput::TimeParser.error", Fluent::Engine.now, {'tag' => tag, 'time' => event_time, 'format' => @time_key_format, 'value' => value}, e)
+    return Time.at(event_time).to_datetime
   end
 
   def client
@@ -303,9 +298,9 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
       elsif @logstash_format
         if record.has_key?(TIMESTAMP_FIELD)
           dt = record[TIMESTAMP_FIELD]
-          dt = @time_parser.parse(record[TIMESTAMP_FIELD], time)
+          dt = parse_time(record[TIMESTAMP_FIELD], time, tag)
         elsif record.has_key?(@time_key)
-          dt = @time_parser.parse(record[@time_key], time)
+          dt = parse_time(record[@time_key], time, tag)
           record[TIMESTAMP_FIELD] = record[@time_key] unless time_key_exclude_timestamp
         else
           dt = Time.at(time).to_datetime
