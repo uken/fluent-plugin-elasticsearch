@@ -724,9 +724,13 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(index_cmds[1]['@timestamp'], ts)
   end
 
-  def test_uses_custom_time_key_format_logs_an_error
+  data(:default => nil,
+       :custom_tag => 'es_plugin.output.time.error')
+  def test_uses_custom_time_key_format_logs_an_error(tag_for_error)
+    tag_config = tag_for_error ? "time_parse_error_tag #{tag_for_error}" : ''
+    tag_for_error = 'Fluent::ElasticsearchOutput::TimeParser.error' if tag_for_error.nil?
     driver.configure("logstash_format true
-                      time_key_format %Y-%m-%dT%H:%M:%S.%N%z\n")
+                      time_key_format %Y-%m-%dT%H:%M:%S.%N%z\n#{tag_config}\n")
     stub_elastic_ping
     stub_elastic
 
@@ -737,7 +741,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run
 
     log = driver.instance.router.emit_error_handler.log
-    errors = log.out.logs.grep /tag="Fluent::ElasticsearchOutput::TimeParser.error"/
+    errors = log.out.logs.grep /tag="#{tag_for_error}"/
     assert_equal(1, errors.length, "Error was logged for timestamp parse failure")
 
     assert_equal(index, index_cmds[0]['index']['_index'])

@@ -58,6 +58,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   config_param :templates, :hash, :default => nil
   config_param :include_tag_key, :bool, :default => false
   config_param :tag_key, :string, :default => 'tag'
+  config_param :time_parse_error_tag, :string, :default => 'Fluent::ElasticsearchOutput::TimeParser.error'
 
   include Fluent::ElasticsearchIndexTemplate
 
@@ -133,7 +134,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   def parse_time(value, event_time, tag)
     @time_parser.call(value)
   rescue => e
-    router.emit_error_event("Fluent::ElasticsearchOutput::TimeParser.error", Fluent::Engine.now, {'tag' => tag, 'time' => event_time, 'format' => @time_key_format, 'value' => value}, e)
+    router.emit_error_event(@time_parse_error_tag, Fluent::Engine.now, {'tag' => tag, 'time' => event_time, 'format' => @time_key_format, 'value' => value}, e)
     return Time.at(event_time).to_datetime
   end
 
