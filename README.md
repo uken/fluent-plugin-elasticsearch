@@ -41,6 +41,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [remove_keys_on_update](#remove_keys_on_update)
   + [remove_keys_on_update_key](#remove_keys_on_update_key)
   + [write_operation](#write_operation)
+  + [time_parse_error_tag](#time_parse_error_tag)
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Proxy Support](#proxy-support)
   + [Buffered output options](#buffered-output-options)
@@ -391,6 +392,13 @@ The write_operation can be any of:
 | upsert      | known as merge or insert if the data does not exist, updates if the data exists (based on its id).|
 
 **Please note, id is required in create, update, and upsert scenario. Without id, the message will be dropped.**
+
+### time_parse_error_tag
+
+With `logstash_format true`, elasticsearch plugin parses timestamp field for generating index name. If the record has invalid timestamp value, this plugin emits an error event to `@ERROR` label with `time_parse_error_tag` configured tag.
+
+Default value is `Fluent::ElasticsearchOutput::TimeParser.error` for backward compatibility. `::` separated tag is not good for tag routing because some plugins assume tag is separated by `.`. We recommend to set this parameter like `time_parse_error_tag es_plugin.output.time.error`.
+We will change default value to `.` separated tag.
 
 ### Client/host certificate options
 

@@ -58,17 +58,17 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   config_param :templates, :hash, :default => nil
   config_param :include_tag_key, :bool, :default => false
   config_param :tag_key, :string, :default => 'tag'
+  config_param :time_parse_error_tag, :string, :default => 'Fluent::ElasticsearchOutput::TimeParser.error'
 
   include Fluent::ElasticsearchIndexTemplate
 
   def initialize
     super
-    @time_parser = TimeParser.new(@time_key_format, @router)
   end
 
   def configure(conf)
     super
-    @time_parser = TimeParser.new(@time_key_format, @router)
+    @time_parser = create_time_parser
 
     if @remove_keys
       @remove_keys = @remove_keys.split(/\s*,\s*/)
@@ -110,40 +110,32 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
     result
   end
 
-  def start
-    super
-  end
-
   # once fluent v0.14 is released we might be able to use
   # Fluent::Parser::TimeParser, but it doesn't quite do what we want - if gives
   # [sec,nsec] where as we want something we can call `strftime` on...
-  class TimeParser
-    def initialize(time_key_format, router)
-      @time_key_format = time_key_format
-      @router = router
-      @parser = if time_key_format
-        begin
-          # Strptime doesn't support all formats, but for those it does it's
-          # blazingly fast.
-          strptime = Strptime.new(time_key_format)
-          Proc.new { |value| strptime.exec(value).to_datetime }
-        rescue
-          # Can happen if Strptime doesn't recognize the format; or
-          # if strptime couldn't be required (because it's not installed -- it's
-          # ruby 2 only)
-          Proc.new { |value| DateTime.strptime(value, time_key_format) }
-        end
-      else
-        Proc.new { |value| DateTime.parse(value) }
+  def create_time_parser
+    if @time_key_format
+      begin
+        # Strptime doesn't support all formats, but for those it does it's
+        # blazingly fast.
+        strptime = Strptime.new(@time_key_format)
+        Proc.new { |value| strptime.exec(value).to_datetime }
+      rescue
+        # Can happen if Strptime doesn't recognize the format; or
+        # if strptime couldn't be required (because it's not installed -- it's
+        # ruby 2 only)
+        Proc.new { |value| DateTime.strptime(value, @time_key_format) }
       end
+    else
+      Proc.new { |value| DateTime.parse(value) }
     end
+  end
 
-    def parse(value, event_time)
-      @parser.call(value)
-    rescue => e
-      @router.emit_error_event("Fluent::ElasticsearchOutput::TimeParser.error", Fluent::Engine.now, {'time' => event_time, 'format' => @time_key_format, 'value' => value }, e)
-      return Time.at(event_time).to_datetime
-    end
+  def parse_time(value, event_time, tag)
+    @time_parser.call(value)
+  rescue => e
+    router.emit_error_event(@time_parse_error_tag, Fluent::Engine.now, {'tag' => tag, 'time' => event_time, 'format' => @time_key_format, 'value' => value}, e)
+    return Time.at(event_time).to_datetime
   end
 
   def client
@@ -213,10 +205,6 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
       attributes[:password] = 'obfuscated' if attributes.has_key?(:password)
       attributes.inspect
     end.join(', ')
-  end
-
-  def shutdown
-    super
   end
 
   BODY_DELIMITER = "\n".freeze
@@ -302,11 +290,12 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
         target_index = target_index_parent.delete(target_index_child_key)
       elsif @logstash_format
         if record.has_key?(TIMESTAMP_FIELD)
-          dt = record[TIMESTAMP_FIELD]
-          dt = @time_parser.parse(record[TIMESTAMP_FIELD], time)
+          rts = record[TIMESTAMP_FIELD]
+          dt = parse_time(rts, time, tag)
         elsif record.has_key?(@time_key)
-          dt = @time_parser.parse(record[@time_key], time)
-          record[TIMESTAMP_FIELD] = record[@time_key] unless time_key_exclude_timestamp
+          rts = record[@time_key]
+          dt = parse_time(rts, time, tag)
+          record[TIMESTAMP_FIELD] = rts unless @time_key_exclude_timestamp
         else
           dt = Time.at(time).to_datetime
           record[TIMESTAMP_FIELD] = dt.to_s
