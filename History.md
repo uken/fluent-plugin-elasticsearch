@@ -1,6 +1,7 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+- add `time_parse_error_tag` (#211)
 
 ### 1.9.0.rc.1
 - Optimize output plugins (#203)
