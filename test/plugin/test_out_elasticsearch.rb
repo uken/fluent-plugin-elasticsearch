@@ -367,8 +367,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_writes_to_target_index_key_logstash
-    driver.configure("target_index_key @target_index\n")
-    driver.configure("logstash_format true\n")
+    driver.configure("target_index_key @target_index
+                      logstash_format true")
     time = Time.parse Date.today.to_s
     stub_elastic_ping
     stub_elastic
@@ -378,8 +378,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
    def test_writes_to_target_index_key_logstash_uppercase
-    driver.configure("target_index_key @target_index\n")
-    driver.configure("logstash_format true\n")
+    driver.configure("target_index_key @target_index
+                      logstash_format true")
     time = Time.parse Date.today.to_s
     stub_elastic_ping
     stub_elastic
@@ -400,8 +400,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_writes_to_target_index_key_fallack_logstash
-    driver.configure("target_index_key @target_index\n")
-    driver.configure("logstash_format true\n")
+    driver.configure("target_index_key @target_index\n
+                      logstash_format true")
     time = Time.parse Date.today.to_s
     logstash_index = "logstash-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
@@ -441,8 +441,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_writes_to_target_type_key_fallack_to_type_name
-    driver.configure("target_type_key @target_type\n")
-    driver.configure("type_name mytype\n")
+    driver.configure("target_type_key @target_type
+                      type_name mytype")
     stub_elastic_ping
     stub_elastic
     driver.emit(sample_record)
