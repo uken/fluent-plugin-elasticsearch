@@ -2,6 +2,7 @@
 
 ### [Unreleased]
 - add `time_parse_error_tag` (#211)
+- add `reconnect_on_error` (#214)
 
 ### 1.9.0.rc.1
 - Optimize output plugins (#203)
