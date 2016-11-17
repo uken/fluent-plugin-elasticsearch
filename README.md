@@ -42,7 +42,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [remove_keys_on_update_key](#remove_keys_on_update_key)
   + [write_operation](#write_operation)
   + [time_parse_error_tag](#time_parse_error_tag)
-  + [reconnect_on_error](#reset_on_error)
+  + [reconnect_on_error](#reconnect_on_error)
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Proxy Support](#proxy-support)
   + [Buffered output options](#buffered-output-options)
