@@ -1,6 +1,8 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+
+### 1.9.0
 - add `time_parse_error_tag` (#211)
 - add `reconnect_on_error` (#214)
 
