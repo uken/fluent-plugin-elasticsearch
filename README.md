@@ -42,6 +42,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [remove_keys_on_update_key](#remove_keys_on_update_key)
   + [write_operation](#write_operation)
   + [time_parse_error_tag](#time_parse_error_tag)
+  + [reconnect_on_error](#reconnect_on_error)
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Proxy Support](#proxy-support)
   + [Buffered output options](#buffered-output-options)
@@ -399,6 +400,14 @@ With `logstash_format true`, elasticsearch plugin parses timestamp field for gen
 
 Default value is `Fluent::ElasticsearchOutput::TimeParser.error` for backward compatibility. `::` separated tag is not good for tag routing because some plugins assume tag is separated by `.`. We recommend to set this parameter like `time_parse_error_tag es_plugin.output.time.error`.
 We will change default value to `.` separated tag.
+
+### reconnect_on_error
+Indicates that the plugin should reset connection on any error (reconnect on next send).
+By default it will reconnect only on "host unreachable exceptions".
+We recommended to set this true in the presence of elasticsearch shield.
+```
+reconnect_on_error true # defaults to false
+```
 
 ### Client/host certificate options
 
