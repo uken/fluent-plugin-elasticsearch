@@ -16,7 +16,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
   config_param :reload_on_failure, :string, :default => "false"
   config_param :resurrect_after, :string, :default => "60"
   config_param :ssl_verify, :string, :default => "true"
-  config_param :reset_on_error, :bool, :default => false
+  config_param :reconnect_on_error, :bool, :default => false
 
   def configure(conf)
     super
@@ -209,7 +209,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       end
       raise ConnectionFailure, "Could not push logs to Elasticsearch after #{retries} retries. #{e.message}"
     rescue Exception
-      @_es = nil if @reset_on_error
+      @_es = nil if @reconnect_on_error
       raise
     end
   end

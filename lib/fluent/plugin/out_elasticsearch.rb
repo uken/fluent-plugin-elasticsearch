@@ -59,7 +59,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   config_param :include_tag_key, :bool, :default => false
   config_param :tag_key, :string, :default => 'tag'
   config_param :time_parse_error_tag, :string, :default => 'Fluent::ElasticsearchOutput::TimeParser.error'
-  config_param :reset_on_error, :bool, :default => false
+  config_param :reconnect_on_error, :bool, :default => false
 
   include Fluent::ElasticsearchIndexTemplate
 
@@ -361,7 +361,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
       end
       raise ConnectionFailure, "Could not push logs to Elasticsearch after #{retries} retries. #{e.message}"
     rescue Exception
-      @_es = nil if @reset_on_error
+      @_es = nil if @reconnect_on_error
       raise
     end
   end

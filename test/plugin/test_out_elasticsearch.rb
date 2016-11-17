@@ -914,7 +914,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(connection_resets, 3)
   end
 
-  def test_reset_connection_on_error_enabled
+  def test_reconnect_on_error_enabled
     connection_resets = 0
 
     stub_elastic_ping(url="http://localhost:9200").with do |req|
@@ -922,10 +922,10 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
 
     stub_request(:post, "http://localhost:9200/_bulk").with do |req|
-      raise ZeroDivisionError, "Test message"
+      raise ZeroDivisionError, "any not host_unreachable_exceptions exception"
     end
     
-    driver.configure("reset_on_error true\n")
+    driver.configure("reconnect_on_error true\n")
     driver.emit(sample_record)
 
     assert_raise(ZeroDivisionError) {
@@ -938,7 +938,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(connection_resets, 2)
   end
 
-  def test_reset_connection_on_error_disabled
+  def test_reconnect_on_error_disabled
     connection_resets = 0
 
     stub_elastic_ping(url="http://localhost:9200").with do |req|
@@ -946,10 +946,10 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
 
     stub_request(:post, "http://localhost:9200/_bulk").with do |req|
-      raise ZeroDivisionError, "Test message"
+      raise ZeroDivisionError, "any not host_unreachable_exceptions exception"
     end
     
-    driver.configure("reset_on_error false\n")
+    driver.configure("reconnect_on_error false\n")
     driver.emit(sample_record)
 
     assert_raise(ZeroDivisionError) {
