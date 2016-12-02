@@ -1,6 +1,12 @@
 # encoding: UTF-8
 require_relative 'out_elasticsearch'
 
+class String
+  def to_bool
+    self == 'true'
+  end
+end
+
 class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
 
   Fluent::Plugin.register_output('elasticsearch_dynamic', self)
@@ -51,8 +57,8 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       adapter_conf = lambda {|f| f.adapter :excon, excon_options }
       transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(connection_options.merge(
                                                                           options: {
-                                                                            reload_connections: to_b(@dynamic_config['reload_connections']),
-                                                                            reload_on_failure: to_b(@dynamic_config['reload_on_failure']),
+                                                                            reload_connections: @dynamic_config['reload_connections'].to_bool,
+                                                                            reload_on_failure: @dynamic_config['reload_on_failure'].to_bool,
                                                                             resurrect_after: @dynamic_config['resurrect_after'].to_i,
                                                                             retry_on_failure: 5,
                                                                             transport_options: {
@@ -264,9 +270,5 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     end
 
     return true
-  end
-
-  def to_b(args)
-    args == "true" ? true : false
   end
 end
