@@ -51,8 +51,8 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       adapter_conf = lambda {|f| f.adapter :excon, excon_options }
       transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(connection_options.merge(
                                                                           options: {
-                                                                            reload_connections: @dynamic_config['reload_connections'],
-                                                                            reload_on_failure: @dynamic_config['reload_on_failure'],
+                                                                            reload_connections: to_b(@dynamic_config['reload_connections']),
+                                                                            reload_on_failure: to_b(@dynamic_config['reload_on_failure']),
                                                                             resurrect_after: @dynamic_config['resurrect_after'].to_i,
                                                                             retry_on_failure: 5,
                                                                             transport_options: {
@@ -264,5 +264,9 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     end
 
     return true
+  end
+
+  def to_b(args)
+    args == "true" ? true : false
   end
 end
