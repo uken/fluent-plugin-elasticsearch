@@ -1,6 +1,7 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+- Cast `reload_*` configs in out_elasticsearch_dynamic to bool (#220)
 
 ### 1.9.0
 - add `time_parse_error_tag` (#211)
