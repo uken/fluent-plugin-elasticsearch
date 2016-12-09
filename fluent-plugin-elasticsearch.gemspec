@@ -18,7 +18,7 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = Gem::Requirement.new(">= 2.0".freeze)
 
-  s.add_runtime_dependency 'fluentd', '>= 0.14.0'
+  s.add_runtime_dependency 'fluentd', '>= 0.14.8'
   s.add_runtime_dependency 'excon', '>= 0'
   s.add_runtime_dependency 'elasticsearch'
 
