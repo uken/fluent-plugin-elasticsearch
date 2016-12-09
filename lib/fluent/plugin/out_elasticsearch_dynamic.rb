@@ -107,7 +107,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     end.join(', ')
   end
 
-  def write_objects(tag, chunk)
+  def write(chunk)
     bulk_message = Hash.new { |h,k| h[k] = '' }
     dynamic_conf = @dynamic_config.clone
 
@@ -117,6 +117,8 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       CREATE_OP => {},
       INDEX_OP => {}
     }
+
+    tag = chunk.metadata.tag
 
     chunk.msgpack_each do |time, record|
       next unless record.is_a? Hash
