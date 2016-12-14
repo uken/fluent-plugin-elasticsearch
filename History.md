@@ -1,6 +1,8 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+
+### 1.9.1
 - Cast `reload_*` configs in out_elasticsearch_dynamic to bool (#220)
 
 ### 1.9.0
