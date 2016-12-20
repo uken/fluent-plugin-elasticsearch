@@ -13,17 +13,18 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
   config_param :utc_index, :string, :default => "true"
   config_param :time_key_exclude_timestamp, :bool, :default => false
 
+  DYNAMIC_PARAM_NAMES = %W[hosts host port logstash_format logstash_prefix logstash_dateformat time_key utc_index index_name tag_key type_name id_key parent_key routing_key write_operation]
+  DYNAMIC_PARAM_SYMBOLS = DYNAMIC_PARAM_NAMES.map { |n| "@#{n}".to_sym }
+
   def configure(conf)
     super
 
     # evaluate all configurations here
-    @dynamic_params ||= []
-    @dynamic_params += self.instance_variables.select { |var| is_valid_expand_param_type(var) }
-    @dynamic_config = Hash.new
-    @dynamic_params.each { |var|
+    @dynamic_config = {}
+    DYNAMIC_PARAM_SYMBOLS.each_with_index { |var, i|
       value = expand_param(self.instance_variable_get(var), nil, nil, nil)
-      var = var[1..-1]
-      @dynamic_config[var] = value
+      key = DYNAMIC_PARAM_NAMES[i]
+      @dynamic_config[key] = value
     }
     # end eval all configs
     @current_config = nil
@@ -124,8 +125,8 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       next unless record.is_a? Hash
 
       # evaluate all configurations here
-      @dynamic_params.each { |var|
-        k = var[1..-1]
+      DYNAMIC_PARAM_SYMBOLS.each_with_index { |var, i|
+        k = DYNAMIC_PARAM_NAMES[i]
         v = self.instance_variable_get(var)
         # check here to determine if we should evaluate
         if dynamic_conf[k] != v
