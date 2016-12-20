@@ -77,10 +77,6 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_equal "false", instance.logstash_format
     assert_equal "true", instance.utc_index
     assert_equal false, instance.time_key_exclude_timestamp
-    assert_equal "true", instance.reload_connections
-    assert_equal "false", instance.reload_on_failure
-    assert_equal "60", instance.resurrect_after
-    assert_equal "true", instance.ssl_verify
   end
 
   def test_legacy_hosts_list
