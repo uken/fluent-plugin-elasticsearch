@@ -7,14 +7,10 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
 
   config_param :delimiter, :string, :default => "."
 
-  # params overloaded as strings
-  config_param :port, :string, :default => "9200"
-  config_param :logstash_format, :string, :default => "false"
-  config_param :utc_index, :string, :default => "true"
-  config_param :time_key_exclude_timestamp, :bool, :default => false
-
   DYNAMIC_PARAM_NAMES = %W[hosts host port logstash_format logstash_prefix logstash_dateformat time_key utc_index index_name tag_key type_name id_key parent_key routing_key write_operation]
   DYNAMIC_PARAM_SYMBOLS = DYNAMIC_PARAM_NAMES.map { |n| "@#{n}".to_sym }
+
+  attr_reader :dynamic_config
 
   def configure(conf)
     super
@@ -24,7 +20,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     DYNAMIC_PARAM_SYMBOLS.each_with_index { |var, i|
       value = expand_param(self.instance_variable_get(var), nil, nil, nil)
       key = DYNAMIC_PARAM_NAMES[i]
-      @dynamic_config[key] = value
+      @dynamic_config[key] = value.to_s
     }
     # end eval all configs
     @current_config = nil
