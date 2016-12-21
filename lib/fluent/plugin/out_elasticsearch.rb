@@ -325,6 +325,10 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
       meta.clear
       meta["_index".freeze] = target_index
       meta["_type".freeze] = target_type
+      
+      if @pipeline
+        meta["pipeline".freeze] = @pipeline
+      end
 
       @meta_config_map.each do |record_key, meta_key|
         meta[meta_key] = record[record_key] if record[record_key]
