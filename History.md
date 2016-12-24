@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 1.9.2
+- Fix elasticsearch_dynamic for v0.14 (#224)
+
 ### 1.9.1
 - Cast `reload_*` configs in out_elasticsearch_dynamic to bool (#220)
 
