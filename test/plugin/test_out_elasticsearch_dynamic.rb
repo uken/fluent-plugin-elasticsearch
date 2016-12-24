@@ -11,7 +11,14 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   end
 
   def driver(tag='test', conf='')
-    @driver ||= Fluent::Test::BufferedOutputTestDriver.new(Fluent::ElasticsearchOutputDynamic, tag).configure(conf)
+    @driver ||= Fluent::Test::BufferedOutputTestDriver.new(Fluent::ElasticsearchOutputDynamic, tag) {
+      # v0.12's test driver assume format definition. This simulates ObjectBufferedOutput format
+      if !defined?(Fluent::Plugin::Output)
+        def format(tag, time, record)
+          [time, record].to_msgpack
+        end
+      end
+    }.configure(conf)
   end
 
   def sample_record
@@ -55,12 +62,12 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     }
     instance = driver('test', config).instance
 
-    assert_equal 'logs.google.com', instance.host
-    assert_equal 777, instance.port
-    assert_equal 'https', instance.scheme
-    assert_equal '/es/', instance.path
+    conf = instance.dynamic_config
+    assert_equal 'logs.google.com', conf['host']
+    assert_equal "777", conf['port']
     assert_equal 'john', instance.user
     assert_equal 'doe', instance.password
+    assert_equal '/es/', instance.path
   end
 
   def test_defaults
@@ -73,14 +80,11 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     }
     instance = driver('test', config).instance
 
-    assert_equal "9200", instance.port
-    assert_equal "false", instance.logstash_format
-    assert_equal "true", instance.utc_index
+    conf = instance.dynamic_config
+    assert_equal "9200", conf['port']
+    assert_equal "false", conf['logstash_format']
+    assert_equal "true", conf['utc_index']
     assert_equal false, instance.time_key_exclude_timestamp
-    assert_equal "true", instance.reload_connections
-    assert_equal "false", instance.reload_on_failure
-    assert_equal "60", instance.resurrect_after
-    assert_equal "true", instance.ssl_verify
   end
 
   def test_legacy_hosts_list
