@@ -350,7 +350,12 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   def send_bulk(data)
     retries = 0
     begin
-      client.bulk body: data
+      response = client.bulk body: data
+      if response['errors']
+        message = "Could not push log to Elasticsearch.\n"
+        response['items'].each { |item| message += "#{item}\n" } unless response['items'].nil?
+        log.error message
+      end
     rescue *client.transport.host_unreachable_exceptions => e
       if retries < 2
         retries += 1
