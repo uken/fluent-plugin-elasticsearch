@@ -192,9 +192,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     begin
       response = client(host).bulk body: data
       if response['errors']
-        message = "Could not push log to Elasticsearch.\n"
-        response['items'].each { |item| message += "#{item}\n" } unless response['items'].nil?
-        log.error message
+        log.error "Could not push log to Elasticsearch: #{response}"
       end
     rescue *client(host).transport.host_unreachable_exceptions => e
       if retries < 2
