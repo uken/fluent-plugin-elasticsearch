@@ -7,29 +7,20 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
 
   config_param :delimiter, :string, :default => "."
 
-  # params overloaded as strings
-  config_param :port, :string, :default => "9200"
-  config_param :logstash_format, :string, :default => "false"
-  config_param :utc_index, :string, :default => "true"
-  config_param :time_key_exclude_timestamp, :bool, :default => false
-  config_param :reload_connections, :string, :default => "true"
-  config_param :reload_on_failure, :string, :default => "false"
-  config_param :resurrect_after, :string, :default => "60"
-  config_param :ssl_verify, :string, :default => "true"
-  config_param :reconnect_on_error, :bool, :default => false
-  config_param :pipeline, :string, :default => nil
+  DYNAMIC_PARAM_NAMES = %W[hosts host port logstash_format logstash_prefix logstash_dateformat time_key utc_index index_name tag_key type_name id_key parent_key routing_key write_operation]
+  DYNAMIC_PARAM_SYMBOLS = DYNAMIC_PARAM_NAMES.map { |n| "@#{n}".to_sym }
+
+  attr_reader :dynamic_config
 
   def configure(conf)
     super
 
     # evaluate all configurations here
-    @dynamic_params ||= []
-    @dynamic_params += self.instance_variables.select { |var| is_valid_expand_param_type(var) }
-    @dynamic_config = Hash.new
-    @dynamic_params.each { |var|
+    @dynamic_config = {}
+    DYNAMIC_PARAM_SYMBOLS.each_with_index { |var, i|
       value = expand_param(self.instance_variable_get(var), nil, nil, nil)
-      var = var[1..-1]
-      @dynamic_config[var] = value
+      key = DYNAMIC_PARAM_NAMES[i]
+      @dynamic_config[key] = value.to_s
     }
     # end eval all configs
     @current_config = nil
@@ -48,17 +39,17 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
 
     @_es ||= begin
       @current_config = connection_options[:hosts].clone
-      excon_options = { client_key: @dynamic_config['client_key'], client_cert: @dynamic_config['client_cert'], client_key_pass: @dynamic_config['client_key_pass'] }
+      excon_options = { client_key: @client_key, client_cert: @client_cert, client_key_pass: @client_key_pass }
       adapter_conf = lambda {|f| f.adapter :excon, excon_options }
       transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(connection_options.merge(
                                                                           options: {
-                                                                            reload_connections: Fluent::Config.bool_value(@dynamic_config['reload_connections']),
-                                                                            reload_on_failure: Fluent::Config.bool_value(@dynamic_config['reload_on_failure']),
-                                                                            resurrect_after: @dynamic_config['resurrect_after'].to_i,
+                                                                            reload_connections: @reload_connections,
+                                                                            reload_on_failure: @reload_on_failure,
+                                                                            resurrect_after: @resurrect_after,
                                                                             retry_on_failure: 5,
                                                                             transport_options: {
-                                                                              request: { timeout: @dynamic_config['request_timeout'] },
-                                                                              ssl: { verify: @dynamic_config['ssl_verify'], ca_file: @dynamic_config['ca_file'] }
+                                                                              request: { timeout: @request_timeout },
+                                                                              ssl: { verify: @ssl_verify, ca_file: @ca_file }
                                                                             }
                                                                           }), &adapter_conf)
       es = Elasticsearch::Client.new transport: transport
@@ -75,16 +66,16 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
   end
 
   def get_connection_options(con_host)
-    raise "`password` must be present if `user` is present" if @dynamic_config['user'] && !@dynamic_config['password']
+    raise "`password` must be present if `user` is present" if @user && !@password
 
-    hosts = if con_host || @dynamic_config['hosts']
-      (con_host || @dynamic_config['hosts']).split(',').map do |host_str|
+    hosts = if con_host || @hosts
+      (con_host || @hosts).split(',').map do |host_str|
         # Support legacy hosts format host:port,host:port,host:port...
         if host_str.match(%r{^[^:]+(\:\d+)?$})
           {
             host:   host_str.split(':')[0],
-            port:   (host_str.split(':')[1] || @dynamic_config['port'] || @port).to_i,
-            scheme: @dynamic_config['scheme']
+            port:   (host_str.split(':')[1] || @port).to_i,
+            scheme: @scheme
           }
         else
           # New hosts format expects URLs such as http://logs.foo.com,https://john:pass@logs2.foo.com/elastic
@@ -96,10 +87,10 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
         end
       end.compact
     else
-      [{host: @dynamic_config['host'], port: @dynamic_config['port'].to_i, scheme: @dynamic_config['scheme']}]
+      [{host: @host, port: @port.to_i, scheme: @scheme}]
     end.each do |host|
-      host.merge!(user: @dynamic_config['user'], password: @dynamic_config['password']) if !host[:user] && @dynamic_config['user']
-      host.merge!(path: @dynamic_config['path']) if !host[:path] && @dynamic_config['path']
+      host.merge!(user: @user, password: @password) if !host[:user] && @user
+      host.merge!(path: @path) if !host[:path] && @path
     end
 
     {
@@ -130,8 +121,8 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
       next unless record.is_a? Hash
 
       # evaluate all configurations here
-      @dynamic_params.each { |var|
-        k = var[1..-1]
+      DYNAMIC_PARAM_SYMBOLS.each_with_index { |var, i|
+        k = DYNAMIC_PARAM_NAMES[i]
         v = self.instance_variable_get(var)
         # check here to determine if we should evaluate
         if dynamic_conf[k] != v
