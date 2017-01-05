@@ -1,6 +1,7 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+- Log ES response errors (#230)
 
 ### 1.9.2
 - Fix elasticsearch_dynamic for v0.14 (#224)
