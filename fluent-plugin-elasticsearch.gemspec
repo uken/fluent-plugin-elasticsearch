@@ -8,7 +8,7 @@ Gem::Specification.new do |s|
   s.email         = ['pitr.vern@gmail.com', 'me@diogoterror.com']
   s.description   = %q{ElasticSearch output plugin for Fluent event collector}
   s.summary       = s.description
-  s.homepage      = 'https://github.com/mohit-soral/fluent-plugin-elasticsearch'
+  s.homepage      = 'https://github.com/uken/fluent-plugin-elasticsearch'
   s.license       = 'MIT'
 
   s.files         = `git ls-files`.split($/)
