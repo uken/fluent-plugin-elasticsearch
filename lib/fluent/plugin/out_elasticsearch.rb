@@ -9,12 +9,14 @@ begin
 rescue LoadError
 end
 
-require 'fluent/output'
+require 'fluent/plugin/output'
 require_relative 'elasticsearch_index_template'
 
 module Fluent::Plugin
-  class Fluent::ElasticsearchOutput < Output
+  class ElasticsearchOutput < Output
     class ConnectionFailure < StandardError; end
+
+    helpers :event_emitter
 
     Fluent::Plugin.register_output('elasticsearch', self)
 

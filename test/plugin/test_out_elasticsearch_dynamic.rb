@@ -12,7 +12,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   end
 
   def driver(tag='test', conf='')
-    @driver ||= Fluent::Test::Driver::Output.new(Fluent::ElasticsearchOutputDynamic) {
+    @driver ||= Fluent::Test::Driver::Output.new(Fluent::Plugin::ElasticsearchOutputDynamic) {
       # v0.12's test driver assume format definition. This simulates ObjectBufferedOutput format
       if !defined?(Fluent::Plugin::Output)
         def format(tag, time, record)
@@ -572,7 +572,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       raise Faraday::ConnectionFailed, "Test message"
     end
 
-    assert_raise(Fluent::ElasticsearchOutput::ConnectionFailure) {
+    assert_raise(Fluent::Plugin::ElasticsearchOutput::ConnectionFailure) {
       driver.run(default_tag: 'test') do
         driver.feed(sample_record)
       end
