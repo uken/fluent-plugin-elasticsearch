@@ -262,6 +262,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
+
+    assert_not_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash")
   end
 
   def test_template_create
@@ -290,6 +292,39 @@ class ElasticsearchOutput < Test::Unit::TestCase
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
+
+    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash", times: 1)
+  end
+
+  def test_template_overwrite
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_template.json')
+
+    config = %{
+      host            logs.google.com
+      port            777
+      scheme          https
+      path            /es/
+      user            john
+      password        doe
+      template_name   logstash
+      template_file   #{template_file}
+      template_overwrite true
+    }
+
+    # connection start
+    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+      to_return(:status => 200, :body => "", :headers => {})
+    # check if template exists
+    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash").
+      to_return(:status => 200, :body => "", :headers => {})
+    # creation
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash").
+      to_return(:status => 200, :body => "", :headers => {})
+
+    driver(config)
+
+    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash", times: 1)
   end
 
 
@@ -353,6 +388,44 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_requested( :put, "https://john:doe@logs.google.com:777/es//_template/logstash1", times: 1)
     assert_requested( :put, "https://john:doe@logs.google.com:777/es//_template/logstash2", times: 1)
     assert_not_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash3") #exists
+  end
+
+  def test_templates_overwrite
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_template.json')
+    config = %{
+      host            logs.google.com
+      port            777
+      scheme          https
+      path            /es/
+      user            john
+      password        doe
+      templates       {"logstash1":"#{template_file}", "logstash2":"#{template_file}","logstash3":"#{template_file}" }
+      template_overwrite true
+    }
+
+    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+      to_return(:status => 200, :body => "", :headers => {})
+     # check if template exists
+    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash1").
+      to_return(:status => 200, :body => "", :headers => {})
+    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash2").
+      to_return(:status => 200, :body => "", :headers => {})
+    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash3").
+      to_return(:status => 200, :body => "", :headers => {}) #exists
+
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash1").
+      to_return(:status => 200, :body => "", :headers => {})
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash2").
+      to_return(:status => 200, :body => "", :headers => {})
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash3").
+      to_return(:status => 200, :body => "", :headers => {})
+
+    driver(config)
+
+    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash1", times: 1)
+    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash2", times: 1)
+    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash3", times: 1)
   end
 
   def test_templates_not_used
