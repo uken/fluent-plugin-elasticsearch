@@ -190,7 +190,10 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
   def send_bulk(data, host)
     retries = 0
     begin
-      client(host).bulk body: data
+      response = client(host).bulk body: data
+      if response['errors']
+        log.error "Could not push log to Elasticsearch: #{response}"
+      end
     rescue *client(host).transport.host_unreachable_exceptions => e
       if retries < 2
         retries += 1

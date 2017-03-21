@@ -13,7 +13,14 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def driver(tag='test', conf='')
-    @driver ||= Fluent::Test::BufferedOutputTestDriver.new(Fluent::ElasticsearchOutput, tag).configure(conf)
+    @driver ||= Fluent::Test::BufferedOutputTestDriver.new(Fluent::ElasticsearchOutput, tag) {
+      # v0.12's test driver assume format definition. This simulates ObjectBufferedOutput format
+      if !defined?(Fluent::Plugin::Output)
+        def format(tag, time, record)
+          [time, record].to_msgpack
+        end
+      end
+    }.configure(conf)
   end
 
   def sample_record
@@ -1134,5 +1141,4 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run
     assert(index_cmds[0].has_key?("create"))
   end
-
 end
