@@ -11,7 +11,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     @driver = nil
   end
 
-  def driver(tag='test', conf='')
+  def driver(conf='')
     @driver ||= Fluent::Test::Driver::Output.new(Fluent::Plugin::ElasticsearchOutputDynamic) {
       # v0.12's test driver assume format definition. This simulates ObjectBufferedOutput format
       if !defined?(Fluent::Plugin::Output)

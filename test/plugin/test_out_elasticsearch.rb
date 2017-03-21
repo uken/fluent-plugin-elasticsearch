@@ -13,7 +13,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     log.out.logs.slice!(0, log.out.logs.length)
   end
 
-  def driver(tag='test', conf='')
+  def driver(conf='')
     @driver ||= Fluent::Test::Driver::Output.new(Fluent::Plugin::ElasticsearchOutput) {
       # v0.12's test driver assume format definition. This simulates ObjectBufferedOutput format
       if !defined?(Fluent::Plugin::Output)
