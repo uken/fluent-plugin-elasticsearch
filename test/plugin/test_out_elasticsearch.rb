@@ -120,8 +120,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
       to_return(:status => 200, :body => "", :headers => {})
 
     driver('test', config)
-  end 
-  
+  end
+
 
   def test_template_create_invalid_filename
     config = %{
@@ -177,14 +177,14 @@ class ElasticsearchOutput < Test::Unit::TestCase
       to_return(:status => 200, :body => "", :headers => {})
     stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash3").
       to_return(:status => 200, :body => "", :headers => {})
-    
+
     driver('test', config)
-    
+
     assert_requested( :put, "https://john:doe@logs.google.com:777/es//_template/logstash1", times: 1)
     assert_requested( :put, "https://john:doe@logs.google.com:777/es//_template/logstash2", times: 1)
     assert_not_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash3") #exists
   end
-  
+
   def test_templates_not_used
     cwd = File.dirname(__FILE__)
     template_file = File.join(cwd, 'test_template.json')
@@ -199,7 +199,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       template_name   logstash
       template_file   #{template_file}
       templates       {"logstash1":"#{template_file}", "logstash2":"#{template_file}" }
-    }    
+    }
     # connection start
     stub_request(:head, "https://john:doe@logs.google.com:777/es//").
       to_return(:status => 200, :body => "", :headers => {})
@@ -254,7 +254,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_raise(RuntimeError) {
       driver('test', config)
     }
-    
+
     assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash1", times: 1)
     assert_not_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash2")
   end
@@ -770,6 +770,37 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(index_cmds[1]['@timestamp'], ts)
   end
 
+  def test_uses_no_subsecond_precision_by_default
+    driver.configure("logstash_format true\n")
+    stub_elastic_ping
+    stub_elastic
+    begin
+      time = Fluent::EventTime.new(Time.now.to_i, 000000000)
+    rescue
+      time = Fluent::Engine.now
+    end
+    driver.emit(sample_record, time)
+    driver.run
+    assert(index_cmds[1].has_key? '@timestamp')
+    assert_equal(index_cmds[1]['@timestamp'], Time.at(time).iso8601)
+  end
+
+  def test_uses_subsecond_precision_when_configured
+    driver.configure("logstash_format true
+                      time_precision 3\n")
+    stub_elastic_ping
+    stub_elastic
+    begin
+    time = Fluent::EventTime.new(Time.now.to_i, 000000000)
+    rescue
+      time = Fluent::Engine.now
+    end
+    driver.emit(sample_record, time)
+    driver.run
+    assert(index_cmds[1].has_key? '@timestamp')
+    assert_equal(index_cmds[1]['@timestamp'], Time.at(time).iso8601(3))
+  end
+
   def test_doesnt_add_tag_key_by_default
     stub_elastic_ping
     stub_elastic
@@ -931,7 +962,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_request(:post, "http://localhost:9200/_bulk").with do |req|
       raise ZeroDivisionError, "any not host_unreachable_exceptions exception"
     end
-    
+
     driver.configure("reconnect_on_error true\n")
     driver.emit(sample_record)
 
@@ -955,7 +986,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_request(:post, "http://localhost:9200/_bulk").with do |req|
       raise ZeroDivisionError, "any not host_unreachable_exceptions exception"
     end
-    
+
     driver.configure("reconnect_on_error false\n")
     driver.emit(sample_record)
 

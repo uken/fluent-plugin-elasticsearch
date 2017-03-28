@@ -27,6 +27,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   config_param :target_index_key, :string, :default => nil
   config_param :target_type_key, :string, :default => nil
   config_param :time_key_format, :string, :default => nil
+  config_param :time_precision, :integer, :default => 0
   config_param :logstash_format, :bool, :default => false
   config_param :logstash_prefix, :string, :default => "logstash"
   config_param :logstash_dateformat, :string, :default => "%Y.%m.%d"
@@ -299,7 +300,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
           record[TIMESTAMP_FIELD] = rts unless @time_key_exclude_timestamp
         else
           dt = Time.at(time).to_datetime
-          record[TIMESTAMP_FIELD] = dt.to_s
+          record[TIMESTAMP_FIELD] = dt.iso8601(@time_precision)
         end
         dt = dt.new_offset(0) if @utc_index
         target_index = "#{@logstash_prefix}-#{dt.strftime(@logstash_dateformat)}"
