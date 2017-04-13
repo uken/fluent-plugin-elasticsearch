@@ -326,6 +326,16 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal nil, host1[:path]
   end
 
+  def test_content_type_header
+    stub_request(:head, "http://localhost:9200/").
+      to_return(:status => 200, :body => "", :headers => {})
+    elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
+      with(headers: { "Content-Type" => "application/json" })
+    driver.emit(sample_record)
+    driver.run
+    assert_requested(elastic_request)
+  end
+
   def test_writes_to_default_index
     stub_elastic_ping
     stub_elastic

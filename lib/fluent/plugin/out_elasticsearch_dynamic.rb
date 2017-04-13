@@ -48,6 +48,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
                                                                             resurrect_after: @resurrect_after,
                                                                             retry_on_failure: 5,
                                                                             transport_options: {
+                                                                              headers: { 'Content-Type' => 'application/json' },
                                                                               request: { timeout: @request_timeout },
                                                                               ssl: { verify: @ssl_verify, ca_file: @ca_file }
                                                                             }
