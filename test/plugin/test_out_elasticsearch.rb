@@ -1141,4 +1141,17 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run
     assert(index_cmds[0].has_key?("create"))
   end
+
+  def test_adds_nanosecond_precision_timestamp
+    driver.configure("logstash_format true
+                     time_as_integer false")
+    stub_elastic_ping
+    stub_elastic
+    ts = DateTime.now.to_s
+    driver.emit(sample_record)
+    driver.run
+    assert(index_cmds[1].has_key? '@timestamp')
+    assert_equal(index_cmds[1]['@timestamp'], ts)
+  end
+
 end

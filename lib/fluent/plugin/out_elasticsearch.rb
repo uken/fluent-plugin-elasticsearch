@@ -71,6 +71,17 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
     super
     @time_parser = create_time_parser
 
+    # This is an attempt at being backwards compatible. If Fluent::TimeFormatter
+    # is defined, we'll attempt to use an instance of it to format
+    # Fluent::EventTime objects. Otherwise, we'll format the time value as it
+    # was prior to Fluent::EventTime support being added.
+    @time_formatter = if defined?(Fluent::TimeFormatter)
+                        f = Fluent::TimeFormatter.new(@time_key_format)
+                        Proc.new { |value| f.format_with_subsec(value) }
+                      else
+                        Proc.new { |value| Time.at(value).to_datetime.to_s }
+                      end
+
     if @remove_keys
       @remove_keys = @remove_keys.split(/\s*,\s*/)
     end
@@ -298,8 +309,10 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
           dt = parse_time(rts, time, tag)
           record[TIMESTAMP_FIELD] = rts unless @time_key_exclude_timestamp
         else
+          # A Fluent::EventTime object is compatible with being passed as an
+          # argument to Time::at.
           dt = Time.at(time).to_datetime
-          record[TIMESTAMP_FIELD] = dt.to_s
+          record[TIMESTAMP_FIELD] = @time_formatter.call(time)
         end
         dt = dt.new_offset(0) if @utc_index
         target_index = "#{@logstash_prefix}-#{dt.strftime(@logstash_dateformat)}"
