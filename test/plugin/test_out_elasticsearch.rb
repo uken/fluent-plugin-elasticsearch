@@ -1143,14 +1143,20 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_adds_nanosecond_precision_timestamp
+    # Configure driver with a time_key_format that specifies nanoseconds should
+    # be included in the outputted timestamp (%N).
+    time_key_format = "%Y-%m-%dT%H:%M:%S.%N%z"
     driver.configure("logstash_format true
-                     time_as_integer false")
+                     time_as_integer false
+                     time_key_format #{time_key_format}")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.now.to_s
-    driver.emit(sample_record)
+    now = Fluent::EventTime.now
+    driver.emit(sample_record, now)
     driver.run
     assert(index_cmds[1].has_key? '@timestamp')
+    formatter = Fluent::TimeFormatter.new(time_key_format)
+    ts = formatter.format_with_subsec(now)
     assert_equal(index_cmds[1]['@timestamp'], ts)
   end
 
