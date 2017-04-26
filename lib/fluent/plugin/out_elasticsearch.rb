@@ -70,17 +70,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   def configure(conf)
     super
     @time_parser = create_time_parser
-
-    # This is an attempt at being backwards compatible. If Fluent::TimeFormatter
-    # is defined, we'll attempt to use an instance of it to format
-    # Fluent::EventTime objects. Otherwise, we'll format the time value as it
-    # was prior to Fluent::EventTime support being added.
-    @time_formatter = if defined?(Fluent::TimeFormatter)
-                        f = Fluent::TimeFormatter.new(@time_key_format)
-                        Proc.new { |value| f.format_with_subsec(value) }
-                      else
-                        Proc.new { |value| Time.at(value).to_datetime.to_s }
-                      end
+    @time_formatter = create_time_formatter
 
     if @remove_keys
       @remove_keys = @remove_keys.split(/\s*,\s*/)
@@ -140,6 +130,21 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
       end
     else
       Proc.new { |value| DateTime.parse(value) }
+    end
+  end
+
+  # create_time_formatter creates a time formatter that formats time values.
+  # This method will use a Fluent::TimeFormatter to format time if the type is
+  # available. Fluent::TimeFormatter is capable of formatting Fluent::EventTime
+  # objects with nanosecond-precision and is therefore the preferred time
+  # formatter. However, if unavailable the default method of formatting time
+  # will be used.
+  def create_time_formatter
+    if defined?(Fluent::TimeFormatter)
+      f = Fluent::TimeFormatter.new(@time_key_format)
+      Proc.new { |value| f.format_with_subsec(value) }
+    else
+      Proc.new { |value| Time.at(value).to_datetime.to_s }
     end
   end
 
