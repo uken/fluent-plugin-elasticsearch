@@ -1142,22 +1142,51 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert(index_cmds[0].has_key?("create"))
   end
 
-  def test_adds_nanosecond_precision_timestamp
-    # Configure driver with a time_key_format that specifies nanoseconds should
-    # be included in the outputted timestamp (%N).
+  # Configures a driver with nanosecond precision when time_as_int is false.
+  def configure_nanosecond_driver(time_as_int: false)
     time_key_format = "%Y-%m-%dT%H:%M:%S.%N%z"
     driver.configure("logstash_format true
-                     time_as_integer false
+                     time_as_integer #{time_as_int}
                      time_key_format #{time_key_format}")
+    time_key_format
+  end
+
+  def test_adds_nanosecond_precision_timestamp
+    time_key_format = configure_nanosecond_driver(time_as_int: false)
+
     stub_elastic_ping
     stub_elastic
+
     now = Fluent::EventTime.now
     driver.emit(sample_record, now)
     driver.run
-    assert(index_cmds[1].has_key? '@timestamp')
+
     formatter = Fluent::TimeFormatter.new(time_key_format)
     ts = formatter.format_with_subsec(now)
+
+    # Assert timestamp included in record is as Fluent::TimeFormatter would
+    # format it: with nanoseconds.
+    assert(index_cmds[1].has_key? '@timestamp')
     assert_equal(index_cmds[1]['@timestamp'], ts)
   end
 
+  def test_nanosecond_precision_disabled
+    time_key_format = configure_nanosecond_driver(time_as_int: true)
+
+    stub_elastic_ping
+    stub_elastic
+
+    now = Fluent::EventTime.now
+    driver.emit(sample_record, now)
+    driver.run
+
+    now_without_nsec = Time.at(now.sec)
+    formatter = Fluent::TimeFormatter.new(time_key_format)
+    ts = formatter.format_with_subsec(now_without_nsec)
+
+    # Assert timestamp included in record effectively has its nanosecond value
+    # zeroed out.
+    assert(index_cmds[1].has_key? '@timestamp')
+    assert_equal(index_cmds[1]['@timestamp'], ts)
+  end
 end
