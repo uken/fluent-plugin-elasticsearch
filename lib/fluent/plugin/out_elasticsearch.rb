@@ -324,7 +324,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
           # Within this else-block, we assume that our time value has not been
           # user-specified. If running fluentd v0.14+, our time value could be
           # of the type Fluent::EventTime. Regardless of its type, we can safely
-          # pass the value to Time::at and the time_fomatter.
+          # pass the value to Time::at and the time_formatter.
           dt = Time.at(time).to_datetime
           record[TIMESTAMP_FIELD] = @time_formatter.call(time)
         end
