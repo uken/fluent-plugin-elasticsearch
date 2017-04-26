@@ -142,7 +142,12 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   def create_time_formatter
     default_formatter = Proc.new { |value| Time.at(value).to_datetime.to_s }
     if defined?(Fluent::TimeFormatter)
-      f = Fluent::TimeFormatter.new(@time_key_format)
+      begin
+        f = Fluent::TimeFormatter.new(@time_key_format)
+      rescue
+        return default_formatter
+      end
+
       Proc.new do |value|
           begin
             f.format_with_subsec(value)
