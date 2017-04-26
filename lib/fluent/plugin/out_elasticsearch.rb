@@ -140,11 +140,18 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   # formatter. However, if unavailable the default method of formatting time
   # will be used.
   def create_time_formatter
+    default_formatter = Proc.new { |value| Time.at(value).to_datetime.to_s }
     if defined?(Fluent::TimeFormatter)
       f = Fluent::TimeFormatter.new(@time_key_format)
-      Proc.new { |value| f.format_with_subsec(value) }
+      Proc.new do |value|
+          begin
+            f.format_with_subsec(value)
+          rescue
+            default_formatter.call(value)
+          end
+      end
     else
-      Proc.new { |value| Time.at(value).to_datetime.to_s }
+      default_formatter
     end
   end
 
