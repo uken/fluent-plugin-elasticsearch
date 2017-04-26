@@ -309,8 +309,10 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
           dt = parse_time(rts, time, tag)
           record[TIMESTAMP_FIELD] = rts unless @time_key_exclude_timestamp
         else
-          # A Fluent::EventTime object is compatible with being passed as an
-          # argument to Time::at.
+          # Within this else-block, we assume that our time value has not been
+          # user-specified. If running fluentd v0.14+, our time value could be
+          # of the type Fluent::EventTime. Regardless of its type, we can safely
+          # pass the value to Time::at and the time_fomatter.
           dt = Time.at(time).to_datetime
           record[TIMESTAMP_FIELD] = @time_formatter.call(time)
         end
