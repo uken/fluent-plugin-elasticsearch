@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 1.9.4
+- Include 'Content-Type' header in `transport_options`
+
 ### 1.9.2
 - Fix elasticsearch_dynamic for v0.14 (#224)
 
