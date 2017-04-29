@@ -70,6 +70,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   def configure(conf)
     super
     @time_parser = create_time_parser
+    @time_formatter = create_time_formatter
 
     if @remove_keys
       @remove_keys = @remove_keys.split(/\s*,\s*/)
@@ -129,6 +130,33 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
       end
     else
       Proc.new { |value| DateTime.parse(value) }
+    end
+  end
+
+  # create_time_formatter creates a time formatter that formats time values.
+  # This method will use a Fluent::TimeFormatter to format time if the type is
+  # available. Fluent::TimeFormatter is capable of formatting Fluent::EventTime
+  # objects with nanosecond-precision and is therefore the preferred time
+  # formatter. However, if unavailable the default method of formatting time
+  # will be used.
+  def create_time_formatter
+    default_formatter = Proc.new { |value| Time.at(value).to_datetime.to_s }
+    if defined?(Fluent::TimeFormatter)
+      begin
+        f = Fluent::TimeFormatter.new(@time_key_format)
+      rescue
+        return default_formatter
+      end
+
+      Proc.new do |value|
+          begin
+            f.format_with_subsec(value)
+          rescue
+            default_formatter.call(value)
+          end
+      end
+    else
+      default_formatter
     end
   end
 
@@ -299,8 +327,12 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
           dt = parse_time(rts, time, tag)
           record[TIMESTAMP_FIELD] = rts unless @time_key_exclude_timestamp
         else
+          # Within this else-block, we assume that our time value has not been
+          # user-specified. If running fluentd v0.14+, our time value could be
+          # of the type Fluent::EventTime. Regardless of its type, we can safely
+          # pass the value to Time::at and the time_formatter.
           dt = Time.at(time).to_datetime
-          record[TIMESTAMP_FIELD] = dt.to_s
+          record[TIMESTAMP_FIELD] = @time_formatter.call(time)
         end
         dt = dt.new_offset(0) if @utc_index
         target_index = "#{@logstash_prefix}-#{dt.strftime(@logstash_dateformat)}"
