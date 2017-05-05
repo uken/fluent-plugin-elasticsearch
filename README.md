@@ -21,6 +21,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [logstash_prefix](#logstash_prefix)
   + [logstash_dateformat](#logstash_dateformat)
   + [time_key_format](#time_key_format)
+  + [time_precision](#time_precision)
   + [time_key](#time_key)
   + [time_key_exclude_timestamp](#time_key_exclude_timestamp)
   + [utc_index](#utc_index)
@@ -139,6 +140,12 @@ For example to parse ISO8601 times with sub-second precision:
 ```
 time_key_format %Y-%m-%dT%H:%M:%S.%N%z
 ```
+
+### time_precision
+
+Should the record not include a `time_key`, define the degree of sub-second time precision to preserve from the `time` portion of the routed event.
+
+For example, should your input plugin not include a `time_key` in the record but it able to pass a `time` to the router when emitting the event (AWS CloudWatch events are an example of this), then this setting will allow you to preserve the sub-second time resolution of those events. This is the case for: [fluent-plugin-cloudwatch-ingest](https://github.com/sampointer/fluent-plugin-cloudwatch-ingest).
 
 ### time_key
 
@@ -360,7 +367,7 @@ remove_keys a_parent, a_routing # a_parent and a_routing fields won't be sent to
 
 ### remove_keys_on_update
 
-Remove keys on update will not update the configured keys in elasticsearch when a record is being updated.  
+Remove keys on update will not update the configured keys in elasticsearch when a record is being updated.
 This setting only has any effect if the write operation is update or upsert.
 
 If the write setting is upsert then these keys are only removed if the record is being
