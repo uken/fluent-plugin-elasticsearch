@@ -1,5 +1,6 @@
 require 'helper'
 require 'date'
+require 'pry-byebug'
 
 class ElasticsearchOutput < Test::Unit::TestCase
   attr_accessor :index_cmds, :index_command_counts
@@ -405,6 +406,16 @@ class ElasticsearchOutput < Test::Unit::TestCase
     # Allthough @target_index has upper-case characters,
     # it should be set as lower-case when sent to elasticsearch.
     assert_equal('local-override', index_cmds.first['index']['_index'])
+  end
+
+  def test_writes_to_default_index_with_pipelines
+    pipeline = "fluentd"
+    driver.configure("pipeline #{pipeline}")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    assert_equal(pipeline, index_cmds.first['index']['pipeline'])
   end
 
   def test_writes_to_target_index_key_fallack
