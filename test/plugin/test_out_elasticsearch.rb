@@ -408,7 +408,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal('local-override', index_cmds.first['index']['_index'])
   end
 
-  def test_writes_to_default_index_with_pipelines
+  def test_writes_to_default_index_with_pipeline
     pipeline = "fluentd"
     driver.configure("pipeline #{pipeline}")
     stub_elastic_ping
