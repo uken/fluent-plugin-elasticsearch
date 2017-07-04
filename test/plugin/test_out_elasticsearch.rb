@@ -1,6 +1,5 @@
 require 'helper'
 require 'date'
-require 'pry-byebug'
 
 class ElasticsearchOutput < Test::Unit::TestCase
   attr_accessor :index_cmds, :index_command_counts
