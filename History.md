@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 1.9.6
+- add pipeline parameter
+
 ### 1.9.5
 - sub-second time precision [(#249)](https://github.com/uken/fluent-plugin-elasticsearch/pull/249)
 
