@@ -703,6 +703,24 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
 
+  def test_error_if_tag_not_in_chunk_keys
+    assert_raise(Fluent::ConfigError) {
+      config = %{
+        <buffer foo>
+        </buffer>
+      }
+      driver.configure(config)
+    }
+  end
+
+  def test_can_use_custom_chunk_along_with_tag
+    config = %{
+      <buffer tag, foo>
+      </buffer>
+    }
+    driver.configure(config)
+  end
+
   def test_doesnt_add_logstash_timestamp_by_default
     stub_elastic_ping
     stub_elastic

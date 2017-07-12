@@ -16,9 +16,11 @@ module Fluent::Plugin
   class ElasticsearchOutput < Output
     class ConnectionFailure < StandardError; end
 
-    helpers :event_emitter
+    helpers :event_emitter, :compat_parameters
 
     Fluent::Plugin.register_output('elasticsearch', self)
+
+    DEFAULT_BUFFER_TYPE = "memory"
 
     config_param :host, :string,  :default => 'localhost'
     config_param :port, :integer, :default => 9200
@@ -66,6 +68,7 @@ module Fluent::Plugin
     config_param :reconnect_on_error, :bool, :default => false
 
     config_section :buffer do
+      config_set_default :@type, DEFAULT_BUFFER_TYPE
       config_set_default :chunk_keys, ['tag']
     end
 
@@ -76,7 +79,11 @@ module Fluent::Plugin
     end
 
     def configure(conf)
+      compat_parameters_convert(conf, :buffer)
+
       super
+      raise Fluent::ConfigError, "'tag' in chunk_keys is required." if not @chunk_key_tag
+
       @time_parser = create_time_parser
 
       if @remove_keys
