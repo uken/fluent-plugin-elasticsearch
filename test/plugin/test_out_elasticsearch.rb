@@ -818,7 +818,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(index_cmds[1]['@timestamp'], ts)
   end
 
-  def test_uses_no_subsecond_precision_by_default
+  def test_uses_nanosecond_precision_by_default
     driver.configure("logstash_format true\n")
     stub_elastic_ping
     stub_elastic
@@ -831,7 +831,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.feed(time.to_i, sample_record)
     end
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], Time.at(time).iso8601)
+    assert_equal(index_cmds[1]['@timestamp'], Time.at(time).iso8601(9))
   end
 
   def test_uses_subsecond_precision_when_configured
