@@ -1,8 +1,11 @@
 require 'helper'
 require 'date'
 require 'fluent/test/driver/output'
+require 'flexmock/test_unit'
 
 class ElasticsearchOutput < Test::Unit::TestCase
+  include FlexMock::TestCase
+
   attr_accessor :index_cmds, :index_command_counts
 
   def setup
@@ -808,13 +811,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
     ts = "2001/02/03 13:14:01,673+02:00"
     index = "logstash-#{Date.today.strftime("%Y.%m.%d")}"
 
+    flexmock(driver.instance.router).should_receive(:emit_error_event)
+      .with(tag_for_error, Fluent::EventTime, Hash, ArgumentError).once
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('@timestamp' => ts))
     end
-
-    log = driver.instance.router.emit_error_handler.log
-    errors = log.out.logs.grep /tag="#{tag_for_error}"/
-    assert_equal(1, errors.length, "Error was logged for timestamp parse failure")
 
     assert_equal(index, index_cmds[0]['index']['_index'])
     assert(index_cmds[1].has_key? '@timestamp')
