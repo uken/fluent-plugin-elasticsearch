@@ -44,6 +44,12 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [write_operation](#write_operation)
   + [time_parse_error_tag](#time_parse_error_tag)
   + [reconnect_on_error](#reconnect_on_error)
+  + [aws\_sign\_requests](#aws-request-signing-support)
+  + [aws\_access\_key\_id](#aws-request-signing-support)
+  + [aws\_secret\_access\_key](#aws-request-signing-support)
+  + [aws\_region](#aws-request-signing-support)
+  + [aws\_assume\_role\_arn](#aws-request-signing-support)
+  + [aws\_assume\_role\_session\_name](#aws-request-signing-support)
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Proxy Support](#proxy-support)
   + [Buffered output options](#buffered-output-options)
@@ -415,6 +421,16 @@ We recommended to set this true in the presence of elasticsearch shield.
 ```
 reconnect_on_error true # defaults to false
 ```
+
+### AWS request signing support
+
+Set `aws\_sign\_requests` to `true` to enable signing outgoing requests with AWS credentials. This can be used when sending data to an AWS Elasticsearch Service instance.
+
+To use explicit credentials, set `aws\_access\_key\_id` and `aws\_secret\_access\_key`.
+
+To use role credentials, instead set `aws\_assume\_role\_arn` to an ARN and `aws\_assume\_role\_session\_name` to the correct session name.
+
+To set the region, set `aws\_region`. It defaults to `us-east-1`.
 
 ### Client/host certificate options
 

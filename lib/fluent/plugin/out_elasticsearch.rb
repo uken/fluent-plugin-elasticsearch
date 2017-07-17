@@ -61,6 +61,12 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   config_param :tag_key, :string, :default => 'tag'
   config_param :time_parse_error_tag, :string, :default => 'Fluent::ElasticsearchOutput::TimeParser.error'
   config_param :reconnect_on_error, :bool, :default => false
+  config_param :aws_sign_requests, :bool, :default => false
+  config_param :aws_access_key_id, :string, :default => ENV['AWS_ACCESS_KEY_ID']
+  config_param :aws_secret_access_key, :string, :default => ENV['AWS_SECRET_ACCESS_KEY']
+  config_param :aws_assume_role_arn, :string, :default => nil
+  config_param :aws_assume_role_session_name, :string, :default => nil
+  config_param :aws_region, :string, :default => 'us-east-1'
 
   include Fluent::ElasticsearchIndexTemplate
 
@@ -142,8 +148,24 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
 
   def client
     @_es ||= begin
+      if @aws_sign_requests
+        # Only require AWS SDK and signing middleware when this method is called.
+        require 'aws-sdk'
+        require 'faraday_middleware/aws_signers_v4'
+      end
+
       excon_options = { client_key: @client_key, client_cert: @client_cert, client_key_pass: @client_key_pass }
-      adapter_conf = lambda {|f| f.adapter :excon, excon_options }
+      adapter_conf = lambda {|f|
+        if @aws_sign_requests
+          # If request signing is requested, insert the aws_signer_v4 middleware.
+          f.request :aws_signers_v4,
+                    credentials: get_aws_credentials,
+                    service_name: 'es',
+                    region: @aws_region
+        end
+
+        f.adapter :excon, excon_options
+      }
       transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(get_connection_options.merge(
                                                                           options: {
                                                                             reload_connections: @reload_connections,
@@ -156,6 +178,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
                                                                               ssl: { verify: @ssl_verify, ca_file: @ca_file }
                                                                             }
                                                                           }), &adapter_conf)
+
       es = Elasticsearch::Client.new transport: transport
 
       begin
@@ -167,6 +190,23 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
       log.info "Connection opened to Elasticsearch cluster => #{connection_options_description}"
       es
     end
+  end
+
+  def get_aws_credentials
+    if !@aws_access_key_id.empty? and !@aws_secret_access_key.empty?
+      credentials = Aws::Credentials.new(@aws_access_key_id, @aws_secret_access_key)
+    elsif @aws_assume_role_arn.nil?
+      credentials = Aws::SharedCredentials.new({retries: 2}).credentials
+      credentials ||= Aws::InstanceProfileCredentials.new.credentials
+    else
+      credentials = Aws::AssumeRoleCredentials.new({
+        role_arn: @aws_assume_role_arn,
+        role_session_name: @aws_assume_role_session_name,
+        region: @aws_region,
+      }).credentials
+    end
+
+    credentials
   end
 
   def get_connection_options
