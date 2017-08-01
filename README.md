@@ -43,6 +43,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [write_operation](#write_operation)
   + [time_parse_error_tag](#time_parse_error_tag)
   + [reconnect_on_error](#reconnect_on_error)
+  + [pipeline](#pipeline)
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Proxy Support](#proxy-support)
   + [Buffered output options](#buffered-output-options)
@@ -407,6 +408,15 @@ By default it will reconnect only on "host unreachable exceptions".
 We recommended to set this true in the presence of elasticsearch shield.
 ```
 reconnect_on_error true # defaults to false
+```
+
+### pipeline
+The pipeline id to which the logs should be pushed to be ingested. This is a new feature specific from Elastic 5.X onwards.
+Default is `nill`; not pushing to any pipeline.
+Note: If a pipeline with this id is not found, fluentd will not be able to push the logs and fail.
+Always a good practice to define the pipeline first and then configure in fluentd.
+```
+pipeline my_pipeline # defaults to nill
 ```
 
 ### Client/host certificate options
