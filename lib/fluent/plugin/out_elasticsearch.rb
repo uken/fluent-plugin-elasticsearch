@@ -14,6 +14,11 @@ require_relative 'elasticsearch_index_template'
 
 class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   class ConnectionFailure < StandardError; end
+  class BulkIndexQueueFull < StandardError; end
+  class ElasticsearchOutOfMemory < StandardError; end
+  class ElasticsearchVersionMismatch < StandardError; end
+  class UnrecognizedElasticsearchError < StandardError; end
+  class ElasticsearchError < StandardError; end
 
   Fluent::Plugin.register_output('elasticsearch', self)
 
@@ -361,7 +366,36 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
     begin
       response = client.bulk body: data
       if response['errors']
-        log.error "Could not push log to Elasticsearch: #{response}"
+        errors = Hash.new(0)
+        errors_bad = 0
+        errors_unrecognized = 0
+        # Count up the individual error types returned for each item
+        response['items'].each do |item|
+          begin
+            if [429, 500].include?(item['create']['status'])
+              errors[item['create']['error']['type']] += 1
+            else
+              errors_unrecognized += 1
+            end
+          rescue Exception
+            errors_bad += 1
+          end
+        end
+        if errors_bad
+          raise ElasticsearchVersionMismatch, "Unable to parse error response from Elasticsearch, likely an API version mismatch  #{reponse}"
+        end
+        if errors_unrecognized
+          raise UnrecognizedElasticsearchError, "Unrecognized elasticsearch errors returned, retrying  #{response}"
+        end
+        errors.keys do |key|
+          if 'out_of_memory_error' == key
+            raise ElasticsearchOutOfMemory, "Elasticsearch has exhausted its heap, retrying"
+          elsif 'es_rejected_execution_exception' == key
+            raise BulkIndexQueueFull, "Bulk index queue is full, retrying"
+          else
+            raise ElasticsearchError, "Elasticsearch errors returned, retrying  #{response}"
+          end
+        end
       end
     rescue *client.transport.host_unreachable_exceptions => e
       if retries < 2

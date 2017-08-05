@@ -53,6 +53,22 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
   end
 
+  def stub_elastic_bulk_rejected(url="http://localhost:9200/_bulk")
+    stub_request(:post, url).to_return(:status => 200, :body => "", :headers => {})
+  end
+
+  def stub_elastic_out_of_memory(url="http://localhost:9200/_bulk")
+    stub_request(:post, url).to_return(:status => 200, :body => "", :headers => {})
+  end
+
+  def stub_elastic_unrecognized_error(url="http://localhost:9200/_bulk")
+    stub_request(:post, url).to_return(:status => 200, :body => "", :headers => {})
+  end
+
+  def stub_elastic_version_mismatch(url="http://localhost:9200/_bulk")
+    stub_request(:post, url).to_return(:status => 200, :body => "", :headers => {})
+  end
+
   def test_configure
     config = %{
       host     logs.google.com
@@ -352,7 +368,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal('fluentd', index_cmds.first['index']['_type'])
   end
 
-  def test_writes_to_speficied_index
+  def test_writes_to_specified_index
     driver.configure("index_name myindex\n")
     stub_elastic_ping
     stub_elastic
@@ -361,7 +377,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal('myindex', index_cmds.first['index']['_index'])
   end
 
-  def test_writes_to_speficied_index_uppercase
+  def test_writes_to_specified_index_uppercase
     driver.configure("index_name MyIndex\n")
     stub_elastic_ping
     stub_elastic
@@ -428,7 +444,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
 
-  def test_writes_to_speficied_type
+  def test_writes_to_specified_type
     driver.configure("type_name mytype\n")
     stub_elastic_ping
     stub_elastic
@@ -494,7 +510,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal('fluentd', index_cmds.first['index']['_type'])
   end
 
-  def test_writes_to_speficied_host
+  def test_writes_to_specified_host
     driver.configure("host 192.168.33.50\n")
     stub_elastic_ping("http://192.168.33.50:9200")
     elastic_request = stub_elastic("http://192.168.33.50:9200/_bulk")
@@ -503,7 +519,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_requested(elastic_request)
   end
 
-  def test_writes_to_speficied_port
+  def test_writes_to_specified_port
     driver.configure("port 9201\n")
     stub_elastic_ping("http://localhost:9201")
     elastic_request = stub_elastic("http://localhost:9201/_bulk")
