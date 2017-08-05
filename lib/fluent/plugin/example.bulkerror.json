@@ -1,0 +1,125 @@
+{
+    "took"=>3,
+    "errors"=>true,
+    "items"=>[
+        {
+            "create"=>{
+                "_index"=>".operations.2017.07.13",
+                "_type"=>"com.redhat.viaq.common",
+                "_id"=>"AV09lEt-yHUkC3cmRhe-",
+                "status"=>429,
+                "error"=>{
+                    "type"=>"es_rejected_execution_exception",
+                    "reason"=>"rejected execution of org.elasticsearch.transport.TransportService$4@1a34d37a on EsThreadPoolExecutor[bulk, queue capacity = 50, org.elasticsearch.common.util.concurrent.EsThreadPoolExecutor@312a2162[Running, pool size = 32, active threads = 32, queued tasks = 50, completed tasks = 327053]]"
+                }
+            }
+        }
+    ]
+}
+
+{
+    "took"=>1,
+    "errors"=>true,
+    "items"=>[
+        {
+            "create"=>{
+                "_index"=>".operations.2017.08.03",
+                "_type"=>"com.redhat.viaq.common",
+                "_id"=>"AV2oBsIyOBWEQxXNi-jX",
+                "status"=>500,
+                "error"=>{
+                    "type"=>"out_of_memory_error",
+                    "reason"=>"Java heap space"
+                }
+            }
+        }, {
+            "create"=>{
+                "_index"=>".operations.2017.08.03",
+                "_type"=>"com.redhat.viaq.common",
+                "_id"=>"AV2oBsIyOBWEQxXNi-jY",
+                "status"=>500,
+                "error"=>{
+                    "type"=>"out_of_memory_error",
+                    "reason"=>"Java heap space"
+                }
+            }
+        }, {
+            "create"=>{
+                "_index"=>".operations.2017.08.03",
+                "_type"=>"com.redhat.viaq.common",
+                "_id"=>"AV2oBsIyOBWEQxXNi-jZ",
+                "status"=>500,
+                "error"=>{
+                    "type"=>"out_of_memory_error",
+                    "reason"=>"Java heap space"
+                }
+            }
+        }, {
+            "create"=>{
+                "_index"=>".operations.2017.08.03",
+                "_type"=>"com.redhat.viaq.common",
+                "_id"=>"AV2oBsIyOBWEQxXNi-ja",
+                "status"=>500,
+                "error"=>{
+                    "type"=>"out_of_memory_error",
+                    "reason"=>"Java heap space"
+                }
+            }
+        }, {
+            "create"=>{
+                "_index"=>".operations.2017.08.03",
+                "_type"=>"com.redhat.viaq.common",
+                "_id"=>"AV2oBsIyOBWEQxXNi-jb",
+                "status"=>500,
+                "error"=>{
+                    "type"=>"out_of_memory_error",
+                    "reason"=>"Java heap space"
+                }
+            }
+        }, {
+            "create"=>{
+                "_index"=>".operations.2017.08.03",
+                "_type"=>"com.redhat.viaq.common",
+                "_id"=>"AV2oBsIyOBWEQxXNi-jc",
+                "status"=>500,
+                "error"=>{
+                    "type"=>"out_of_memory_error",
+                    "reason"=>"Java heap space"
+                }
+            }
+        }, {
+            "create"=>{
+                "_index"=>".operations.2017.08.03",
+                "_type"=>"com.redhat.viaq.common",
+                "_id"=>"AV2oBsIyOBWEQxXNi-jd",
+                "status"=>500,
+                "error"=>{
+                    "type"=>"out_of_memory_error",
+                    "reason"=>"Java heap space"
+                }
+            }
+        }, {
+            "create"=>{
+                "_index"=>".operations.2017.08.03",
+                "_type"=>"com.redhat.viaq.common",
+                "_id"=>"AV2oBsIyOBWEQxXNi-je",
+                "status"=>500,
+                "error"=>{
+                    "type"=>"out_of_memory_error",
+                    "reason"=>"Java heap space"
+                }
+            }
+        }, {
+            "create"=>{
+                "_index"=>".operations.2017.08.03",
+                "_type"=>"com.redhat.viaq.common",
+                "_id"=>"AV2oBsIyOBWEQxXNi-jf",
+                "status"=>500,
+                "error"=>{
+                    "type"=>"out_of_memory_error",
+                    "reason"=>"Java heap space"
+                }
+            }
+        }
+    ]
+}
