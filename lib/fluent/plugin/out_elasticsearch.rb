@@ -30,6 +30,8 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   config_param :time_precision, :integer, :default => 0
   config_param :logstash_format, :bool, :default => false
   config_param :logstash_prefix, :string, :default => "logstash"
+  config_param :logstash_prefix_key, :string, :default => nil
+  config_param :logstash_prefix_separator, :string, :default => "-"
   config_param :logstash_dateformat, :string, :default => "%Y.%m.%d"
   config_param :utc_index, :bool, :default => true
   config_param :type_name, :string, :default => "fluentd"
@@ -86,6 +88,10 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
 
     if @remove_keys_on_update && @remove_keys_on_update.is_a?(String)
       @remove_keys_on_update = @remove_keys_on_update.split ','
+    end
+
+    if @logstash_prefix_key && @logstash_prefix_key.is_a?(String)
+      @logstash_prefix_key = @logstash_prefix_key.split '.'
     end
 
     if @template_name && @template_file
@@ -304,7 +310,13 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
           record[TIMESTAMP_FIELD] = dt.iso8601(@time_precision)
         end
         dt = dt.new_offset(0) if @utc_index
-        target_index = "#{@logstash_prefix}-#{dt.strftime(@logstash_dateformat)}"
+        logstash_prefix_parent, logstash_prefix_child_key = @logstash_prefix_key ? get_parent_of(record, @logstash_prefix_key) : nil
+        if logstash_prefix_parent && logstash_prefix_parent[logstash_prefix_child_key]
+          the_logstash_prefix = logstash_prefix_parent.delete(logstash_prefix_child_key)
+        else
+          the_logstash_prefix = @logstash_prefix
+        end
+        target_index = "#{the_logstash_prefix}#{@logstash_prefix_separator}#{dt.strftime(@logstash_dateformat)}"
       else
         target_index = @index_name
       end
