@@ -21,7 +21,9 @@ Current maintainers: @cosmo0920
   + [user, password, path, scheme, ssl_verify](#user-password-path-scheme-ssl_verify)
   + [logstash_format](#logstash_format)
   + [logstash_prefix](#logstash_prefix)
+  + [logstash_prefix_key](#logstash_prefix_key)
   + [logstash_dateformat](#logstash_dateformat)
+  + [logstash_prefix_separator](#logstash_prefix_separator)
   + [time_key_format](#time_key_format)
   + [time_precision](#time_precision)
   + [time_key](#time_key)
@@ -115,13 +117,60 @@ Specify `ssl_verify false` to skip ssl verification (defaults to true)
 logstash_format true # defaults to false
 ```
 
-This is meant to make writing data into ElasticSearch indices compatible to what [Logstash](https://www.elastic.co/products/logstash) calls them. By doing this, one could take advantage of [Kibana](https://www.elastic.co/products/kibana). See logstash_prefix and logstash_dateformat to customize this index name pattern. The index name will be `#{logstash_prefix}-#{formated_date}`
+This is meant to make writing data into Elastisearch indices compatible to what [Logstash](https://www.elastic.co/products/logstash) calls them. By doing this, one could take advantage of [Kibana](https://www.elastic.co/products/kibana). See `logstash_prefix`, `logstash_prefix_key`, `logstash_prefix_separator`, and `logstash_dateformat` to customize this index name pattern. By default, the index name will be `#{logstash_prefix}-#{formated_date}`.
 
 ### logstash_prefix
+
+The index name prefix to use when forming the full index name.  The index name will be `#{logstash_prefix}-#{formated_date}`.  See also `logstash_prefix_key`, `logstash_prefix_separator`, and `logstash_dateformat` for other customizations.
 
 ```
 logstash_prefix mylogs # defaults to "logstash"
 ```
+
+### logstash_prefix_key
+
+Tell this plugin to find the index name prefix used to contruct the index name to write to in the record under this key. Key can be specified as path to nested record using dot ('.') as a separator.
+
+If it is present in the record (and the value is non falsey) the value will be used as the index name prefix, and then removed from the record before output; if it is not found, then the logstash_prefix default value will be used.
+
+Suppose you have the following settings
+
+```
+logstash_prefix_key @index_prefix
+logstash_prefix fallback
+```
+
+If your input is:
+```
+{
+  "title": "developer",
+  "@timestamp": "2014-12-19T08:01:03Z",
+  "@index_prefix": "dev"
+}
+```
+
+The output would be
+
+```
+{
+  "title": "developer",
+  "@timestamp": "2014-12-19T08:01:03Z",
+}
+```
+
+and this record will be written to the index, `dev-2014.12.19`, rather than `fallback-2014.12.19`.
+
+### logstash_prefix_separator
+
+By default, logstash uses a `'-'` dash string as the separator between the prefix part and the date part of the index name.  You can set this parameter if you want to use a different string as a separator.  For example, if you have config like this:
+
+```
+logstash_format true
+logstash_prefix foo
+logstash_prefix_separator .
+```
+
+Then the index name will be something like `foo.2017.08.23`.
 
 ### logstash_dateformat
 
@@ -266,7 +315,7 @@ If `template_file` and `template_name` are set, then this parameter will be igno
 
 You can specify HTTP request timeout.
 
-This is useful when ElasticSearch cannot return response for bulk request within the default of 5 seconds.
+This is useful when Elasticsearch cannot return response for bulk request within the default of 5 seconds.
 
 ```
 request_timeout 15s # defaults to 5s
@@ -274,7 +323,7 @@ request_timeout 15s # defaults to 5s
 
 ### reload_connections
 
-You can tune how the elasticsearch-transport host reloading feature works. By default it will reload the host list from the server every 10,000th request to spread the load. This can be an issue if your ElasticSearch cluster is behind a Reverse Proxy, as Fluentd process may not have direct network access to the ElasticSearch nodes.
+You can tune how the elasticsearch-transport host reloading feature works. By default it will reload the host list from the server every 10,000th request to spread the load. This can be an issue if your Elasticsearch cluster is behind a Reverse Proxy, as Fluentd process may not have direct network access to the Elasticsearch nodes.
 
 ```
 reload_connections false # defaults to true
@@ -314,7 +363,7 @@ This will add the Fluentd tag in the JSON record. For instance, if you have a co
 </match>
 ```
 
-The record inserted into ElasticSearch would be
+The record inserted into Elasticsearch would be
 
 ```
 {"_key":"my.logs", "name":"Johnny Doeie"}
@@ -326,9 +375,9 @@ The record inserted into ElasticSearch would be
 id_key request_id # use "request_id" field as a record id in ES
 ```
 
-By default, all records inserted into ElasticSearch get a random _id. This option allows to use a field in the record as an identifier.
+By default, all records inserted into Elasticsearch get a random _id. This option allows to use a field in the record as an identifier.
 
-This following record `{"name":"Johnny","request_id":"87d89af7daffad6"}` will trigger the following ElasticSearch command
+This following record `{"name":"Johnny","request_id":"87d89af7daffad6"}` will trigger the following Elasticsearch command
 
 ```
 { "index" : { "_index" : "logstash-2013.01.01, "_type" : "fluentd", "_id" : "87d89af7daffad6" } }
@@ -346,7 +395,7 @@ If your input is
 { "name": "Johnny", "a_parent": "my_parent" }
 ```
 
-ElasticSearch command would be
+Elasticsearch command would be
 
 ```
 { "index" : { "_index" : "****", "_type" : "****", "_id" : "****", "_parent" : "my_parent" } }
@@ -420,12 +469,12 @@ reconnect_on_error true # defaults to false
 
 ### Client/host certificate options
 
-Need to verify ElasticSearch's certificate?  You can use the following parameter to specify a CA instead of using an environment variable.
+Need to verify Elasticsearch's certificate?  You can use the following parameter to specify a CA instead of using an environment variable.
 ```
 ca_file /path/to/your/ca/cert
 ```
 
-Does your ElasticSearch cluster want to verify client connections?  You can specify the following parameters to use your client certificate, key, and key password for your connection.
+Does your Elasticsearch cluster want to verify client connections?  You can specify the following parameters to use your client certificate, key, and key password for your connection.
 ```
 client_cert /path/to/your/client/cert
 client_key /path/to/your/private/key
@@ -473,7 +522,7 @@ Note that the flattener does not deal with arrays at this time.
 
 We try to keep the scope of this plugin small and not add too many configuration options. If you think an option would be useful to others, feel free to open an issue or contribute a Pull Request.
 
-Alternatively, consider using [fluent-plugin-forest](https://github.com/tagomoris/fluent-plugin-forest). For example, to configure multiple tags to be sent to different ElasticSearch indices:
+Alternatively, consider using [fluent-plugin-forest](https://github.com/tagomoris/fluent-plugin-forest). For example, to configure multiple tags to be sent to different Elasticsearch indices:
 
 ```
 <match my.logs.*>
@@ -491,7 +540,7 @@ And yet another option is described in Dynamic Configuration section.
 
 ### Dynamic configuration
 
-If you want configurations to depend on information in messages, you can use `elasticsearch_dynamic`. This is an experimental variation of the ElasticSearch plugin allows configuration values to be specified in ways such as the below:
+If you want configurations to depend on information in messages, you can use `elasticsearch_dynamic`. This is an experimental variation of the Elasticsearch plugin allows configuration values to be specified in ways such as the below:
 
 ```
 <match my.logs.*>
