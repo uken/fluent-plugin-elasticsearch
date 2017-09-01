@@ -20,8 +20,7 @@ Gem::Specification.new do |s|
 
   s.add_runtime_dependency 'fluentd', '>= 0.10.43'
   s.add_runtime_dependency 'excon', '>= 0'
-  s.add_runtime_dependency 'elasticsearch'
-
+  s.add_runtime_dependency 'elasticsearch', '>= 2.0.2'
 
   s.add_development_dependency 'rake', '>= 0'
   s.add_development_dependency 'webmock', '~> 1'

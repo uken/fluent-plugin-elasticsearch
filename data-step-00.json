@@ -1,0 +1,6 @@
+{"index": { "_index" : "testing-bulk-indexing-0", "_type" : "type-00", "_id" : "0" } }
+{"field0": "0", "field1": "val-field1-00", "field2": "2017-08-10T11:40:00.000000Z" }
+{"index": { "_index" : "testing-bulk-indexing-1", "_type" : "type-00", "_id" : "0" } }
+{"field0": "0", "field1": "val-field1-00", "field2": "2017-08-10T11:40:00.000000Z" }
+{"index": { "_index" : "testing-bulk-indexing-2", "_type" : "type-00", "_id" : "0" } }
+{"field0": "0", "field1": "val-field1-00", "field2": "2017-08-10T11:40:00.000000Z" }
