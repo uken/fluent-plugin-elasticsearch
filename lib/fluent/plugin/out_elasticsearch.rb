@@ -298,7 +298,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
         elsif record.has_key?(@time_key)
           rts = record[@time_key]
           dt = parse_time(rts, time, tag)
-          record[TIMESTAMP_FIELD] = rts unless @time_key_exclude_timestamp
+          record[TIMESTAMP_FIELD] = dt.strftime(@time_key_format ? @time_key_format : String.new) unless @time_key_exclude_timestamp
         else
           dt = Time.at(time).to_datetime
           record[TIMESTAMP_FIELD] = dt.iso8601(@time_precision)
@@ -308,7 +308,6 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
       else
         target_index = @index_name
       end
-
       # Change target_index to lower-case since Elasticsearch doesn't
       # allow upper-case characters in index names.
       target_index = target_index.downcase
