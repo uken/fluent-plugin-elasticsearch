@@ -737,13 +737,14 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("logstash_format true\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.now.to_s
+    ts = DateTime.now
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    tf = "%Y-%m-%dT%H:%M:%S"
+    tf = "%Y-%m-%dT%H:%M:%S%:z"
+    timef = Fluent::TimeFormatter.new(tf, true, ENV["TZ"])
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(DateTime.strptime(index_cmds[1]['@timestamp'], tf).to_s, ts)
+    assert_equal(timef.format(Time.parse(index_cmds[1]['@timestamp'])).to_s, ts.to_s)
   end
 
   def test_uses_custom_timestamp_when_included_in_record
