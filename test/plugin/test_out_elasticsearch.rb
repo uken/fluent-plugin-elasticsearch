@@ -738,8 +738,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic_ping
     stub_elastic
     ts = DateTime.now
+    time = Fluent::EventTime.from_time(ts.to_time)
     driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
+      driver.feed(time, sample_record)
     end
     tf = "%Y-%m-%dT%H:%M:%S%:z"
     timef = Fluent::TimeFormatter.new(tf, true, ENV["TZ"])
