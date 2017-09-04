@@ -572,11 +572,9 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       raise Faraday::ConnectionFailed, "Test message"
     end
 
-    assert_raise(Fluent::Plugin::ElasticsearchOutput::ConnectionFailure) {
-      driver.run(default_tag: 'test') do
-        driver.feed(sample_record)
-      end
-    }
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
     assert_equal(connection_resets, 3)
   end
 
@@ -599,7 +597,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       end
     }
 
-    assert_raise(ZeroDivisionError) {
+    assert_raise(Timeout::Error) {
       driver.run(default_tag: 'test', shutdown: false) do
         driver.feed(sample_record)
       end
@@ -626,7 +624,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       end
     }
 
-    assert_raise(ZeroDivisionError) {
+    assert_raise(Timeout::Error) {
       driver.run(default_tag: 'test', shutdown: false) do
         driver.feed(sample_record)
       end
