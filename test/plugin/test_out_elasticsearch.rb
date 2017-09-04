@@ -1042,13 +1042,13 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("reconnect_on_error true\n")
 
     assert_raise(ZeroDivisionError) {
-      driver.run(default_tag: 'test') do
+      driver.run(default_tag: 'test', shutdown: false) do
         driver.feed(sample_record)
       end
     }
 
     assert_raise(ZeroDivisionError) {
-      driver.run(default_tag: 'test') do
+      driver.run(default_tag: 'test', shutdown: false) do
         driver.feed(sample_record)
       end
     }
@@ -1069,13 +1069,13 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("reconnect_on_error false\n")
 
     assert_raise(ZeroDivisionError) {
-      driver.run(default_tag: 'test') do
+      driver.run(default_tag: 'test', shutdown: false) do
         driver.feed(sample_record)
       end
     }
 
     assert_raise(ZeroDivisionError) {
-      driver.run(default_tag: 'test') do
+      driver.run(default_tag: 'test', shutdown: false) do
         driver.feed(sample_record)
       end
     }
