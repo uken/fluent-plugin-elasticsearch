@@ -1051,7 +1051,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
         driver.feed(sample_record)
       end
     }
-    assert_equal(connection_resets, 2)
+    # FIXME: Consider keywords arguments in #run and how to test this later.
+    # Because v0.14 test driver does not have 1 to 1 correspondence between #run and #flush in tests.
+    assert_equal(connection_resets, 1)
   end
 
   def test_reconnect_on_error_disabled
