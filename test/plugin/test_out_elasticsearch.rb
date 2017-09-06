@@ -76,6 +76,26 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal 'doe', instance.password
   end
 
+  test 'lack of tag in chunk_keys' do
+    assert_raise_message(/'tag' in chunk_keys is required./) do
+      driver(Fluent::Config::Element.new(
+               'ROOT', '', {
+                 '@type' => 'elasticsearch',
+                 'host' => 'log.google.com',
+                 'port' => 777,
+                 'scheme' => 'https',
+                 'path' => '/es/',
+                 'user' => 'john',
+                 'pasword' => 'doe',
+               }, [
+                 Fluent::Config::Element.new('buffer', 'mykey', {
+                                               'chunk_keys' => 'mykey'
+                                             }, [])
+               ]
+             ))
+    end
+  end
+
   def test_template_already_present
     config = %{
       host            logs.google.com
