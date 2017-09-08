@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 2.0.0.rc.1
+- Use v0.14 API to support nanosecond precision (#223)
+
 ### 1.9.5
 - sub-second time precision [(#249)](https://github.com/uken/fluent-plugin-elasticsearch/pull/249)
 
