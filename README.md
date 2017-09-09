@@ -56,6 +56,15 @@ Current maintainers: @cosmo0920
 * [Contributing](#contributing)
 * [Running tests](#running-tests)
 
+## Requirements
+
+| fluent-plugin-elasticsearch  | fluentd | ruby |
+|-------------------|---------|------|
+| >= 2.0.0 | >= v0.14.0 | >= 2.1 |
+|  < 2.0.0 | >= v0.12.0 | >= 1.9 |
+
+NOTE: fluent-plugin-elasticsearch v2.0.0 is now RC. We will release stable v2.0.0 soon.
+
 ## Installation
 
 ```sh
