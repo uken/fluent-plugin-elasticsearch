@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 2.0.0.rc.2
+- add pipeline parameter
+
 ### 2.0.0.rc.1
 - Use v0.14 API to support nanosecond precision (#223)
 

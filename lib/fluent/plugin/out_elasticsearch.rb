@@ -66,6 +66,8 @@ module Fluent::Plugin
     config_param :tag_key, :string, :default => 'tag'
     config_param :time_parse_error_tag, :string, :default => 'Fluent::ElasticsearchOutput::TimeParser.error'
     config_param :reconnect_on_error, :bool, :default => false
+    config_param :pipeline, :string, :default => nil
+
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE
@@ -342,6 +344,10 @@ module Fluent::Plugin
         meta.clear
         meta["_index".freeze] = target_index
         meta["_type".freeze] = target_type
+
+        if @pipeline
+          meta["pipeline".freeze] = @pipeline
+        end
 
         @meta_config_map.each do |record_key, meta_key|
           meta[meta_key] = record[record_key] if record[record_key]
