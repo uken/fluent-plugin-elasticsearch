@@ -20,6 +20,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [logstash_format](#logstash_format)
   + [logstash_prefix](#logstash_prefix)
   + [logstash_dateformat](#logstash_dateformat)
+  + [pipeline](#pipeline)
   + [time_key_format](#time_key_format)
   + [time_precision](#time_precision)
   + [time_key](#time_key)
@@ -127,6 +128,16 @@ The strftime format to generate index target index name when `logstash_format` i
 
 ```
 logstash_dateformat %Y.%m. # defaults to "%Y.%m.%d"
+```
+
+### pipeline
+
+Only in ES >= 5.x is available to use this parameter.
+This param is to set a pipeline id of your elasticsearch to be added into the request, you can configure ingest node.
+For more information: [![Ingest node](https://www.elastic.co/guide/en/elasticsearch/reference/master/ingest.html)]
+
+```
+pipeline pipeline_id
 ```
 
 ### time_key_format
