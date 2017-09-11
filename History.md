@@ -5,7 +5,7 @@
 - Use latest elasticsearch-ruby (#240)
 
 ### 1.9.6
-- add pipeline parameter
+- add pipeline parameter (#266)
 
 ### 1.9.5
 - sub-second time precision [(#249)](https://github.com/uken/fluent-plugin-elasticsearch/pull/249)
