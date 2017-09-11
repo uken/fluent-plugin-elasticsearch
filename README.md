@@ -54,6 +54,7 @@ Current maintainers: @cosmo0920
   + [Not seeing a config you need?](#not-seeing-a-config-you-need)
   + [Dynamic configuration](#dynamic-configuration)
   + [Placeholders](#placeholders)
+  + [Multi workers](#multi-workers)
 * [Contact](#contact)
 * [Contributing](#contributing)
 * [Running tests](#running-tests)
@@ -579,6 +580,16 @@ records = {key1: "value1", key2: "value2"}
   </buffer>
   # <snip>
 </match>
+```
+
+## Multi workers
+
+Since Fluentd v0.14, multi workers feature had been implemented to increase throughput with multiple processes. This feature allows Fluentd processes to use one or more CPUs. This feature will be enabled by the following system configuration:
+
+```
+<system>
+  workers N # where N is a natural number (N >= 1).
+</system>
 ```
 
 ## Contact
