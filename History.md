@@ -5,7 +5,7 @@
 - Use latest elasticsearch-ruby (#240)
 
 ### 2.0.0.rc.2
-- add pipeline parameter
+- add pipeline parameter (#290)
 
 ### 2.0.0.rc.1
 - Use v0.14 API to support nanosecond precision (#223)
