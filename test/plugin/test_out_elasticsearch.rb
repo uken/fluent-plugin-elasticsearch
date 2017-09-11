@@ -389,6 +389,16 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal('myindex', index_cmds.first['index']['_index'])
   end
 
+  def test_writes_to_speficied_index_with_placeholder
+    driver.configure("index_name myindex.${tag}\n")
+    stub_elastic_ping
+    stub_elastic
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+    assert_equal('myindex.test', index_cmds.first['index']['_index'])
+  end
+
   def test_writes_to_speficied_index_uppercase
     driver.configure("index_name MyIndex\n")
     stub_elastic_ping
@@ -676,6 +686,19 @@ class ElasticsearchOutput < Test::Unit::TestCase
                       logstash_prefix myprefix")
     time = Time.parse Date.today.to_s
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
+    stub_elastic_ping
+    stub_elastic
+    driver.run(default_tag: 'test') do
+      driver.feed(time.to_i, sample_record)
+    end
+    assert_equal(logstash_index, index_cmds.first['index']['_index'])
+  end
+
+  def test_writes_to_logstash_index_with_specified_prefix_and_placeholder
+    driver.configure("logstash_format true
+                      logstash_prefix myprefix-${tag}")
+    time = Time.parse Date.today.to_s
+    logstash_index = "myprefix-test-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do

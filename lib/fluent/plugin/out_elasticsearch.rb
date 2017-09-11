@@ -290,12 +290,19 @@ module Fluent::Plugin
       ret
     end
 
+    def expand_placeholders(metadata)
+      logstash_prefix = extract_placeholders(@logstash_prefix, metadata)
+      index_name = extract_placeholders(@index_name, metadata)
+      return logstash_prefix, index_name
+    end
+
     def write(chunk)
       bulk_message = ''
       header = {}
       meta = {}
 
       tag = chunk.metadata.tag
+      logstash_prefix, index_name = expand_placeholders(chunk.metadata)
 
       chunk.msgpack_each do |time, record|
         next unless record.is_a? Hash
@@ -320,9 +327,9 @@ module Fluent::Plugin
             record[TIMESTAMP_FIELD] = dt.iso8601(@time_precision)
           end
           dt = dt.new_offset(0) if @utc_index
-          target_index = "#{@logstash_prefix}-#{dt.strftime(@logstash_dateformat)}"
+          target_index = "#{logstash_prefix}-#{dt.strftime(@logstash_dateformat)}"
         else
-          target_index = @index_name
+          target_index = index_name
         end
 
         # Change target_index to lower-case since Elasticsearch doesn't
