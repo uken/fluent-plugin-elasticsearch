@@ -389,14 +389,57 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal('myindex', index_cmds.first['index']['_index'])
   end
 
-  def test_writes_to_speficied_index_with_placeholder
-    driver.configure("index_name myindex.${tag}\n")
-    stub_elastic_ping
-    stub_elastic
-    driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
+  class IndexNamePlaceholdersTest < self
+    def test_writes_to_speficied_index_with_tag_placeholder
+      driver.configure("index_name myindex.${tag}\n")
+      stub_elastic_ping
+      stub_elastic
+      driver.run(default_tag: 'test') do
+        driver.feed(sample_record)
+      end
+      assert_equal('myindex.test', index_cmds.first['index']['_index'])
     end
-    assert_equal('myindex.test', index_cmds.first['index']['_index'])
+
+    def test_writes_to_speficied_index_with_time_placeholder
+      driver.configure(Fluent::Config::Element.new(
+                         'ROOT', '', {
+                           '@type' => 'elasticsearch',
+                           'index_name' => 'myindex.%Y.%m.%d',
+                         }, [
+                           Fluent::Config::Element.new('buffer', 'tag,time', {
+                                                         'chunk_keys' => ['tag', 'time'],
+                                                         'timekey' => 3600,
+                                                       }, [])
+                         ]
+                       ))
+      stub_elastic_ping
+      stub_elastic
+      time = Time.parse Date.today.to_s
+      driver.run(default_tag: 'test') do
+        driver.feed(time.to_i, sample_record)
+      end
+      assert_equal("myindex.#{time.getutc.strftime("%Y.%m.%d")}", index_cmds.first['index']['_index'])
+    end
+
+    def test_writes_to_speficied_index_with_custom_key_placeholder
+      driver.configure(Fluent::Config::Element.new(
+                         'ROOT', '', {
+                           '@type' => 'elasticsearch',
+                           'index_name' => 'myindex.${pipeline_id}',
+                         }, [
+                           Fluent::Config::Element.new('buffer', 'tag,pipeline_id', {}, [])
+                         ]
+                       ))
+      time = Time.parse Date.today.to_s
+      pipeline_id = "mypipeline"
+      logstash_index = "myindex.#{pipeline_id}"
+      stub_elastic_ping
+      stub_elastic
+      driver.run(default_tag: 'test') do
+        driver.feed(time.to_i, sample_record.merge({"pipeline_id" => pipeline_id}))
+      end
+      assert_equal(logstash_index, index_cmds.first['index']['_index'])
+    end
   end
 
   def test_writes_to_speficied_index_uppercase
@@ -694,17 +737,63 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
 
-  def test_writes_to_logstash_index_with_specified_prefix_and_placeholder
-    driver.configure("logstash_format true
+  class LogStashPrefixPlaceholdersTest < self
+    def test_writes_to_logstash_index_with_specified_prefix_and_tag_placeholder
+      driver.configure("logstash_format true
                       logstash_prefix myprefix-${tag}")
-    time = Time.parse Date.today.to_s
-    logstash_index = "myprefix-test-#{time.getutc.strftime("%Y.%m.%d")}"
-    stub_elastic_ping
-    stub_elastic
-    driver.run(default_tag: 'test') do
-      driver.feed(time.to_i, sample_record)
+      time = Time.parse Date.today.to_s
+      logstash_index = "myprefix-test-#{time.getutc.strftime("%Y.%m.%d")}"
+      stub_elastic_ping
+      stub_elastic
+      driver.run(default_tag: 'test') do
+        driver.feed(time.to_i, sample_record)
+      end
+      assert_equal(logstash_index, index_cmds.first['index']['_index'])
     end
-    assert_equal(logstash_index, index_cmds.first['index']['_index'])
+
+    def test_writes_to_logstash_index_with_specified_prefix_and_time_placeholder
+      driver.configure(Fluent::Config::Element.new(
+                         'ROOT', '', {
+                           '@type' => 'elasticsearch',
+                           'logstash_format' => true,
+                           'logstash_prefix' => 'myprefix-%H',
+                         }, [
+                           Fluent::Config::Element.new('buffer', 'tag,time', {
+                                                         'chunk_keys' => ['tag', 'time'],
+                                                         'timekey' => 3600,
+                                                       }, [])
+                         ]
+                       ))
+      time = Time.parse Date.today.to_s
+      logstash_index = "myprefix-#{time.localtime.strftime("%H")}-#{time.getutc.strftime("%Y.%m.%d")}"
+      stub_elastic_ping
+      stub_elastic
+      driver.run(default_tag: 'test') do
+        driver.feed(time.to_i, sample_record)
+      end
+      assert_equal(logstash_index, index_cmds.first['index']['_index'])
+    end
+
+    def test_writes_to_logstash_index_with_specified_prefix_and_custom_key_placeholder
+      driver.configure(Fluent::Config::Element.new(
+                         'ROOT', '', {
+                           '@type' => 'elasticsearch',
+                           'logstash_format' => true,
+                           'logstash_prefix' => 'myprefix-${pipeline_id}',
+                         }, [
+                           Fluent::Config::Element.new('buffer', 'tag,pipeline_id', {}, [])
+                         ]
+                       ))
+      time = Time.parse Date.today.to_s
+      pipeline_id = "mypipeline"
+      logstash_index = "myprefix-#{pipeline_id}-#{time.getutc.strftime("%Y.%m.%d")}"
+      stub_elastic_ping
+      stub_elastic
+      driver.run(default_tag: 'test') do
+        driver.feed(time.to_i, sample_record.merge({"pipeline_id" => pipeline_id}))
+      end
+      assert_equal(logstash_index, index_cmds.first['index']['_index'])
+    end
   end
 
   def test_writes_to_logstash_index_with_specified_prefix_uppercase
