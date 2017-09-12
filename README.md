@@ -52,6 +52,7 @@ Current maintainers: @cosmo0920
   + [Hash flattening](#hash-flattening)
   + [Not seeing a config you need?](#not-seeing-a-config-you-need)
   + [Dynamic configuration](#dynamic-configuration)
+  + [Placeholders](#placeholders)
 * [Contact](#contact)
 * [Contributing](#contributing)
 * [Running tests](#running-tests)
@@ -515,6 +516,59 @@ If you want configurations to depend on information in messages, you can use `el
 ```
 
 **Please note, this uses Ruby's `eval` for every message, so there are performance and security implications.**
+
+### Placeholders
+
+v0.14 placeholders can handle `${tag}` for tag, `%Y%m%d` like strftime format, and custom record keys like as `record["mykey"]`.
+
+Note that custom chunk key is diffrent notations for `record_reformer` and `record_modifier`.
+They uses `record["some_key"]` to specify placeholders, but this feature uses `${key1}`, `${key2}` notation. And tag, time, and some arbitrary keys must be included in buffer directive attributes.
+
+They are used as below:
+
+#### tag
+
+```aconf
+<match my.logs>
+  @type elasticsearch
+  index_name elastic.${tag} #=> replaced with each event's tag. e.g.) elastic.test.tag
+  <buffer tag>
+    @type memory
+  </buffer>
+  # <snip>
+</match>
+```
+
+#### time
+
+```aconf
+<match my.logs>
+  @type elasticsearch
+  index_name elastic.%Y%m%d #=> e.g.) elastic.20170811
+  <buffer tag, time>
+    @type memory
+    timekey 3600
+  </buffer>
+  # <snip>
+</match>
+```
+
+#### custom key
+
+```log
+records = {key1: "value1", key2: "value2"}
+```
+
+```aconf
+<match my.logs>
+  @type elasticsearch
+  index_name elastic.${key1}.${key2} # => e.g.) elastic.value1.value2
+  <buffer tag, key1, key2>
+    @type memory
+  </buffer>
+  # <snip>
+</match>
+```
 
 ## Contact
 
