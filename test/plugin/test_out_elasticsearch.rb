@@ -418,7 +418,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.run(default_tag: 'test') do
         driver.feed(time.to_i, sample_record)
       end
-      assert_equal("myindex.#{time.getutc.strftime("%Y.%m.%d")}", index_cmds.first['index']['_index'])
+      assert_equal("myindex.#{time.utc.strftime("%Y.%m.%d")}", index_cmds.first['index']['_index'])
     end
 
     def test_writes_to_speficied_index_with_custom_key_placeholder
@@ -776,7 +776,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
                          ]
                        ))
       time = Time.parse Date.today.to_s
-      logstash_index = "myprefix-#{time.localtime.strftime("%H")}-#{time.getutc.strftime("%Y.%m.%d")}"
+      logstash_index = "myprefix-#{time.getutc.strftime("%H")}-#{time.getutc.strftime("%Y.%m.%d")}"
       stub_elastic_ping
       stub_elastic
       driver.run(default_tag: 'test') do
