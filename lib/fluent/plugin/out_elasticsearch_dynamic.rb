@@ -108,6 +108,10 @@ module Fluent::Plugin
       end.join(', ')
     end
 
+    def multi_workers_ready?
+      true
+    end
+
     def write(chunk)
       bulk_message = Hash.new { |h,k| h[k] = '' }
       dynamic_conf = @dynamic_config.clone

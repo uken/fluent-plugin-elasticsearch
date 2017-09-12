@@ -299,6 +299,10 @@ module Fluent::Plugin
       return logstash_prefix, index_name
     end
 
+    def multi_workers_ready?
+      true
+    end
+
     def write(chunk)
       bulk_message = ''
       header = {}
