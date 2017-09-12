@@ -72,6 +72,7 @@ module Fluent::Plugin
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE
       config_set_default :chunk_keys, ['tag']
+      config_set_default :timekey_use_utc, true
     end
 
     include Fluent::ElasticsearchIndexTemplate
