@@ -418,7 +418,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.run(default_tag: 'test') do
         driver.feed(time.to_i, sample_record)
       end
-      assert_equal("myindex.#{time.getutc.strftime("%Y.%m.%d")}", index_cmds.first['index']['_index'])
+      assert_equal("myindex.#{time.localtime.strftime("%Y.%m.%d")}", index_cmds.first['index']['_index'])
     end
 
     def test_writes_to_speficied_index_with_custom_key_placeholder
