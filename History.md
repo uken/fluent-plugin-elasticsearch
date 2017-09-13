@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 1.9.7
+- fix license identifier in gemspec (#295)
+
 ### 1.9.6
 - add pipeline parameter (#266)
 
