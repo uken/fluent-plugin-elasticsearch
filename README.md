@@ -49,7 +49,7 @@ Current maintainers: @cosmo0920
   + [reconnect_on_error](#reconnect_on_error)
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Proxy Support](#proxy-support)
-  + [Buffered output options](#buffered-output-options)
+  + [Buffer options](#buffer-options)
   + [Hash flattening](#hash-flattening)
   + [Not seeing a config you need?](#not-seeing-a-config-you-need)
   + [Dynamic configuration](#dynamic-configuration)
@@ -67,6 +67,7 @@ Current maintainers: @cosmo0920
 |  < 2.0.0 | >= v0.12.0 | >= 1.9 |
 
 NOTE: fluent-plugin-elasticsearch v2.0.0 is now RC. We will release stable v2.0.0 soon.
+
 NOTE: For v0.12 version, you should use 1.x.y version. Please send patch into v0.12 branch if you encountered 1.x version's bug.
 
 ## Installation
@@ -459,9 +460,9 @@ client_key_pass password
 
 Starting with version 0.8.0, this gem uses excon, which supports proxy with environment variables - https://github.com/excon/excon#proxy-support
 
-### Buffered output options
+### Buffer options
 
-`fluentd-plugin-elasticsearch` extends [Fluentd's builtin Buffered Output plugin](http://docs.fluentd.org/articles/buffer-plugin-overview). It adds the following options:
+`fluentd-plugin-elasticsearch` extends [Fluentd's builtin Output plugin](https://docs.fluentd.org/v0.14/articles/output-plugin-overview) and use `compat_parameters` plugin helper. It adds the following options:
 
 ```
 buffer_type memory
@@ -472,6 +473,8 @@ num_threads 1
 ```
 
 The value for option `buffer_chunk_limit` should not exceed value `http.max_content_length` in your Elasticsearch setup (by default it is 100mb).
+
+**Note**: If you use or evaluate Fluentd v0.14, you can use `<buffer>` directive to specify buffer configuration, too. In more detail, please refer to the [buffer configuration options for v0.14](https://docs.fluentd.org/v0.14/articles/buffer-plugin-overview#configuration-parameters)
 
 ### Hash flattening
 
@@ -511,6 +514,8 @@ Alternatively, consider using [fluent-plugin-forest](https://github.com/tagomori
 ```
 
 And yet another option is described in Dynamic Configuration section.
+
+**Note**: If you use or evaluate Fluentd v0.14, you can use builtin placeholders. In more detail, please refer to [Placeholders](#placeholders) section.
 
 ### Dynamic configuration
 
