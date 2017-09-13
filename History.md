@@ -5,7 +5,7 @@
 - Use latest elasticsearch-ruby (#240)
 
 ### 2.0.0.rc.4
-- fix license identifier in gemspec
+- fix license identifier in gemspec (#294)
 
 ### 2.0.0.rc.3
 - add built-in placeholders support (#288, #293)
