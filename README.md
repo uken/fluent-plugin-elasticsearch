@@ -19,6 +19,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [user, password, path, scheme, ssl_verify](#user-password-path-scheme-ssl_verify)
   + [logstash_format](#logstash_format)
   + [logstash_prefix](#logstash_prefix)
+  + [logstash_prefix_separator](#logstash_prefix_separator)
   + [logstash_dateformat](#logstash_dateformat)
   + [pipeline](#pipeline)
   + [time_key_format](#time_key_format)
@@ -120,6 +121,12 @@ This is meant to make writing data into ElasticSearch indices compatible to what
 
 ```
 logstash_prefix mylogs # defaults to "logstash"
+```
+
+### logstash_prefix_separator
+
+```
+logstash_prefix_separator _ # defaults to "-"
 ```
 
 ### logstash_dateformat

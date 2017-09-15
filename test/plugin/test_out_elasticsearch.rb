@@ -645,6 +645,20 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
 
+  def test_writes_to_logstash_index_with_specified_prefix_and_separator
+    separator = '_'
+    driver.configure("logstash_format true
+                      logstash_prefix_separator #{separator}
+                      logstash_prefix myprefix")
+    time = Time.parse Date.today.to_s
+    logstash_index = "myprefix#{separator}#{time.getutc.strftime("%Y.%m.%d")}"
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record, time.to_i)
+    driver.run
+    assert_equal(logstash_index, index_cmds.first['index']['_index'])
+  end
+
   def test_writes_to_logstash_index_with_specified_prefix_uppercase
     driver.configure("logstash_format true
                       logstash_prefix MyPrefix")
@@ -739,7 +753,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(index_cmds[1]['@timestamp'], ts)
     assert_equal("logstash-2001.02.03", index_cmds[0]['index']['_index'])
   end
-  
+
   def test_uses_custom_time_key_exclude_timekey
     driver.configure("logstash_format true
                       time_key vtm
