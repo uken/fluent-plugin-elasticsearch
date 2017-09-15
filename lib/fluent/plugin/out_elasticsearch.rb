@@ -35,6 +35,7 @@ module Fluent::Plugin
     config_param :time_precision, :integer, :default => 9
     config_param :logstash_format, :bool, :default => false
     config_param :logstash_prefix, :string, :default => "logstash"
+    config_param :logstash_prefix_separator, :string, :default => '-'
     config_param :logstash_dateformat, :string, :default => "%Y.%m.%d"
     config_param :utc_index, :bool, :default => true
     config_param :type_name, :string, :default => "fluentd"
@@ -334,7 +335,7 @@ module Fluent::Plugin
             record[TIMESTAMP_FIELD] = dt.iso8601(@time_precision)
           end
           dt = dt.new_offset(0) if @utc_index
-          target_index = "#{logstash_prefix}-#{dt.strftime(@logstash_dateformat)}"
+          target_index = "#{logstash_prefix}#{@logstash_prefix_separator}#{dt.strftime(@logstash_dateformat)}"
         else
           target_index = index_name
         end
