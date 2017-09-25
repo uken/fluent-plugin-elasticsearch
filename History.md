@@ -4,6 +4,10 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 2.0.0.rc.5
+- make configurable with `ssl_version` parameter (#299)
+- add `logstash_prefix_separator` config parameter (#297)
+
 ### 2.0.0.rc.4
 - fix license identifier in gemspec (#294)
 
