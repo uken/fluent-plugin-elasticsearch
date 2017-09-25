@@ -4,6 +4,11 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 1.10.0
+- backport adding `logstash_prefix_separator` parameter fix
+- backport making configuraable SSL/TLS version (#300)
+- bump up minimum required Fluentd version to v0.12.10 due to use enum parameter type
+
 ### 1.9.7
 - fix license identifier in gemspec (#295)
 
