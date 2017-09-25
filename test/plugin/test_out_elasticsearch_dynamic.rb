@@ -69,6 +69,10 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_equal 'john', instance.user
     assert_equal 'doe', instance.password
     assert_equal '/es/', instance.path
+    assert_equal :TLSv1, instance.ssl_version
+    assert_nil instance.client_key
+    assert_nil instance.client_cert
+    assert_nil instance.client_key_pass
   end
 
   def test_defaults
