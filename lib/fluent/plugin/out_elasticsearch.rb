@@ -50,6 +50,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   config_param :client_cert, :string, :default => nil
   config_param :client_key_pass, :string, :default => nil
   config_param :ca_file, :string, :default => nil
+  config_param :ssl_version, :enum, list: [:SSLv23, :TLSv1, :TLSv1_1, :TLSv1_2], :default => :TLSv1
   config_param :remove_keys, :string, :default => nil
   config_param :remove_keys_on_update, :string, :default => ""
   config_param :remove_keys_on_update_key, :string, :default => nil
@@ -155,7 +156,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
                                                                             transport_options: {
                                                                               headers: { 'Content-Type' => 'application/json' },
                                                                               request: { timeout: @request_timeout },
-                                                                              ssl: { verify: @ssl_verify, ca_file: @ca_file }
+                                                                              ssl: { verify: @ssl_verify, ca_file: @ca_file, version: @ssl_version }
                                                                             }
                                                                           }), &adapter_conf)
       es = Elasticsearch::Client.new transport: transport
