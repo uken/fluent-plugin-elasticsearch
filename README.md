@@ -185,7 +185,7 @@ For example, should your input plugin not include a `time_key` in the record but
 By default, when inserting records in [Logstash](https://www.elastic.co/products/logstash) format, `@timestamp` is dynamically created with the time at log ingestion. If you'd like to use a custom time, include an `@timestamp` with your record.
 
 ```
-{"@timestamp":"2014-04-07T000:00:00-00:00"}
+{"@timestamp": "2014-04-07T000:00:00-00:00"}
 ```
 
 You can specify an option `time_key` (like the option described in [tail Input Plugin](http://docs.fluentd.org/articles/in_tail)) to replace `@timestamp` key.
@@ -348,7 +348,7 @@ This will add the Fluentd tag in the JSON record. For instance, if you have a co
 The record inserted into ElasticSearch would be
 
 ```
-{"_key":"my.logs", "name":"Johnny Doeie"}
+{"_key": "my.logs", "name": "Johnny Doeie"}
 ```
 
 ### id_key
@@ -359,10 +359,10 @@ id_key request_id # use "request_id" field as a record id in ES
 
 By default, all records inserted into ElasticSearch get a random _id. This option allows to use a field in the record as an identifier.
 
-This following record `{"name":"Johnny","request_id":"87d89af7daffad6"}` will trigger the following ElasticSearch command
+This following record `{"name": "Johnny", "request_id": "87d89af7daffad6"}` will trigger the following ElasticSearch command
 
 ```
-{ "index" : { "_index" : "logstash-2013.01.01, "_type" : "fluentd", "_id" : "87d89af7daffad6" } }
+{ "index" : { "_index": "logstash-2013.01.01", "_type": "fluentd", "_id": "87d89af7daffad6" } }
 { "name": "Johnny", "request_id": "87d89af7daffad6" }
 ```
 
@@ -380,7 +380,7 @@ If your input is
 ElasticSearch command would be
 
 ```
-{ "index" : { "_index" : "****", "_type" : "****", "_id" : "****", "_parent" : "my_parent" } }
+{ "index" : { "_index": "****", "_type": "****", "_id": "****", "_parent": "my_parent" } }
 { "name": "Johnny", "a_parent": "my_parent" }
 ```
 
