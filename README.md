@@ -132,6 +132,8 @@ logstash_format true # defaults to false
 
 This is meant to make writing data into ElasticSearch indices compatible to what [Logstash](https://www.elastic.co/products/logstash) calls them. By doing this, one could take advantage of [Kibana](https://www.elastic.co/products/kibana). See logstash_prefix and logstash_dateformat to customize this index name pattern. The index name will be `#{logstash_prefix}-#{formated_date}`
 
+:warning: Setting this option to `true` will ignore the `index_name` setting. The default index name prefix is `logstash-`.
+
 ### logstash_prefix
 
 ```
