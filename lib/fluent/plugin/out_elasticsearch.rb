@@ -121,6 +121,13 @@ module Fluent::Plugin
       rescue LoadError
         @dump_proc = Yajl.method(:dump)
       end
+
+      if m = @user.match(/%{(?<user>.*)}/)
+        @user = URI.encode_www_form_component(m["user"])
+      end
+      if m = @password.match(/%{(?<password>.*)}/)
+        @password = URI.encode_www_form_component(m["password"])
+      end
     end
 
     def create_meta_config_map
@@ -188,6 +195,18 @@ module Fluent::Plugin
       end
     end
 
+    def get_escaped_userinfo(host_str)
+      if m = host_str.match(/(?<scheme>.*)%{(?<user>.*)}:%{(?<password>.*)}(?<path>@.*)/)
+        m["scheme"] +
+          URI.encode_www_form_component(m["user"]) +
+          ':' +
+          URI.encode_www_form_component(m["password"]) +
+          m["path"]
+      else
+        host_str
+      end
+    end
+
     def get_connection_options
       raise "`password` must be present if `user` is present" if @user && !@password
 
@@ -202,7 +221,7 @@ module Fluent::Plugin
             }
           else
             # New hosts format expects URLs such as http://logs.foo.com,https://john:pass@logs2.foo.com/elastic
-            uri = URI(host_str)
+            uri = URI(get_escaped_userinfo(host_str))
             %w(user password path).inject(host: uri.host, port: uri.port, scheme: uri.scheme) do |hash, key|
               hash[key.to_sym] = uri.public_send(key) unless uri.public_send(key).nil? || uri.public_send(key) == ''
               hash
