@@ -122,10 +122,10 @@ module Fluent::Plugin
         @dump_proc = Yajl.method(:dump)
       end
 
-      if m = @user.match(/%{(?<user>.*)}/)
+      if @user && m = @user.match(/%{(?<user>.*)}/)
         @user = URI.encode_www_form_component(m["user"])
       end
-      if m = @password.match(/%{(?<password>.*)}/)
+      if @password && m = @password.match(/%{(?<password>.*)}/)
         @password = URI.encode_www_form_component(m["password"])
       end
     end
