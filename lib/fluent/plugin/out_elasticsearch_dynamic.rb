@@ -81,7 +81,7 @@ module Fluent::Plugin
             }
           else
             # New hosts format expects URLs such as http://logs.foo.com,https://john:pass@logs2.foo.com/elastic
-            uri = URI(host_str)
+            uri = URI(get_escaped_userinfo(host_str))
             %w(user password path).inject(host: uri.host, port: uri.port, scheme: uri.scheme) do |hash, key|
               hash[key.to_sym] = uri.public_send(key) unless uri.public_send(key).nil? || uri.public_send(key) == ''
               hash
