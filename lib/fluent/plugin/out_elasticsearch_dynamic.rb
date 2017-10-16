@@ -6,6 +6,8 @@ module Fluent::Plugin
 
     Fluent::Plugin.register_output('elasticsearch_dynamic', self)
 
+    helpers :event_emitter
+
     config_param :delimiter, :string, :default => "."
 
     DYNAMIC_PARAM_NAMES = %W[hosts host port logstash_format logstash_prefix logstash_dateformat time_key utc_index index_name tag_key type_name id_key parent_key routing_key write_operation]
@@ -128,17 +130,23 @@ module Fluent::Plugin
       chunk.msgpack_each do |time, record|
         next unless record.is_a? Hash
 
-        # evaluate all configurations here
-        DYNAMIC_PARAM_SYMBOLS.each_with_index { |var, i|
-          k = DYNAMIC_PARAM_NAMES[i]
-          v = self.instance_variable_get(var)
-          # check here to determine if we should evaluate
-          if dynamic_conf[k] != v
-            value = expand_param(v, tag, time, record)
-            dynamic_conf[k] = value
-          end
-        }
+        begin
+          # evaluate all configurations here
+          DYNAMIC_PARAM_SYMBOLS.each_with_index { |var, i|
+            k = DYNAMIC_PARAM_NAMES[i]
+            v = self.instance_variable_get(var)
+            # check here to determine if we should evaluate
+            if dynamic_conf[k] != v
+              value = expand_param(v, tag, time, record)
+              dynamic_conf[k] = value
+            end
+          }
         # end eval all configs
+        rescue => e
+          # handle dynamic parameters misconfigurations
+          router.emit_error_event(tag, time, record, e)
+          next
+        end
 
         if eval_or_val(dynamic_conf['logstash_format'])
           if record.has_key?("@timestamp")

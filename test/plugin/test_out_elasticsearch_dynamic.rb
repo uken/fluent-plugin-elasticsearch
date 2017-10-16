@@ -1,8 +1,11 @@
 require 'helper'
 require 'date'
 require 'fluent/test/driver/output'
+require 'flexmock/test_unit'
 
 class ElasticsearchOutputDynamic < Test::Unit::TestCase
+  include FlexMock::TestCase
+
   attr_accessor :index_cmds, :index_command_counts
 
   def setup
@@ -564,6 +567,17 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
         driver.feed(sample_record)
       end
     }
+  end
+
+  def test_tag_parts_index_error_event
+    stub_elastic_ping
+    stub_elastic
+    driver.configure("logstash_prefix ${tag_parts[1]}\n")
+    flexmock(driver.instance.router).should_receive(:emit_error_event)
+      .with('test', Fluent::EventTime, Hash, TypeError).once
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
   end
 
   def test_connection_failed_retry
