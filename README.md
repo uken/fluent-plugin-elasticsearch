@@ -94,6 +94,12 @@ You can specify multiple ElasticSearch hosts with separator ",".
 
 If you specify multiple hosts, this plugin will load balance updates to ElasticSearch. This is an [elasticsearch-ruby](https://github.com/elasticsearch/elasticsearch-ruby) feature, the default strategy is round-robin.
 
+And this plugin will escape required URL encoded characters within `%{}` placeholders.
+
+```
+hosts https://%{j+hn}:%{passw@rd}@host1:443/elastic/,http://host2
+```
+
 ### user, password, path, scheme, ssl_verify
 
 If you specify this option, host and port options are ignored.
@@ -106,6 +112,13 @@ scheme https
 ```
 
 You can specify user and password for HTTP basic auth. If used in conjunction with a hosts list, then these options will be used by default i.e. if you do not provide any of these options within the hosts listed.
+
+And this plugin will escape required URL encoded characters within `%{}` placeholders.
+
+```
+user %{demo+}
+password %{@secret}
+```
 
 Specify `ssl_verify false` to skip ssl verification (defaults to true)
 
