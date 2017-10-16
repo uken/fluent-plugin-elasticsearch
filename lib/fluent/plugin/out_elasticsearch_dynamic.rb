@@ -121,17 +121,23 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     chunk.msgpack_each do |time, record|
       next unless record.is_a? Hash
 
-      # evaluate all configurations here
-      DYNAMIC_PARAM_SYMBOLS.each_with_index { |var, i|
-        k = DYNAMIC_PARAM_NAMES[i]
-        v = self.instance_variable_get(var)
-        # check here to determine if we should evaluate
-        if dynamic_conf[k] != v
-          value = expand_param(v, tag, time, record)
-          dynamic_conf[k] = value
-        end
-      }
+      begin
+        # evaluate all configurations here
+        DYNAMIC_PARAM_SYMBOLS.each_with_index { |var, i|
+          k = DYNAMIC_PARAM_NAMES[i]
+          v = self.instance_variable_get(var)
+          # check here to determine if we should evaluate
+          if dynamic_conf[k] != v
+            value = expand_param(v, tag, time, record)
+            dynamic_conf[k] = value
+          end
+        }
       # end eval all configs
+      rescue => e
+        # handle dynamic parameters misconfigurations
+        router.emit_error_event(tag, time, record, e)
+        next
+      end
 
       if eval_or_val(dynamic_conf['logstash_format'])
         if record.has_key?("@timestamp")

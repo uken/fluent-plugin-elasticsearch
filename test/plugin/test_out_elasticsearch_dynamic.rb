@@ -1,7 +1,10 @@
 require 'helper'
 require 'date'
+require 'flexmock/test_unit'
 
 class ElasticsearchOutputDynamic < Test::Unit::TestCase
+  include FlexMock::TestCase
+
   attr_accessor :index_cmds, :index_command_counts
 
   def setup
@@ -537,6 +540,16 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     driver.run
   end
 
+  def test_tag_parts_index_error_event
+    stub_elastic_ping
+    stub_elastic
+    driver.configure("logstash_prefix ${tag_parts[1]}\n")
+    flexmock(driver.instance.router).should_receive(:emit_error_event)
+      .with('test', Integer, Hash, TypeError).once
+    driver.emit(sample_record)
+    driver.run
+  end
+
   def test_connection_failed_retry
     connection_resets = 0
 
@@ -566,7 +579,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     stub_request(:post, "http://localhost:9200/_bulk").with do |req|
       raise ZeroDivisionError, "any not host_unreachable_exceptions exception"
     end
-    
+
     driver.configure("reconnect_on_error true\n")
     driver.emit(sample_record)
 
@@ -590,7 +603,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     stub_request(:post, "http://localhost:9200/_bulk").with do |req|
       raise ZeroDivisionError, "any not host_unreachable_exceptions exception"
     end
-    
+
     driver.configure("reconnect_on_error false\n")
     driver.emit(sample_record)
 
