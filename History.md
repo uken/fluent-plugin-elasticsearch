@@ -4,6 +4,11 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 2.0.0.rc.6
+- Improve documentation (#304)
+- Handle dynamic_config misconfigurations (#305)
+- Escape basic authentication user information placeholders (#306)
+
 ### 2.0.0.rc.5
 - make configurable with `ssl_version` parameter (#299)
 - add `logstash_prefix_separator` config parameter (#297)
