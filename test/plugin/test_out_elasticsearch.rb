@@ -940,8 +940,23 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_nil(index_cmds[1]['@timestamp'])
   end
 
-  def test_adds_logstash_timestamp_when_configured
+  def test_adds_timestamp_when_logstash
     driver.configure("logstash_format true\n")
+    stub_elastic_ping
+    stub_elastic
+    ts = DateTime.now
+    time = Fluent::EventTime.from_time(ts.to_time)
+    driver.run(default_tag: 'test') do
+      driver.feed(time, sample_record)
+    end
+    tf = "%Y-%m-%dT%H:%M:%S%:z"
+    timef = Fluent::TimeFormatter.new(tf, true, ENV["TZ"])
+    assert(index_cmds[1].has_key? '@timestamp')
+    assert_equal(timef.format(Time.parse(index_cmds[1]['@timestamp'])).to_s, ts.to_s)
+  end
+
+  def test_adds_timestamp_when_include_timestamp
+    driver.configure("include_timestamp true\n")
     stub_elastic_ping
     stub_elastic
     ts = DateTime.now
@@ -957,6 +972,18 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_uses_custom_timestamp_when_included_in_record
     driver.configure("logstash_format true\n")
+    stub_elastic_ping
+    stub_elastic
+    ts = DateTime.new(2001,2,3).to_s
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record.merge!('@timestamp' => ts))
+    end
+    assert(index_cmds[1].has_key? '@timestamp')
+    assert_equal(index_cmds[1]['@timestamp'], ts)
+  end
+
+  def test_uses_custom_timestamp_when_included_in_record_without_logstash
+    driver.configure("include_timestamp true\n")
     stub_elastic_ping
     stub_elastic
     ts = DateTime.new(2001,2,3).to_s
@@ -995,6 +1022,22 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal("logstash-2001.02.03", index_cmds[0]['index']['_index'])
   end
 
+  def test_uses_custom_time_key_with_format_without_logstash
+    driver.configure("include_timestamp true
+                      index_name test
+                      time_key_format %Y-%m-%d %H:%M:%S.%N%z
+                      time_key vtm\n")
+    stub_elastic_ping
+    stub_elastic
+    ts = "2001-02-03 13:14:01.673+02:00"
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record.merge!('vtm' => ts))
+    end
+    assert(index_cmds[1].has_key? '@timestamp')
+    assert_equal(index_cmds[1]['@timestamp'], ts)
+    assert_equal("test", index_cmds[0]['index']['_index'])
+  end
+
   def test_uses_custom_time_key_exclude_timekey
     driver.configure("logstash_format true
                       time_key vtm
@@ -1018,6 +1061,21 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.feed(sample_record.merge!('@timestamp' => ts))
     end
     assert_equal("logstash-2001.02.03", index_cmds[0]['index']['_index'])
+    assert(index_cmds[1].has_key? '@timestamp')
+    assert_equal(index_cmds[1]['@timestamp'], ts)
+  end
+
+  def test_uses_custom_time_key_format_without_logstash
+    driver.configure("include_timestamp true
+                      index_name test
+                      time_key_format %Y-%m-%dT%H:%M:%S.%N%z\n")
+    stub_elastic_ping
+    stub_elastic
+    ts = "2001-02-03T13:14:01.673+02:00"
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record.merge!('@timestamp' => ts))
+    end
+    assert_equal("test", index_cmds[0]['index']['_index'])
     assert(index_cmds[1].has_key? '@timestamp')
     assert_equal(index_cmds[1]['@timestamp'], ts)
   end
