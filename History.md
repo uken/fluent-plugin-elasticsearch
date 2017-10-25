@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 1.10.2
+- backport adding `include_timestamp` option (#311)
+
 ### 1.10.1
 - backport escaping basic authentication user information placeholders (#309)
 - backport handling dynamic config misconfiguration (#308)
