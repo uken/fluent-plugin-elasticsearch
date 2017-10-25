@@ -10,7 +10,7 @@ module Fluent::Plugin
 
     config_param :delimiter, :string, :default => "."
 
-    DYNAMIC_PARAM_NAMES = %W[hosts host port logstash_format logstash_prefix logstash_dateformat time_key utc_index index_name tag_key type_name id_key parent_key routing_key write_operation]
+    DYNAMIC_PARAM_NAMES = %W[hosts host port include_timestamp logstash_format logstash_prefix logstash_dateformat time_key utc_index index_name tag_key type_name id_key parent_key routing_key write_operation]
     DYNAMIC_PARAM_SYMBOLS = DYNAMIC_PARAM_NAMES.map { |n| "@#{n}".to_sym }
 
     attr_reader :dynamic_config
@@ -148,7 +148,7 @@ module Fluent::Plugin
           next
         end
 
-        if eval_or_val(dynamic_conf['logstash_format'])
+        if eval_or_val(dynamic_conf['logstash_format']) || eval_or_val(dynamic_conf['include_timestamp'])
           if record.has_key?("@timestamp")
             time = Time.parse record["@timestamp"]
           elsif record.has_key?(dynamic_conf['time_key'])
@@ -157,7 +157,9 @@ module Fluent::Plugin
           else
             record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
           end
+        end
 
+        if eval_or_val(dynamic_conf['logstash_format'])
           if eval_or_val(dynamic_conf['utc_index'])
             target_index = "#{dynamic_conf['logstash_prefix']}-#{Time.at(time).getutc.strftime("#{dynamic_conf['logstash_dateformat']}")}"
           else
