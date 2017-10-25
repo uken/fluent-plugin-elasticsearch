@@ -771,7 +771,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic_ping
     stub_elastic
     ts = DateTime.now
-    time = Fluent::EventTime.from_time(ts.to_time)
+    time = ts.to_time
     driver.emit(sample_record, time)
     driver.run
     tf = "%Y-%m-%dT%H:%M:%S%:z"
