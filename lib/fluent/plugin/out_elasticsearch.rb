@@ -28,6 +28,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   config_param :target_type_key, :string, :default => nil
   config_param :time_key_format, :string, :default => nil
   config_param :time_precision, :integer, :default => 0
+  config_param :include_timestamp, :bool, :default => false
   config_param :logstash_format, :bool, :default => false
   config_param :logstash_prefix, :string, :default => "logstash"
   config_param :logstash_prefix_separator, :string, :default => '-'
@@ -310,10 +311,8 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
         record = flatten_record(record)
       end
 
-      target_index_parent, target_index_child_key = @target_index_key ? get_parent_of(record, @target_index_key) : nil
-      if target_index_parent && target_index_parent[target_index_child_key]
-        target_index = target_index_parent.delete(target_index_child_key)
-      elsif @logstash_format
+      dt = nil
+      if @logstash_format || @include_timestamp
         if record.has_key?(TIMESTAMP_FIELD)
           rts = record[TIMESTAMP_FIELD]
           dt = parse_time(rts, time, tag)
@@ -325,6 +324,12 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
           dt = Time.at(time).to_datetime
           record[TIMESTAMP_FIELD] = dt.iso8601(@time_precision)
         end
+      end
+
+      target_index_parent, target_index_child_key = @target_index_key ? get_parent_of(record, @target_index_key) : nil
+      if target_index_parent && target_index_parent[target_index_child_key]
+        target_index = target_index_parent.delete(target_index_child_key)
+      elsif @logstash_format
         dt = dt.new_offset(0) if @utc_index
         target_index = "#{@logstash_prefix}#{@logstash_prefix_separator}#{dt.strftime(@logstash_dateformat)}"
       else

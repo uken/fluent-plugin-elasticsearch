@@ -26,6 +26,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [time_precision](#time_precision)
   + [time_key](#time_key)
   + [time_key_exclude_timestamp](#time_key_exclude_timestamp)
+  + [include_timestamp](#time_key_exclude_timestamp)
   + [utc_index](#utc_index)
   + [target_index_key](#target_index_key)
   + [target_type_key](#target_type_key)
@@ -129,6 +130,14 @@ logstash_format true # defaults to false
 ```
 
 This is meant to make writing data into ElasticSearch indices compatible to what [Logstash](https://www.elastic.co/products/logstash) calls them. By doing this, one could take advantage of [Kibana](https://www.elastic.co/products/kibana). See logstash_prefix and logstash_dateformat to customize this index name pattern. The index name will be `#{logstash_prefix}-#{formated_date}`
+
+### include_timestamp
+
+```
+include_timestamp true # defaults to false
+```
+
+Adds a `@timestamp` field to the log, following all settings `logstash_format` does, except without the restrictions on `index_name`. This allows one to log to an alias in Elasticsearch and utilize the rollover API.
 
 ### logstash_prefix
 

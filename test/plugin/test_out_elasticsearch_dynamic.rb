@@ -232,7 +232,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_equal('fluentd', index_cmds.first['index']['_type'])
   end
 
-  def test_writes_to_speficied_index
+  def test_writes_to_specified_index
     driver.configure("index_name myindex\n")
     stub_elastic_ping
     stub_elastic
@@ -241,7 +241,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_equal('myindex', index_cmds.first['index']['_index'])
   end
 
-  def test_writes_to_speficied_index_uppercase
+  def test_writes_to_specified_index_uppercase
     driver.configure("index_name MyIndex\n")
     stub_elastic_ping
     stub_elastic
@@ -250,7 +250,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_equal('myindex', index_cmds.first['index']['_index'])
   end
 
-  def test_writes_to_speficied_type
+  def test_writes_to_specified_type
     driver.configure("type_name mytype\n")
     stub_elastic_ping
     stub_elastic
@@ -259,7 +259,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_equal('mytype', index_cmds.first['index']['_type'])
   end
 
-  def test_writes_to_speficied_host
+  def test_writes_to_specified_host
     driver.configure("host 192.168.33.50\n")
     stub_elastic_ping("http://192.168.33.50:9200")
     elastic_request = stub_elastic("http://192.168.33.50:9200/_bulk")
@@ -268,7 +268,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_requested(elastic_request)
   end
 
-  def test_writes_to_speficied_port
+  def test_writes_to_specified_port
     driver.configure("port 9201\n")
     stub_elastic_ping("http://localhost:9201")
     elastic_request = stub_elastic("http://localhost:9201/_bulk")
@@ -419,6 +419,17 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   end
 
   def test_uses_custom_timestamp_when_included_in_record
+    driver.configure("include_timestamp true\n")
+    stub_elastic_ping
+    stub_elastic
+    ts = DateTime.new(2001,2,3).to_s
+    driver.emit(sample_record.merge!('@timestamp' => ts))
+    driver.run
+    assert(index_cmds[1].has_key? '@timestamp')
+    assert_equal(index_cmds[1]['@timestamp'], ts)
+  end
+
+  def test_uses_custom_timestamp_when_included_in_record_logstash
     driver.configure("logstash_format true\n")
     stub_elastic_ping
     stub_elastic
@@ -429,7 +440,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_equal(index_cmds[1]['@timestamp'], ts)
   end
 
-  def test_uses_custom_time_key
+  def test_uses_custom_time_key_logstash
     driver.configure("logstash_format true
                       time_key vtm\n")
     stub_elastic_ping
@@ -441,7 +452,45 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_equal(index_cmds[1]['@timestamp'], ts)
   end
 
+  def test_uses_custom_time_key_timestamp
+    driver.configure("include_timestamp true
+                      time_key vtm\n")
+    stub_elastic_ping
+    stub_elastic
+    ts = DateTime.new(2001,2,3).to_s
+    driver.emit(sample_record.merge!('vtm' => ts))
+    driver.run
+    assert(index_cmds[1].has_key? '@timestamp')
+    assert_equal(index_cmds[1]['@timestamp'], ts)
+  end
+
+  def test_uses_custom_time_key_timestamp_custom_index
+    driver.configure("include_timestamp true
+                      index_name test
+                      time_key vtm\n")
+    stub_elastic_ping
+    stub_elastic
+    ts = DateTime.new(2001,2,3).to_s
+    driver.emit(sample_record.merge!('vtm' => ts))
+    driver.run
+    assert(index_cmds[1].has_key? '@timestamp')
+    assert_equal(index_cmds[1]['@timestamp'], ts)
+    assert_equal('test', index_cmds.first['index']['_index'])
+  end
+
   def test_uses_custom_time_key_exclude_timestamp
+    driver.configure("include_timestamp true
+                      time_key vtm
+                      time_key_exclude_timestamp true\n")
+    stub_elastic_ping
+    stub_elastic
+    ts = DateTime.new(2001,2,3).to_s
+    driver.emit(sample_record.merge!('vtm' => ts))
+    driver.run
+    assert(!index_cmds[1].key?('@timestamp'), '@timestamp should be missing')
+  end
+
+  def test_uses_custom_time_key_exclude_timestamp_logstash
     driver.configure("logstash_format true
                       time_key vtm
                       time_key_exclude_timestamp true\n")
