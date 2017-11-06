@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 2.0.0
+- Release for Fluentd v0.14 stable.
+
 ### 2.0.0.rc.7
 - Add `include_timestamp` option (#310)
 
