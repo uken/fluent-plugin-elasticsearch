@@ -388,6 +388,29 @@ This following record `{"name": "Johnny", "request_id": "87d89af7daffad6"}` will
 { "name": "Johnny", "request_id": "87d89af7daffad6" }
 ```
 
+Fluentd re-emits events that failed to be indexed/ingested in Elasticsearch with a new and unique `_id` value, this means that congested Elasticsearch clusters that reject events (due to command queue overflow, for example) will cause Fluentd to re-emit the event with a new `_id`, however Elasticsearch may actually process both (or more) attempts (with some delay) and create duplicate events in the index (since each have a unique `_id` value), one possible workaround is to use the [fluent-plugin-genhashvalue](https://github.com/mtakemi/fluent-plugin-genhashvalue) plugin to generate a unique `_hash` key in the record of each event, this `_hash` record can be used as the `id_key` to prevent Elasticsearch from creating deplicate events.
+
+```
+id_key _hash
+```
+
+Example configuration for [fluent-plugin-genhashvalue](https://github.com/mtakemi/fluent-plugin-genhashvalue) (review the documentation of the plugin for more details)
+```
+<filter logs.**>
+  @type genhashvalue
+  keys sessionid,requestid
+  hash_type md5    # md5/sha1/sha256/sha512
+  base64_enc true
+  base91_enc false
+  set_key _hash
+  separator _
+  inc_time_as_key true
+  inc_tag_as_key true
+</filter>
+```
+
+:warning: In order to avoid hash-collisions and loosing data careful consideration is required when choosing the keys in the event record that should be used to calculate the hash 
+
 ### parent_key
 
 ```
