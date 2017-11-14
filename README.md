@@ -347,7 +347,7 @@ reload_on_failure true # defaults to false
 You can set in the elasticsearch-transport how often dead connections from the elasticsearch-transport's pool will be resurrected.
 
 ```
-resurrect_after 5 # defaults to 60s
+resurrect_after 5s # defaults to 60s
 ```
 
 ### include_tag_key, tag_key
@@ -500,7 +500,7 @@ Starting with version 0.8.0, this gem uses excon, which supports proxy with envi
 
 ```
 buffer_type memory
-flush_interval 60
+flush_interval 60s
 retry_limit 17
 retry_wait 1.0
 num_threads 1
