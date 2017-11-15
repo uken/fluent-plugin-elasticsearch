@@ -13,6 +13,8 @@ module Fluent::Plugin
     DYNAMIC_PARAM_NAMES = %W[hosts host port include_timestamp logstash_format logstash_prefix logstash_dateformat time_key utc_index index_name tag_key type_name id_key parent_key routing_key write_operation]
     DYNAMIC_PARAM_SYMBOLS = DYNAMIC_PARAM_NAMES.map { |n| "@#{n}".to_sym }
 
+    include Fluent::Plugin::GenerateHashIdSupport
+
     attr_reader :dynamic_config
 
     def configure(conf)
@@ -129,6 +131,10 @@ module Fluent::Plugin
 
       chunk.msgpack_each do |time, record|
         next unless record.is_a? Hash
+
+        if @hash_config
+          record = generate_hash_id_key(record)
+        end
 
         begin
           # evaluate all configurations here

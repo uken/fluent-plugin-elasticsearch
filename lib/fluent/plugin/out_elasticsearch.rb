@@ -11,6 +11,7 @@ end
 
 require 'fluent/plugin/output'
 require_relative 'elasticsearch_index_template'
+require_relative 'generate_hash_id_support'
 
 module Fluent::Plugin
   class ElasticsearchOutput < Output
@@ -79,6 +80,7 @@ module Fluent::Plugin
     end
 
     include Fluent::ElasticsearchIndexTemplate
+    include Fluent::Plugin::GenerateHashIdSupport
 
     def initialize
       super
@@ -338,6 +340,10 @@ module Fluent::Plugin
 
         if @flatten_hashes
           record = flatten_record(record)
+        end
+
+        if @hash_config
+          record = generate_hash_id_key(record)
         end
 
         dt = nil
