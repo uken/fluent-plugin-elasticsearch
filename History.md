@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 1.10.3.rc.1
+- backport Add generating hash id mechanism to avoid records duplication (#323)
+
 ### 1.10.2
 - backport adding `include_timestamp` option (#311)
 
