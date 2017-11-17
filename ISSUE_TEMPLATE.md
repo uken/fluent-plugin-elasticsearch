@@ -10,6 +10,10 @@ Either clone and modify https://gist.github.com/pitr/9a518e840db58f435911
 
 Provide example config and message
 
+#### Expected Behavior or What you need to ask
+
+...
+
 #### Using Fluentd and ES plugin versions
 
 * Fluentd v0.12 or v0.14
