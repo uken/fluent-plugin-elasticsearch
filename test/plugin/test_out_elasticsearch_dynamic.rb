@@ -1,10 +1,12 @@
 require 'helper'
 require 'date'
+require 'fluent/test/helpers'
 require 'fluent/test/driver/output'
 require 'flexmock/test_unit'
 
 class ElasticsearchOutputDynamic < Test::Unit::TestCase
   include FlexMock::TestCase
+  include Fluent::Test::Helpers
 
   attr_accessor :index_cmds, :index_command_counts
 
@@ -314,6 +316,35 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       total += count
     end
     assert_equal(2000, total)
+  end
+
+  class AdditionalHashIdMechanismTest < self
+    data("default"            => {"hash_id_key" => '_id'},
+         "custom hash_id_key" => {"hash_id_key" => '_hash_id'},
+        )
+    def test_writes_with_genrate_hash(data)
+      driver.configure(Fluent::Config::Element.new(
+                         'ROOT', '', {
+                           '@type' => 'elasticsearch',
+                           'id_key' => data["hash_id_key"],
+                         }, [
+                           Fluent::Config::Element.new('hash', '', {
+                                                         'keys' => ['request_id'],
+                                                         'hash_id_key' => data["hash_id_key"],
+                                                       }, [])
+                         ]
+                       ))
+      stub_elastic_ping
+      stub_elastic
+      stub_elastic
+      flexmock(SecureRandom).should_receive(:uuid)
+        .and_return("82120f33-897a-4d9d-b3d5-14afd18fb412")
+      time = event_time("2017-10-15 15:00:23.34567890 UTC")
+      driver.run(default_tag: 'test') do
+        driver.feed(time, sample_record.merge('request_id' => 'elastic'))
+      end
+      assert_equal(Base64.strict_encode64(SecureRandom.uuid), index_cmds[1]["#{data["hash_id_key"]}"])
+    end
   end
 
   def test_makes_bulk_request
@@ -734,7 +765,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     stub_request(:post, "http://localhost:9200/_bulk").with do |req|
       raise ZeroDivisionError, "any not host_unreachable_exceptions exception"
     end
-    
+
     driver.configure("reconnect_on_error false\n")
 
     assert_raise(ZeroDivisionError) {
