@@ -11,6 +11,7 @@ end
 
 require 'fluent/output'
 require_relative 'elasticsearch_index_template'
+require_relative 'generate_hash_id_support'
 
 class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   class ConnectionFailure < StandardError; end
@@ -67,6 +68,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   config_param :pipeline, :string, :default => nil
 
   include Fluent::ElasticsearchIndexTemplate
+  include Fluent::GenerateHashIdSupport
 
   def initialize
     super
@@ -309,6 +311,10 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
 
       if @flatten_hashes
         record = flatten_record(record)
+      end
+
+      if @hash_config
+        record = generate_hash_id_key(record)
       end
 
       dt = nil
