@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 2.0.1
+- Releasing generating hash id mechanism to avoid records duplication feature.
+
 ### 2.0.1.rc.1
 - Add generating hash id mechanism to avoid records duplication (#318)
 
