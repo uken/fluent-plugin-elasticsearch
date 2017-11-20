@@ -10,6 +10,8 @@ rescue LoadError
 end
 
 require 'fluent/output'
+require_relative 'elasticsearch_constants'
+require_relative 'elasticsearch_error_handler'
 require_relative 'elasticsearch_index_template'
 require_relative 'generate_hash_id_support'
 
@@ -69,6 +71,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
 
   include Fluent::ElasticsearchIndexTemplate
   include Fluent::GenerateHashIdSupport
+  include Fluent::ElasticsearchConstants
 
   def initialize
     super
@@ -305,8 +308,10 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
     bulk_message = ''
     header = {}
     meta = {}
+    @error = Fluent::ElasticsearchErrorHandler.new(self)
 
     chunk.msgpack_each do |time, record|
+      @error.records += 1
       next unless record.is_a? Hash
 
       if @flatten_hashes
@@ -373,6 +378,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
       end
 
       append_record_to_messages(@write_operation, meta, header, record, bulk_message)
+      @error.bulk_message_count += 1
     end
 
     send_bulk(bulk_message) unless bulk_message.empty?
@@ -391,6 +397,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
     begin
       response = client.bulk body: data
       if response['errors']
+        @error.handle_error(response)
         log.error "Could not push log to Elasticsearch: #{response}"
       end
     rescue *client.transport.host_unreachable_exceptions => e
