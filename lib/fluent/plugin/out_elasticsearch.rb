@@ -10,6 +10,8 @@ rescue LoadError
 end
 
 require 'fluent/plugin/output'
+require_relative 'elasticsearch_constants'
+require_relative 'elasticsearch_error_handler'
 require_relative 'elasticsearch_index_template'
 require_relative 'generate_hash_id_support'
 
@@ -81,6 +83,7 @@ module Fluent::Plugin
 
     include Fluent::ElasticsearchIndexTemplate
     include Fluent::Plugin::GenerateHashIdSupport
+    include Fluent::Plugin::ElasticsearchConstants
 
     def initialize
       super
@@ -251,14 +254,6 @@ module Fluent::Plugin
       end.join(', ')
     end
 
-    BODY_DELIMITER = "\n".freeze
-    UPDATE_OP = "update".freeze
-    UPSERT_OP = "upsert".freeze
-    CREATE_OP = "create".freeze
-    INDEX_OP = "index".freeze
-    ID_FIELD = "_id".freeze
-    TIMESTAMP_FIELD = "@timestamp".freeze
-
     def append_record_to_messages(op, meta, header, record, msgs)
       case op
       when UPDATE_OP, UPSERT_OP
@@ -334,8 +329,10 @@ module Fluent::Plugin
 
       tag = chunk.metadata.tag
       logstash_prefix, index_name = expand_placeholders(chunk.metadata)
+      @error = Fluent::Plugin::ElasticsearchErrorHandler.new(self)
 
       chunk.msgpack_each do |time, record|
+        @error.records += 1
         next unless record.is_a? Hash
 
         if @flatten_hashes
@@ -402,6 +399,7 @@ module Fluent::Plugin
         end
 
         append_record_to_messages(@write_operation, meta, header, record, bulk_message)
+        @error.bulk_message_count += 1
       end
 
       send_bulk(bulk_message) unless bulk_message.empty?
@@ -420,6 +418,7 @@ module Fluent::Plugin
       begin
         response = client.bulk body: data
         if response['errors']
+          @error.handle_error(response)
           log.error "Could not push log to Elasticsearch: #{response}"
         end
       rescue *client.transport.host_unreachable_exceptions => e
