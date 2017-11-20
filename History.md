@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 1.11.0
+- backport adding bulk errors handling (#324)
+
 ### 1.10.3
 - releasing generating hash id mechanism to avoid records duplication backport (#323)
 
