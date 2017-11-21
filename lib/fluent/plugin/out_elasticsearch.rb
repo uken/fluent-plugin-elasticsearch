@@ -118,6 +118,10 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
     if @password && m = @password.match(/%{(?<password>.*)}/)
       @password = URI.encode_www_form_component(m["password"])
     end
+
+    if @hash_config
+      raise Fluent::ConfigError, "@hash_config.hash_id_key and id_key must be equal." unless @hash_config.hash_id_key == @id_key
+    end
   end
 
   def create_meta_config_map
