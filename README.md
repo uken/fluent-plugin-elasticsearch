@@ -563,7 +563,9 @@ Here is a sample config:
 ```
 <hash>
   hash_id_key _id    # storing generated hash id key
+  hash_id_key _hash    # storing generated hash id key
 </hash>
+id_key _hash # specify same key name which is specified in hash_id_key
 ```
 
 ### Not seeing a config you need?

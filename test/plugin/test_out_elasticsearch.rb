@@ -227,6 +227,21 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
   end
 
+  test 'with invaild generate id config' do
+    assert_raise(Fluent::ConfigError) {
+      driver.configure(Fluent::Config::Element.new(
+                         'ROOT', '', {
+                           '@type' => 'elasticsearch',
+                           'id_key' =>'id_mismatch',
+                         }, [
+                           Fluent::Config::Element.new('hash', '', {
+                                                         'hash_id_key' => '_hash',
+                                                       }, [])
+                         ]
+                       ))
+    }
+  end
+
   def test_template_already_present
     config = %{
       host            logs.google.com

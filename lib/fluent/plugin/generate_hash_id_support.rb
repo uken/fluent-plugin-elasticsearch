@@ -7,7 +7,7 @@ module Fluent
       def self.included(klass)
         klass.instance_eval {
           config_section :hash, param_name: :hash_config, required: false, multi: false do
-            config_param :hash_id_key, :string, default: '_id'
+            config_param :hash_id_key, :string, default: '_hash'
           end
         }
       end
