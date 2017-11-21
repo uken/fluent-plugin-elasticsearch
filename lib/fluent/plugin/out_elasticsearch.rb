@@ -242,14 +242,6 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
     end.join(', ')
   end
 
-  BODY_DELIMITER = "\n".freeze
-  UPDATE_OP = "update".freeze
-  UPSERT_OP = "upsert".freeze
-  CREATE_OP = "create".freeze
-  INDEX_OP = "index".freeze
-  ID_FIELD = "_id".freeze
-  TIMESTAMP_FIELD = "@timestamp".freeze
-
   def append_record_to_messages(op, meta, header, record, msgs)
     case op
     when UPDATE_OP, UPSERT_OP
