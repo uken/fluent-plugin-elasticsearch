@@ -4,6 +4,10 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 1.11.1
+- Raise ConfigError when specifying different @hash_config.hash_id_key and id_key configration (#326)
+- backport small typo fix in README.md (#328)
+
 ### 1.11.0
 - backport adding bulk errors handling (#324)
 
