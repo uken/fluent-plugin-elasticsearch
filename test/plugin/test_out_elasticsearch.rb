@@ -205,7 +205,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_configure_with_invaild_generate_id_config
-    assert_raise(Fluent::ConfigError) {
+    assert_raise_message(/Use bundled filer-elasticsearch-genid instead./) do
       driver.configure(Fluent::Config::Element.new(
                          'ROOT', '', {
                            '@type' => 'elasticsearch',
@@ -216,7 +216,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
                                                        }, [])
                          ]
                        ))
-    }
+    end
   end
 
   def test_template_already_present
@@ -558,25 +558,19 @@ class ElasticsearchOutput < Test::Unit::TestCase
          "custom hash_id_key" => {"hash_id_key" => '_hash_id'},
         )
     def test_writes_with_genrate_hash(data)
-      driver.configure(Fluent::Config::Element.new(
-                         'ROOT', '', {
-                           '@type' => 'elasticsearch',
-                           'id_key' => data["hash_id_key"],
-                         }, [
-                           Fluent::Config::Element.new('hash', '', {
-                                                         'keys' => ['request_id'],
-                                                         'hash_id_key' => data["hash_id_key"],
-                                                       }, [])
-                         ]
-                       ))
-      stub_elastic_ping
-      stub_elastic
-      flexmock(SecureRandom).should_receive(:uuid)
-        .and_return("13a0c028-bf7c-4ae2-ad03-ec09a40006df")
-      time = Time.parse("2017-10-15 15:00:23.34567890 UTC").to_i
-      driver.emit(sample_record.merge('request_id' => 'elastic'), time)
-      driver.run
-      assert_equal(Base64.strict_encode64(SecureRandom.uuid), index_cmds[1]["#{data["hash_id_key"]}"])
+      assert_raise_message(/Use bundled filer-elasticsearch-genid instead./) do
+        driver.configure(Fluent::Config::Element.new(
+                           'ROOT', '', {
+                             '@type' => 'elasticsearch',
+                             'id_key' => data["hash_id_key"],
+                           }, [
+                             Fluent::Config::Element.new('hash', '', {
+                                                           'keys' => ['request_id'],
+                                                           'hash_id_key' => data["hash_id_key"],
+                                                         }, [])
+                           ]
+                         ))
+      end
     end
   end
 

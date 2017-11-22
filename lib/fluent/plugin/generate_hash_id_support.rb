@@ -6,7 +6,9 @@ module Fluent
     def self.included(klass)
       klass.instance_eval {
         config_section :hash, param_name: :hash_config, required: false, multi: false do
-          config_param :hash_id_key, :string, default: '_hash'
+          config_param :hash_id_key, :string, default: '_hash',
+                       obsoleted: "Use bundled filer-elasticsearch-genid instead."
+
         end
       }
     end
