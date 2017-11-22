@@ -323,27 +323,19 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
          "custom hash_id_key" => {"hash_id_key" => '_hash_id'},
         )
     def test_writes_with_genrate_hash(data)
-      driver.configure(Fluent::Config::Element.new(
-                         'ROOT', '', {
-                           '@type' => 'elasticsearch',
-                           'id_key' => data["hash_id_key"],
-                         }, [
-                           Fluent::Config::Element.new('hash', '', {
-                                                         'keys' => ['request_id'],
-                                                         'hash_id_key' => data["hash_id_key"],
-                                                       }, [])
-                         ]
-                       ))
-      stub_elastic_ping
-      stub_elastic
-      stub_elastic
-      flexmock(SecureRandom).should_receive(:uuid)
-        .and_return("82120f33-897a-4d9d-b3d5-14afd18fb412")
-      time = event_time("2017-10-15 15:00:23.34567890 UTC")
-      driver.run(default_tag: 'test') do
-        driver.feed(time, sample_record.merge('request_id' => 'elastic'))
+      assert_raise_message(/Use bundled filer-elasticsearch-genid instead./) do
+        driver.configure(Fluent::Config::Element.new(
+                           'ROOT', '', {
+                             '@type' => 'elasticsearch',
+                             'id_key' => data["hash_id_key"],
+                           }, [
+                             Fluent::Config::Element.new('hash', '', {
+                                                           'keys' => ['request_id'],
+                                                           'hash_id_key' => data["hash_id_key"],
+                                                         }, [])
+                           ]
+                         ))
       end
-      assert_equal(Base64.strict_encode64(SecureRandom.uuid), index_cmds[1]["#{data["hash_id_key"]}"])
     end
   end
 
