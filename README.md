@@ -521,7 +521,7 @@ The bundled elasticsearch_genid filter can generate a unique _hash key for each 
 Here is a sample config:
 
 ```
-<filter>
+<filter **>
   @type elasticsearch_genid
   hash_id_key _hash    # storing generated hash id key (default is _hash)
 </filter>
