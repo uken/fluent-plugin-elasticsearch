@@ -323,7 +323,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
          "custom hash_id_key" => {"hash_id_key" => '_hash_id'},
         )
     def test_writes_with_genrate_hash(data)
-      assert_raise_message(/Use bundled filer-elasticsearch-genid instead./) do
+      assert_raise_message(/Use bundled filter-elasticsearch-genid instead./) do
         driver.configure(Fluent::Config::Element.new(
                            'ROOT', '', {
                              '@type' => 'elasticsearch',
