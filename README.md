@@ -568,6 +568,7 @@ Here is a sample config:
 <match **>
   @type elasticsearch
   id_key _hash # specify same key name which is specified in hash_id_key
+  remove_keys _hash # Elasticsearch doesn't like keys that start with _
   # other settings are ommitted.
 </match>
 ```
