@@ -563,7 +563,7 @@ Here is a sample config:
 ```
 <filter>
   @type elasticsearch_genid
-  # hash_id_key _hash    # storing generated hash id key (default is _hash)
+  hash_id_key _hash    # storing generated hash id key (default is _hash)
 </filter>
 <match **>
   @type elasticsearch
