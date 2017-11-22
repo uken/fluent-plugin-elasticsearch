@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 1.12.0.rc.1
+- Backport separating generate hash id module and bundled new plugin for generating unique hash id (#331)
+
 ### 1.11.1
 - Raise ConfigError when specifying different @hash_config.hash_id_key and id_key configration (#326)
 - backport small typo fix in README.md (#328)
