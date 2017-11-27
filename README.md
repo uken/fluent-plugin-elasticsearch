@@ -34,6 +34,7 @@ Current maintainers: @cosmo0920
   + [target_type_key](#target_type_key)
   + [template_name](#template_name)
   + [template_file](#template_file)
+  + [template_overwrite](#template_overwrite)
   + [templates](#templates)
   + [request_timeout](#request_timeout)
   + [reload_connections](#reload_connections)
@@ -294,7 +295,7 @@ Similar to `target_index_key` config, find the type name to write to in the reco
 
 ### template_name
 
-The name of the template to define. If a template by the name given is already present, it will be left unchanged.
+The name of the template to define. If a template by the name given is already present, it will be left unchanged, unless [template_overwrite](#template_overwrite) is set, in which case the template will be updated.
 
 This parameter along with template_file allow the plugin to behave similarly to Logstash (it installs a template at creation time) so that raw records are available. See [https://github.com/uken/fluent-plugin-elasticsearch/issues/33](https://github.com/uken/fluent-plugin-elasticsearch/issues/33).
 
@@ -315,6 +316,16 @@ templates { "templane_name_1": "path_to_template_1_file", "templane_name_2": "pa
 ```
 
 If `template_file` and `template_name` are set, then this parameter will be ignored.
+
+### template_overwrite
+
+Always update the template, even if it already exists.
+
+```
+template_overwrite true # defaults to false
+```
+
+One of [template_file](#template_file) or [templates](#templates) must also be specified if this is set.
 
 ### request_timeout
 

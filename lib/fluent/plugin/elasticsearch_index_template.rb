@@ -19,7 +19,12 @@ module Fluent::ElasticsearchIndexTemplate
     client.indices.put_template(:name => name, :body => template)
   end
 
-  def template_install(name, template_file)
+  def template_install(name, template_file, overwrite)
+    if overwrite
+      template_put(name, get_template(template_file))
+      log.info("Template '#{name}' overwritten with #{template_file}.")
+      return
+    end
     if !template_exists?(name)
       template_put(name, get_template(template_file))
       log.info("Template configured, but no template installed. Installed '#{name}' from #{template_file}.")
@@ -28,9 +33,9 @@ module Fluent::ElasticsearchIndexTemplate
     end
   end
 
-  def templates_hash_install (templates)
+  def templates_hash_install(templates, overwrite)
     templates.each do |key, value|
-      template_install(key, value)
+      template_install(key, value, overwrite)
     end
   end
 
