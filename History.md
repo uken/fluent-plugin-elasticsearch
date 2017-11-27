@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 2.3.0
+- Allow overwriting existing index template (#239)
+
 ### 2.2.0
 - GA release 2.2.0.
 
