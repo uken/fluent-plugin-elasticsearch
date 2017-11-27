@@ -62,6 +62,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   config_param :flatten_hashes_separator, :string, :default => "_"
   config_param :template_name, :string, :default => nil
   config_param :template_file, :string, :default => nil
+  config_param :template_overwrite, :bool, :default => false
   config_param :templates, :hash, :default => nil
   config_param :include_tag_key, :bool, :default => false
   config_param :tag_key, :string, :default => 'tag'
@@ -98,9 +99,9 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
     end
 
     if @template_name && @template_file
-      template_install(@template_name, @template_file)
+      template_install(@template_name, @template_file, @template_overwrite)
     elsif @templates
-      templates_hash_install (@templates)
+      templates_hash_install(@templates, @template_overwrite)
     end
 
     @meta_config_map = create_meta_config_map
