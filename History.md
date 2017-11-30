@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 2.4.0
+- Add built-in placeholders support against type_name parameter (#338)
+
 ### 2.3.0
 - Allow overwriting existing index template (#239)
 
