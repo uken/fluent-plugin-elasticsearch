@@ -320,7 +320,8 @@ module Fluent::Plugin
     def expand_placeholders(metadata)
       logstash_prefix = extract_placeholders(@logstash_prefix, metadata)
       index_name = extract_placeholders(@index_name, metadata)
-      return logstash_prefix, index_name
+      type_name = extract_placeholders(@type_name, metadata)
+      return logstash_prefix, index_name, type_name
     end
 
     def multi_workers_ready?
@@ -333,7 +334,7 @@ module Fluent::Plugin
       meta = {}
 
       tag = chunk.metadata.tag
-      logstash_prefix, index_name = expand_placeholders(chunk.metadata)
+      logstash_prefix, index_name, type_name = expand_placeholders(chunk.metadata)
       @error = Fluent::Plugin::ElasticsearchErrorHandler.new(self)
 
       chunk.msgpack_each do |time, record|
@@ -384,7 +385,7 @@ module Fluent::Plugin
         if target_type_parent && target_type_parent[target_type_child_key]
           target_type = target_type_parent.delete(target_type_child_key)
         else
-          target_type = @type_name
+          target_type = type_name
         end
 
         meta.clear

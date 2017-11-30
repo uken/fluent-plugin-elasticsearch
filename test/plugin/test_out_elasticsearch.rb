@@ -821,6 +821,16 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal('mytype', index_cmds.first['index']['_type'])
   end
 
+  def test_writes_to_speficied_type_with_placeholders
+    driver.configure("type_name mytype.${tag}\n")
+    stub_elastic_ping
+    stub_elastic
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+    assert_equal('mytype.test', index_cmds.first['index']['_type'])
+  end
+
   def test_writes_to_target_type_key
     driver.configure("target_type_key @target_type\n")
     stub_elastic_ping
