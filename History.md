@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 1.13.1
+- backport adding config parameter to enable elasticsearch-ruby's transporter logging (#343)
+
 ### 1.13.0
 - Backport allowing to overwrite existing index template (#336)
 
