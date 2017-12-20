@@ -74,7 +74,7 @@ module Fluent::Plugin
     config_param :time_parse_error_tag, :string, :default => 'Fluent::ElasticsearchOutput::TimeParser.error'
     config_param :reconnect_on_error, :bool, :default => false
     config_param :pipeline, :string, :default => nil
-
+    config_param :with_transporter_log, :bool, :default => false
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE
@@ -139,6 +139,12 @@ module Fluent::Plugin
       if @hash_config
         raise Fluent::ConfigError, "@hash_config.hash_id_key and id_key must be equal." unless @hash_config.hash_id_key == @id_key
       end
+      @transport_logger = nil
+      if @with_transporter_log
+        @transport_logger = log
+        log_level = conf['@log_level'] || conf['log_level']
+        log.warn "Consider to specify log_level with @log_level." unless log_level
+      end
     end
 
     def create_meta_config_map
@@ -187,6 +193,7 @@ module Fluent::Plugin
                                                                               reload_on_failure: @reload_on_failure,
                                                                               resurrect_after: @resurrect_after,
                                                                               retry_on_failure: 5,
+                                                                              logger: @transport_logger,
                                                                               transport_options: {
                                                                                 headers: { 'Content-Type' => 'application/json' },
                                                                                 request: { timeout: @request_timeout },

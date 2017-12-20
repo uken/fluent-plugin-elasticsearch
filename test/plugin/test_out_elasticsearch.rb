@@ -205,6 +205,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_nil instance.client_key
     assert_nil instance.client_cert
     assert_nil instance.client_key_pass
+    assert_false instance.with_transporter_log
   end
 
   test 'lack of tag in chunk_keys' do
