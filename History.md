@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 2.4.1
+- Add config parameter to enable elasticsearch-ruby's transporter logging (#342)
+
 ### 2.4.0
 - Add built-in placeholders support against type_name parameter (#338)
 
