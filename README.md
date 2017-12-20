@@ -48,6 +48,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [write_operation](#write_operation)
   + [time_parse_error_tag](#time_parse_error_tag)
   + [reconnect_on_error](#reconnect_on_error)
+  + [with_transporter_log](#with_transporter_log)
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Proxy Support](#proxy-support)
   + [Buffered output options](#buffered-output-options)
@@ -466,6 +467,17 @@ By default it will reconnect only on "host unreachable exceptions".
 We recommended to set this true in the presence of elasticsearch shield.
 ```
 reconnect_on_error true # defaults to false
+```
+
+### with_transporter_log
+
+This is debugging purpose option to enable to obtain transporter layer log.
+Default value is `false` for backward compatibility.
+
+We recommend to set this true if you start to debug this plugin.
+
+```
+with_transporter_log true
 ```
 
 ### Client/host certificate options
