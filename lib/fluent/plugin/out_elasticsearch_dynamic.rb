@@ -49,6 +49,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
                                                                             reload_on_failure: @reload_on_failure,
                                                                             resurrect_after: @resurrect_after,
                                                                             retry_on_failure: 5,
+                                                                            logger: @transport_logger,
                                                                             transport_options: {
                                                                               headers: { 'Content-Type' => 'application/json' },
                                                                               request: { timeout: @request_timeout },

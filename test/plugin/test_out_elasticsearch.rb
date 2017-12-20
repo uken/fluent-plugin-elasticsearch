@@ -202,6 +202,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_nil instance.client_key
     assert_nil instance.client_cert
     assert_nil instance.client_key_pass
+    assert_false instance.with_transporter_log
   end
 
   def test_configure_with_invaild_generate_id_config
