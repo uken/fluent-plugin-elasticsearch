@@ -16,5 +16,9 @@ Provide example config and message
 
 #### Using Fluentd and ES plugin versions
 
-* Fluentd v0.12 or v0.14
+* OS version
+* Fluentd v0.12 or v0.14/v1.0
+  * paste result of ``fluentd --version`` or ``td-agent --version``
 * ES plugin 2.x.y or 1.x.y
+  * paste boot log of fluentd or td-agent
+  * paste result of ``fluent-gem list``, ``td-agent-gem list`` or your Gemfile.lock
