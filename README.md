@@ -7,7 +7,7 @@
 [![Issue Stats](http://issuestats.com/github/uken/fluent-plugin-elasticsearch/badge/pr)](http://issuestats.com/github/uken/fluent-plugin-elasticsearch)
 [![Issue Stats](http://issuestats.com/github/uken/fluent-plugin-elasticsearch/badge/issue)](http://issuestats.com/github/uken/fluent-plugin-elasticsearch)
 
-Send your logs to ElasticSearch (and search them with Kibana maybe?)
+Send your logs to Elasticsearch (and search them with Kibana maybe?)
 
 Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-elasticsearch-service](https://github.com/atomita/fluent-plugin-aws-elasticsearch-service)
 
@@ -95,7 +95,7 @@ In your Fluentd configuration, use `@type elasticsearch`. Additional configurati
 
 ### Index templates
 
-This plugin creates ElasticSearch indices by merely writing to them. Consider using [Index Templates](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html) to gain control of what get indexed and how. See [this example](https://github.com/uken/fluent-plugin-elasticsearch/issues/33#issuecomment-38693282) for a good starting point.
+This plugin creates Elasticsearch indices by merely writing to them. Consider using [Index Templates](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html) to gain control of what get indexed and how. See [this example](https://github.com/uken/fluent-plugin-elasticsearch/issues/33#issuecomment-38693282) for a good starting point.
 
 ## Configuration
 
@@ -107,9 +107,9 @@ hosts host1:port1,host2:port2,host3:port3
 hosts https://customhost.com:443/path,https://username:password@host-failover.com:443
 ```
 
-You can specify multiple ElasticSearch hosts with separator ",".
+You can specify multiple Elasticsearch hosts with separator ",".
 
-If you specify multiple hosts, this plugin will load balance updates to ElasticSearch. This is an [elasticsearch-ruby](https://github.com/elasticsearch/elasticsearch-ruby) feature, the default strategy is round-robin.
+If you specify multiple hosts, this plugin will load balance updates to Elasticsearch. This is an [elasticsearch-ruby](https://github.com/elasticsearch/elasticsearch-ruby) feature, the default strategy is round-robin.
 
 And this plugin will escape required URL encoded characters within `%{}` placeholders.
 
@@ -145,7 +145,7 @@ Specify `ssl_verify false` to skip ssl verification (defaults to true)
 logstash_format true # defaults to false
 ```
 
-This is meant to make writing data into ElasticSearch indices compatible to what [Logstash](https://www.elastic.co/products/logstash) calls them. By doing this, one could take advantage of [Kibana](https://www.elastic.co/products/kibana). See logstash_prefix and logstash_dateformat to customize this index name pattern. The index name will be `#{logstash_prefix}-#{formated_date}`
+This is meant to make writing data into Elasticsearch indices compatible to what [Logstash](https://www.elastic.co/products/logstash) calls them. By doing this, one could take advantage of [Kibana](https://www.elastic.co/products/kibana). See logstash_prefix and logstash_dateformat to customize this index name pattern. The index name will be `#{logstash_prefix}-#{formated_date}`
 
 :warning: Setting this option to `true` will ignore the `index_name` setting. The default index name prefix is `logstash-`.
 
@@ -332,7 +332,7 @@ One of [template_file](#template_file) or [templates](#templates) must also be s
 
 You can specify HTTP request timeout.
 
-This is useful when ElasticSearch cannot return response for bulk request within the default of 5 seconds.
+This is useful when Elasticsearch cannot return response for bulk request within the default of 5 seconds.
 
 ```
 request_timeout 15s # defaults to 5s
@@ -340,7 +340,7 @@ request_timeout 15s # defaults to 5s
 
 ### reload_connections
 
-You can tune how the elasticsearch-transport host reloading feature works. By default it will reload the host list from the server every 10,000th request to spread the load. This can be an issue if your ElasticSearch cluster is behind a Reverse Proxy, as Fluentd process may not have direct network access to the ElasticSearch nodes.
+You can tune how the elasticsearch-transport host reloading feature works. By default it will reload the host list from the server every 10,000th request to spread the load. This can be an issue if your Elasticsearch cluster is behind a Reverse Proxy, as Fluentd process may not have direct network access to the Elasticsearch nodes.
 
 ```
 reload_connections false # defaults to true
@@ -380,7 +380,7 @@ This will add the Fluentd tag in the JSON record. For instance, if you have a co
 </match>
 ```
 
-The record inserted into ElasticSearch would be
+The record inserted into Elasticsearch would be
 
 ```
 {"_key": "my.logs", "name": "Johnny Doeie"}
@@ -392,9 +392,9 @@ The record inserted into ElasticSearch would be
 id_key request_id # use "request_id" field as a record id in ES
 ```
 
-By default, all records inserted into ElasticSearch get a random _id. This option allows to use a field in the record as an identifier.
+By default, all records inserted into Elasticsearch get a random _id. This option allows to use a field in the record as an identifier.
 
-This following record `{"name": "Johnny", "request_id": "87d89af7daffad6"}` will trigger the following ElasticSearch command
+This following record `{"name": "Johnny", "request_id": "87d89af7daffad6"}` will trigger the following Elasticsearch command
 
 ```
 { "index" : { "_index": "logstash-2013.01.01", "_type": "fluentd", "_id": "87d89af7daffad6" } }
@@ -435,7 +435,7 @@ If your input is
 { "name": "Johnny", "a_parent": "my_parent" }
 ```
 
-ElasticSearch command would be
+Elasticsearch command would be
 
 ```
 { "index" : { "_index": "****", "_type": "****", "_id": "****", "_parent": "my_parent" } }
@@ -520,12 +520,12 @@ with_transporter_log true
 
 ### Client/host certificate options
 
-Need to verify ElasticSearch's certificate?  You can use the following parameter to specify a CA instead of using an environment variable.
+Need to verify Elasticsearch's certificate?  You can use the following parameter to specify a CA instead of using an environment variable.
 ```
 ca_file /path/to/your/ca/cert
 ```
 
-Does your ElasticSearch cluster want to verify client connections?  You can specify the following parameters to use your client certificate, key, and key password for your connection.
+Does your Elasticsearch cluster want to verify client connections?  You can specify the following parameters to use your client certificate, key, and key password for your connection.
 ```
 client_cert /path/to/your/client/cert
 client_key /path/to/your/private/key
@@ -600,7 +600,7 @@ Here is a sample config:
 
 We try to keep the scope of this plugin small and not add too many configuration options. If you think an option would be useful to others, feel free to open an issue or contribute a Pull Request.
 
-Alternatively, consider using [fluent-plugin-forest](https://github.com/tagomoris/fluent-plugin-forest). For example, to configure multiple tags to be sent to different ElasticSearch indices:
+Alternatively, consider using [fluent-plugin-forest](https://github.com/tagomoris/fluent-plugin-forest). For example, to configure multiple tags to be sent to different Elasticsearch indices:
 
 ```
 <match my.logs.*>
@@ -620,7 +620,7 @@ And yet another option is described in Dynamic Configuration section.
 
 ### Dynamic configuration
 
-If you want configurations to depend on information in messages, you can use `elasticsearch_dynamic`. This is an experimental variation of the ElasticSearch plugin allows configuration values to be specified in ways such as the below:
+If you want configurations to depend on information in messages, you can use `elasticsearch_dynamic`. This is an experimental variation of the Elasticsearch plugin allows configuration values to be specified in ways such as the below:
 
 ```
 <match my.logs.*>
