@@ -187,8 +187,8 @@ module Fluent::Plugin
         meta = {"_index" => target_index, "_type" => dynamic_conf['type_name']}
 
         @meta_config_map.each_pair do |config_name, meta_key|
-          if dynamic_conf[config_name] && record[dynamic_conf[config_name]]
-            meta[meta_key] = record[dynamic_conf[config_name]]
+          if dynamic_conf[config_name] && accessor = record_accessor_create(dynamic_conf[config_name])
+            meta[meta_key] = accessor.call(record)
           end
         end
 

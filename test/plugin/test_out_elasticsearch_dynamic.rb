@@ -31,6 +31,12 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     {'age' => 26, 'request_id' => '42', 'parent_id' => 'parent', 'routing_id' => 'routing'}
   end
 
+  def nested_sample_record
+    {'nested' =>
+     {'age' => 26, 'parent_id' => 'parent', 'routing_id' => 'routing', 'request_id' => '42'}
+    }
+  end
+
   def stub_elastic_ping(url="http://localhost:9200")
     stub_request(:head, url).to_return(:status => 200, :body => "", :headers => {})
   end
@@ -582,6 +588,38 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_equal(index_cmds[0]['index']['_id'], '42')
   end
 
+  class NestedIdKeyTest < self
+    def test_adds_nested_id_key_with_dot
+      driver.configure("id_key nested.request_id\n")
+      stub_elastic_ping
+      stub_elastic
+      driver.run(default_tag: 'test') do
+        driver.feed(nested_sample_record)
+      end
+      assert_equal(index_cmds[0]['index']['_id'], '42')
+    end
+
+    def test_adds_nested_id_key_with_dollar_dot
+      driver.configure("id_key $.nested.request_id\n")
+      stub_elastic_ping
+      stub_elastic
+      driver.run(default_tag: 'test') do
+        driver.feed(nested_sample_record)
+      end
+      assert_equal(index_cmds[0]['index']['_id'], '42')
+    end
+
+    def test_adds_nested_id_key_with_bracket
+      driver.configure("id_key $['nested']['request_id']\n")
+      stub_elastic_ping
+      stub_elastic
+      driver.run(default_tag: 'test') do
+        driver.feed(nested_sample_record)
+      end
+      assert_equal(index_cmds[0]['index']['_id'], '42')
+    end
+  end
+
   def test_doesnt_add_id_key_if_missing_when_configured
     driver.configure("id_key another_request_id\n")
     stub_elastic_ping
@@ -611,6 +649,38 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_equal(index_cmds[0]['index']['_parent'], 'parent')
   end
 
+  class NestedParentKeyTest < self
+    def test_adds_nested_parent_key_with_dot
+      driver.configure("parent_key nested.parent_id\n")
+      stub_elastic_ping
+      stub_elastic
+      driver.run(default_tag: 'test') do
+        driver.feed(nested_sample_record)
+      end
+      assert_equal(index_cmds[0]['index']['_parent'], 'parent')
+    end
+
+    def test_adds_nested_parent_key_with_dollar_dot
+      driver.configure("parent_key $.nested.parent_id\n")
+      stub_elastic_ping
+      stub_elastic
+      driver.run(default_tag: 'test') do
+        driver.feed(nested_sample_record)
+      end
+      assert_equal(index_cmds[0]['index']['_parent'], 'parent')
+    end
+
+    def test_adds_nested_parent_key_with_bracket
+      driver.configure("parent_key $['nested']['parent_id']\n")
+      stub_elastic_ping
+      stub_elastic
+      driver.run(default_tag: 'test') do
+        driver.feed(nested_sample_record)
+      end
+      assert_equal(index_cmds[0]['index']['_parent'], 'parent')
+    end
+  end
+
   def test_doesnt_add_parent_key_if_missing_when_configured
     driver.configure("parent_key another_parent_id\n")
     stub_elastic_ping
@@ -638,6 +708,38 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.feed(sample_record)
     end
     assert_equal(index_cmds[0]['index']['_routing'], 'routing')
+  end
+
+  class NestedRoutingKeyTest < self
+    def test_adds_nested_routing_key_with_dot
+      driver.configure("routing_key nested.routing_id\n")
+      stub_elastic_ping
+      stub_elastic
+      driver.run(default_tag: 'test') do
+        driver.feed(nested_sample_record)
+      end
+      assert_equal(index_cmds[0]['index']['_routing'], 'routing')
+    end
+
+    def test_adds_nested_routing_key_with_dollar_dot
+      driver.configure("routing_key $.nested.routing_id\n")
+      stub_elastic_ping
+      stub_elastic
+      driver.run(default_tag: 'test') do
+        driver.feed(nested_sample_record)
+      end
+      assert_equal(index_cmds[0]['index']['_routing'], 'routing')
+    end
+
+    def test_adds_nested_routing_key_with_bracket
+      driver.configure("routing_key $['nested']['routing_id']\n")
+      stub_elastic_ping
+      stub_elastic
+      driver.run(default_tag: 'test') do
+        driver.feed(nested_sample_record)
+      end
+      assert_equal(index_cmds[0]['index']['_routing'], 'routing')
+    end
   end
 
   def test_doesnt_add_routing_key_if_missing_when_configured
