@@ -6,7 +6,7 @@ Gem::Specification.new do |s|
   s.version       = '2.4.1'
   s.authors       = ['diogo', 'pitr']
   s.email         = ['pitr.vern@gmail.com', 'me@diogoterror.com']
-  s.description   = %q{ElasticSearch output plugin for Fluent event collector}
+  s.description   = %q{Elasticsearch output plugin for Fluent event collector}
   s.summary       = s.description
   s.homepage      = 'https://github.com/uken/fluent-plugin-elasticsearch'
   s.license       = 'Apache-2.0'
