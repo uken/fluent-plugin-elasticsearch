@@ -188,7 +188,9 @@ module Fluent::Plugin
 
         @meta_config_map.each_pair do |config_name, meta_key|
           if dynamic_conf[config_name] && accessor = record_accessor_create(dynamic_conf[config_name])
-            meta[meta_key] = accessor.call(record)
+            if raw_value = accessor.call(record)
+              meta[meta_key] = raw_value
+            end
           end
         end
 
