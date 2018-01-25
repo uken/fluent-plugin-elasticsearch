@@ -19,7 +19,7 @@ module Fluent::Plugin
   class ElasticsearchOutput < Output
     class ConnectionFailure < StandardError; end
 
-    helpers :event_emitter, :compat_parameters
+    helpers :event_emitter, :compat_parameters, :record_accessor
 
     Fluent::Plugin.register_output('elasticsearch', self)
 
@@ -120,6 +120,11 @@ module Fluent::Plugin
         templates_hash_install(@templates, @template_overwrite)
       end
 
+      # Consider missing the prefix of "$." in nested key specifiers.
+      @id_key = convert_compat_id_key(@id_key) if @id_key
+      @parent_key = convert_compat_id_key(@parent_key) if @parent_key
+      @routing_key = convert_compat_id_key(@routing_key) if @routing_key
+
       @meta_config_map = create_meta_config_map
 
       begin
@@ -147,11 +152,18 @@ module Fluent::Plugin
       end
     end
 
+    def convert_compat_id_key(key)
+      if key.include?('.') && !key.start_with?('$[')
+        key = "$.#{key}" unless key.start_with?('$.')
+      end
+      key
+    end
+
     def create_meta_config_map
       result = []
-      result << [@id_key, '_id'] if @id_key
-      result << [@parent_key, '_parent'] if @parent_key
-      result << [@routing_key, '_routing'] if @routing_key
+      result << [record_accessor_create(@id_key), '_id'] if @id_key
+      result << [record_accessor_create(@parent_key), '_parent'] if @parent_key
+      result << [record_accessor_create(@routing_key), '_routing'] if @routing_key
       result
     end
 
@@ -403,8 +415,10 @@ module Fluent::Plugin
           meta["pipeline".freeze] = @pipeline
         end
 
-        @meta_config_map.each do |record_key, meta_key|
-          meta[meta_key] = record[record_key] if record[record_key]
+        @meta_config_map.each do |record_accessor, meta_key|
+          if raw_value = record_accessor.call(record)
+            meta[meta_key] = raw_value
+          end
         end
 
         if @remove_keys

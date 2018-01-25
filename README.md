@@ -68,7 +68,7 @@ Current maintainers: @cosmo0920
 
 | fluent-plugin-elasticsearch  | fluentd | ruby |
 |-------------------|---------|------|
-| >= 2.0.0 | >= v0.14.0 | >= 2.1 |
+| >= 2.0.0 | >= v0.14.20 | >= 2.1 |
 |  < 2.0.0 | >= v0.12.0 | >= 1.9 |
 
 NOTE: For v0.12 version, you should use 1.x.y version. Please send patch into v0.12 branch if you encountered 1.x version's bug.
@@ -422,7 +422,32 @@ Example configuration for [fluent-plugin-genhashvalue](https://github.com/mtakem
 </filter>
 ```
 
-:warning: In order to avoid hash-collisions and loosing data careful consideration is required when choosing the keys in the event record that should be used to calculate the hash 
+:warning: In order to avoid hash-collisions and loosing data careful consideration is required when choosing the keys in the event record that should be used to calculate the hash
+
+#### Using nested key
+
+Nested key specifying syntax is also supported.
+
+With the following configuration
+
+```aconf
+id_key $.nested.request_id
+```
+
+and the following nested record
+
+```json
+{"nested":{"name": "Johnny", "request_id": "87d89af7daffad6"}}
+```
+
+will trigger the following Elasticsearch command
+
+```
+{"index":{"_index":"fluentd","_type":"fluentd","_id":"87d89af7daffad6"}}
+{"nested":{"name":"Johnny","request_id":"87d89af7daffad6"}}
+```
+
+:warning: Note that [Hash flattening](#hash-flattening) may be conflict nested record feature.
 
 ### parent_key
 
@@ -443,6 +468,31 @@ Elasticsearch command would be
 ```
 
 if `parent_key` is not configed or the `parent_key` is absent in input record, nothing will happen.
+
+#### Using nested key
+
+Nested key specifying syntax is also supported.
+
+With the following configuration
+
+```aconf
+parent_key $.nested.a_parent
+```
+
+and the following nested record
+
+```json
+{"nested":{ "name": "Johnny", "a_parent": "my_parent" }}
+```
+
+will trigger the following Elasticsearch command
+
+```
+{"index":{"_index":"fluentd","_type":"fluentd","_parent":"my_parent"}}
+{"nested":{"name":"Johnny","a_parent":"my_parent"}}
+```
+
+:warning: Note that [Hash flattening](#hash-flattening) may be conflict nested record feature.
 
 ### routing_key
 
