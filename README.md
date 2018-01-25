@@ -447,6 +447,8 @@ will trigger the following Elasticsearch command
 {"nested":{"name":"Johnny","request_id":"87d89af7daffad6"}}
 ```
 
+:warning: Note that [Hash flattening](#hash-flattening) may be conflict nested record feature.
+
 ### parent_key
 
 ```
@@ -489,6 +491,8 @@ will trigger the following Elasticsearch command
 {"index":{"_index":"fluentd","_type":"fluentd","_parent":"my_parent"}}
 {"nested":{"name":"Johnny","a_parent":"my_parent"}}
 ```
+
+:warning: Note that [Hash flattening](#hash-flattening) may be conflict nested record feature.
 
 ### routing_key
 
