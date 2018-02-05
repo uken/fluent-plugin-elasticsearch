@@ -1249,8 +1249,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_uses_custom_time_key
     driver.configure("logstash_format true
-                      time_key vtm
-                      time_precision 0\n")
+                      time_key vtm\n")
     stub_elastic_ping
     stub_elastic
     ts = DateTime.new(2001,2,3).to_s
@@ -1258,14 +1257,13 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.feed(sample_record.merge!('vtm' => ts))
     end
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], ts)
+    assert_equal(index_cmds[1]['@timestamp'], ts.iso8601(9))
   end
 
   def test_uses_custom_time_key_with_format
     driver.configure("logstash_format true
                       time_key_format %Y-%m-%d %H:%M:%S.%N%z
-                      time_key vtm
-                      time_precision 3\n")
+                      time_key vtm\n")
     stub_elastic_ping
     stub_elastic
     ts = "2001-02-03 13:14:01.673+02:00"
@@ -1273,7 +1271,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.feed(sample_record.merge!('vtm' => ts))
     end
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], ts)
+    assert_equal(index_cmds[1]['@timestamp'], ts.iso8601(9))
     assert_equal("logstash-2001.02.03", index_cmds[0]['index']['_index'])
   end
 
@@ -1281,8 +1279,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("include_timestamp true
                       index_name test
                       time_key_format %Y-%m-%d %H:%M:%S.%N%z
-                      time_key vtm
-                      time_precision 3\n")
+                      time_key vtm\n")
     stub_elastic_ping
     stub_elastic
     ts = "2001-02-03 13:14:01.673+02:00"
@@ -1290,7 +1287,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.feed(sample_record.merge!('vtm' => ts))
     end
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], ts)
+    assert_equal(index_cmds[1]['@timestamp'], ts.iso8601(9))
     assert_equal("test", index_cmds[0]['index']['_index'])
   end
 
@@ -1318,7 +1315,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
     assert_equal("logstash-2001.02.03", index_cmds[0]['index']['_index'])
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], ts)
+    assert_equal(index_cmds[1]['@timestamp'], ts.iso8601(9))
   end
 
   def test_uses_custom_time_key_format_without_logstash
@@ -1333,7 +1330,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
     assert_equal("test", index_cmds[0]['index']['_index'])
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], ts)
+    assert_equal(index_cmds[1]['@timestamp'], ts.iso8601(9))
   end
 
   data(:default => nil,
