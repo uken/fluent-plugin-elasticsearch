@@ -1265,7 +1265,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("logstash_format true
                       time_key_format %Y-%m-%d %H:%M:%S.%N%z
                       time_key vtm
-                      time_precision 0\n")
+                      time_precision 3\n")
     stub_elastic_ping
     stub_elastic
     ts = "2001-02-03 13:14:01.673+02:00"
@@ -1282,7 +1282,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
                       index_name test
                       time_key_format %Y-%m-%d %H:%M:%S.%N%z
                       time_key vtm
-                      time_precision 0\n")
+                      time_precision 3\n")
     stub_elastic_ping
     stub_elastic
     ts = "2001-02-03 13:14:01.673+02:00"
