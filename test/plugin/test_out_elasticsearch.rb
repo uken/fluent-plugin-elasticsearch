@@ -706,7 +706,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
                        ))
       stub_elastic_ping
       stub_elastic
-      time = Time.parse Date.today.to_s
+      time = Time.parse Date.today.iso8601
       driver.run(default_tag: 'test') do
         driver.feed(time.to_i, sample_record)
       end
@@ -722,7 +722,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
                            Fluent::Config::Element.new('buffer', 'tag,pipeline_id', {}, [])
                          ]
                        ))
-      time = Time.parse Date.today.to_s
+      time = Time.parse Date.today.iso8601
       pipeline_id = "mypipeline"
       logstash_index = "myindex.#{pipeline_id}"
       stub_elastic_ping
@@ -761,7 +761,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_writes_to_target_index_key_logstash
     driver.configure("target_index_key @target_index
                       logstash_format true")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
@@ -773,7 +773,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
    def test_writes_to_target_index_key_logstash_uppercase
     driver.configure("target_index_key @target_index
                       logstash_format true")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
@@ -808,7 +808,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_writes_to_target_index_key_fallack_logstash
     driver.configure("target_index_key @target_index\n
                       logstash_format true")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "logstash-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
@@ -1040,7 +1040,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_writes_to_logstash_index_with_specified_prefix
     driver.configure("logstash_format true
                       logstash_prefix myprefix")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
@@ -1055,7 +1055,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("logstash_format true
                       logstash_prefix_separator #{separator}
                       logstash_prefix myprefix")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "myprefix#{separator}#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
@@ -1069,7 +1069,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     def test_writes_to_logstash_index_with_specified_prefix_and_tag_placeholder
       driver.configure("logstash_format true
                       logstash_prefix myprefix-${tag}")
-      time = Time.parse Date.today.to_s
+      time = Time.parse Date.today.iso8601
       logstash_index = "myprefix-test-#{time.getutc.strftime("%Y.%m.%d")}"
       stub_elastic_ping
       stub_elastic
@@ -1092,7 +1092,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
                                                        }, [])
                          ]
                        ))
-      time = Time.parse Date.today.to_s
+      time = Time.parse Date.today.iso8601
       logstash_index = "myprefix-#{time.getutc.strftime("%H")}-#{time.getutc.strftime("%Y.%m.%d")}"
       stub_elastic_ping
       stub_elastic
@@ -1112,7 +1112,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
                            Fluent::Config::Element.new('buffer', 'tag,pipeline_id', {}, [])
                          ]
                        ))
-      time = Time.parse Date.today.to_s
+      time = Time.parse Date.today.iso8601
       pipeline_id = "mypipeline"
       logstash_index = "myprefix-#{pipeline_id}-#{time.getutc.strftime("%Y.%m.%d")}"
       stub_elastic_ping
@@ -1127,7 +1127,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_writes_to_logstash_index_with_specified_prefix_uppercase
     driver.configure("logstash_format true
                       logstash_prefix MyPrefix")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
@@ -1142,7 +1142,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     def test_writes_to_logstash_index_with_specified_dateformat
     driver.configure("logstash_format true
                       logstash_dateformat %Y.%m")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "logstash-#{time.getutc.strftime("%Y.%m")}"
     stub_elastic_ping
     stub_elastic
@@ -1156,7 +1156,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("logstash_format true
                       logstash_prefix myprefix
                       logstash_dateformat %Y.%m")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m")}"
     stub_elastic_ping
     stub_elastic
@@ -1202,10 +1202,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(time, sample_record)
     end
-    tf = "%Y-%m-%dT%H:%M:%S%:z"
-    timef = Fluent::TimeFormatter.new(tf, true, ENV["TZ"])
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(timef.format(Time.parse(index_cmds[1]['@timestamp'])).to_s, ts.to_s)
+    assert_equal(index_cmds[1]['@timestamp'], ts.iso8601(9))
   end
 
   def test_adds_timestamp_when_include_timestamp
@@ -1217,17 +1215,15 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(time, sample_record)
     end
-    tf = "%Y-%m-%dT%H:%M:%S%:z"
-    timef = Fluent::TimeFormatter.new(tf, true, ENV["TZ"])
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(timef.format(Time.parse(index_cmds[1]['@timestamp'])).to_s, ts.to_s)
+    assert_equal(index_cmds[1]['@timestamp'], ts.iso8601(9))
   end
 
   def test_uses_custom_timestamp_when_included_in_record
     driver.configure("logstash_format true\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('@timestamp' => ts))
     end
@@ -1239,7 +1235,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("include_timestamp true\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('@timestamp' => ts))
     end
@@ -1252,7 +1248,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
                       time_key vtm\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('vtm' => ts))
     end
@@ -1297,7 +1293,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
                       time_key_exclude_timestamp true\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('vtm' => ts))
     end
