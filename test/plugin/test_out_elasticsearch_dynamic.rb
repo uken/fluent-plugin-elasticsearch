@@ -369,7 +369,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
 
   def test_writes_to_logstash_index
     driver.configure("logstash_format true\n")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "logstash-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
@@ -382,7 +382,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   def test_writes_to_logstash_utc_index
     driver.configure("logstash_format true
                       utc_index false")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     utc_index = "logstash-#{time.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
@@ -395,7 +395,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   def test_writes_to_logstash_index_with_specified_prefix
     driver.configure("logstash_format true
                       logstash_prefix myprefix")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
@@ -408,7 +408,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   def test_writes_to_logstash_index_with_specified_prefix_uppercase
     driver.configure("logstash_format true
                       logstash_prefix MyPrefix")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
@@ -421,7 +421,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     def test_writes_to_logstash_index_with_specified_dateformat
     driver.configure("logstash_format true
                       logstash_dateformat %Y.%m")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "logstash-#{time.getutc.strftime("%Y.%m")}"
     stub_elastic_ping
     stub_elastic
@@ -435,7 +435,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     driver.configure("logstash_format true
                       logstash_prefix myprefix
                       logstash_dateformat %Y.%m")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m")}"
     stub_elastic_ping
     stub_elastic
@@ -464,14 +464,14 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.feed(time, sample_record)
     end
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], ts.to_s)
+    assert_equal(index_cmds[1]['@timestamp'], ts.iso8601)
   end
 
   def test_uses_custom_timestamp_when_included_in_record
     driver.configure("include_timestamp true\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('@timestamp' => ts))
     end
@@ -483,7 +483,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     driver.configure("logstash_format true\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('@timestamp' => ts))
     end
@@ -496,7 +496,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
                       time_key vtm\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('vtm' => ts))
     end
@@ -509,7 +509,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
                       time_key vtm\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('vtm' => ts))
     end
@@ -523,7 +523,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
                       time_key vtm\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('vtm' => ts))
     end
@@ -538,7 +538,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
                       time_key_exclude_timestamp true\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('vtm' => ts))
     end
@@ -551,7 +551,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
                       time_key_exclude_timestamp true\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('vtm' => ts))
     end
