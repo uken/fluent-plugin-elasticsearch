@@ -4,8 +4,11 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 2.6.0
+- Handle high precision time format when using custom time_key (#360)
+
 ### 2.5.0
-- Using nested record in `id_key`, `parent_key`, and `routing_key` (#351
+- Using nested record in `id_key`, `parent_key`, and `routing_key` (#351)
 - Fix inverted case of a proper noun "Elasticsearch" (#349)
 
 ### 2.4.1
