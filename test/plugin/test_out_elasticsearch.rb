@@ -1267,7 +1267,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.feed(sample_record.merge!('vtm' => ts))
     end
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], Time.parse(ts).iso8601(9))
+    assert_equal(index_cmds[1]['@timestamp'], DateTime.parse(ts).iso8601(9))
     assert_equal("logstash-2001.02.03", index_cmds[0]['index']['_index'])
   end
 
@@ -1283,7 +1283,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.feed(sample_record.merge!('vtm' => ts))
     end
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], Time.parse(ts).iso8601(9))
+    assert_equal(index_cmds[1]['@timestamp'], DateTime.parse(ts).iso8601(9))
     assert_equal("test", index_cmds[0]['index']['_index'])
   end
 
