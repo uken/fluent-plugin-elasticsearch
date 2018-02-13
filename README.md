@@ -36,6 +36,7 @@ Current maintainers: @cosmo0920
   + [template_file](#template_file)
   + [template_overwrite](#template_overwrite)
   + [templates](#templates)
+  + [customize_template](#customize_template)
   + [request_timeout](#request_timeout)
   + [reload_connections](#reload_connections)
   + [reload_on_failure](#reload_on_failure)
@@ -319,6 +320,17 @@ templates { "templane_name_1": "path_to_template_1_file", "templane_name_2": "pa
 ```
 
 If `template_file` and `template_name` are set, then this parameter will be ignored.
+
+### customize_template
+
+Specify the string and its value to be replaced in form of hash. Can contain multiple templates.
+
+```
+customize_template {"string_1": "subs_value_1", "string_2": "subs_value_2"}
+```
+
+If `template_file` and `template_name` are set, then this parameter will be in effect otherwise ignored.
+
 
 ### template_overwrite
 

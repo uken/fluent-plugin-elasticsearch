@@ -115,7 +115,12 @@ module Fluent::Plugin
       end
 
       if @template_name && @template_file
-        template_install(@template_name, @template_file, @template_overwrite)
+        if @customize_template
+          template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template)
+        else
+          templates_hash_install(@templates, @template_overwrite)
+        end
+        #template_install(@template_name, @template_file, @template_overwrite)
       elsif @templates
         templates_hash_install(@templates, @template_overwrite)
       end
