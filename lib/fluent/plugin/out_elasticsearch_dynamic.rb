@@ -36,7 +36,7 @@ module Fluent::Plugin
     end
 
 
-    def client(host = @host)
+    def client(host = nil)
       # check here to see if we already have a client connection for the given host
       connection_options = get_connection_options(host)
 
