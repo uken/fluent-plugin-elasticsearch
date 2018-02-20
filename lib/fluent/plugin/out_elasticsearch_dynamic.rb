@@ -32,7 +32,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
     {'id_key' => '_id', 'parent_key' => '_parent', 'routing_key' => '_routing'}
   end
 
-  def client(host)
+  def client(host = nil)
 
     # check here to see if we already have a client connection for the given host
     connection_options = get_connection_options(host)
@@ -266,6 +266,7 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
   def is_existing_connection(host)
     # check if the host provided match the current connection
     return false if @_es.nil?
+    return false if @current_config.nil?
     return false if host.length != @current_config.length
 
     for i in 0...host.length
