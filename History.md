@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 2.6.1
+- Prevent error when using template in elasticsearch_dynamic for elementally use case (#363)
+
 ### 2.6.0
 - Handle high precision time format when using custom time_key (#360)
 
