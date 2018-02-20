@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 1.13.2
+- backport preventing error when using template in elasticsearch_dynamic for elementally use case (#363)
+
 ### 1.13.1
 - backport adding config parameter to enable elasticsearch-ruby's transporter logging (#343)
 
