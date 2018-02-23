@@ -212,6 +212,24 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_nil instance.client_cert
     assert_nil instance.client_key_pass
     assert_false instance.with_transporter_log
+    assert_equal :"application/x-ndjson", instance.content_type
+  end
+
+  test 'configure Content-Type' do
+    config = %{
+      content_type application/json
+    }
+    instance = driver(config).instance
+    assert_equal :"application/json", instance.content_type
+  end
+
+  test 'invalid Content-Type' do
+    config = %{
+      content_type nonexistent/invalid
+    }
+    assert_raise(Fluent::ConfigError) {
+      instance = driver(config).instance
+    }
   end
 
   test 'lack of tag in chunk_keys' do
