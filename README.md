@@ -51,6 +51,7 @@ Current maintainers: @cosmo0920
   + [time_parse_error_tag](#time_parse_error_tag)
   + [reconnect_on_error](#reconnect_on_error)
   + [with_transporter_log](#with_transporter_log)
+  + [content_type](#content_type)
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Proxy Support](#proxy-support)
   + [Buffer options](#buffer-options)
@@ -568,6 +569,16 @@ We recommend to set this true if you start to debug this plugin.
 
 ```
 with_transporter_log true
+```
+
+### content_type
+
+With `content_type application/json`, elasticsearch plugin adds `application/json` as `Content-Type` in payload.
+
+Default value is `application/x-ndjson` which is encourage to use Elasticsearch bulk request.
+
+```
+content_type application/json
 ```
 
 ### Client/host certificate options
