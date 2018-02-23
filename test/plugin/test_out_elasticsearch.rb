@@ -643,7 +643,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_request(:head, "http://localhost:9200/").
       to_return(:status => 200, :body => "", :headers => {})
     elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
-      with(headers: { "Content-Type" => "application/json" })
+      with(headers: { "Content-Type" => "application/x-ndjson" })
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
