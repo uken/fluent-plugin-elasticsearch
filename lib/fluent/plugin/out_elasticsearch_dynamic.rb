@@ -54,7 +54,7 @@ module Fluent::Plugin
                                                                               retry_on_failure: 5,
                                                                               logger: @transport_logger,
                                                                               transport_options: {
-                                                                                headers: { 'Content-Type' => 'application/json' },
+                                                                                headers: { 'Content-Type' => @content_type.to_s },
                                                                                 request: { timeout: @request_timeout },
                                                                                 ssl: { verify: @ssl_verify, ca_file: @ca_file }
                                                                               }

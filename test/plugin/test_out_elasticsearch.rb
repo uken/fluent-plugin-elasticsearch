@@ -212,6 +212,24 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_nil instance.client_cert
     assert_nil instance.client_key_pass
     assert_false instance.with_transporter_log
+    assert_equal :"application/x-ndjson", instance.content_type
+  end
+
+  test 'configure Content-Type' do
+    config = %{
+      content_type application/json
+    }
+    instance = driver(config).instance
+    assert_equal :"application/json", instance.content_type
+  end
+
+  test 'invalid Content-Type' do
+    config = %{
+      content_type nonexistent/invalid
+    }
+    assert_raise(Fluent::ConfigError) {
+      instance = driver(config).instance
+    }
   end
 
   test 'lack of tag in chunk_keys' do
@@ -625,7 +643,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_request(:head, "http://localhost:9200/").
       to_return(:status => 200, :body => "", :headers => {})
     elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
-      with(headers: { "Content-Type" => "application/json" })
+      with(headers: { "Content-Type" => "application/x-ndjson" })
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
