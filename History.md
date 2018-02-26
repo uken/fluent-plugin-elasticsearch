@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 2.7.0
+- Configureable content type (#367)
+
 ### 2.6.1
 - Prevent error when using template in elasticsearch_dynamic for elementally use case (#363)
 
