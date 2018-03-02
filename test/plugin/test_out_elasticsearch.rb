@@ -868,7 +868,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge('@target_type' => 'local-override'))
     end
-    assert_equal('local-override', index_cmds.first['index']['_type'])
+    if driver.instance.detect_es_major_version >= 6
+      assert_equal('fluentd', index_cmds.first['index']['_type'])
+    else
+      assert_equal('local-override', index_cmds.first['index']['_type'])
+    end
     assert_nil(index_cmds[1]['@target_type'])
   end
 
@@ -904,7 +908,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
         }
       }))
     end
-    assert_equal('local-override', index_cmds.first['index']['_type'])
+    if driver.instance.detect_es_major_version >= 6
+      assert_equal('fluentd', index_cmds.first['index']['_type'])
+    else
+      assert_equal('local-override', index_cmds.first['index']['_type'])
+    end
     assert_nil(index_cmds[1]['kubernetes']['labels']['log_type'])
   end
 
