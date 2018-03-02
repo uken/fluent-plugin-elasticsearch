@@ -29,7 +29,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       end
       # For request stub to detect compatibility.
       def detect_es_major_version
-        6
+        [2, 5, 6].sample
       end
     }.configure(conf)
   end
