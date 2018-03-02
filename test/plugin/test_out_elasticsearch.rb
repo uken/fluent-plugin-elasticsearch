@@ -27,6 +27,10 @@ class ElasticsearchOutput < Test::Unit::TestCase
           [time, record].to_msgpack
         end
       end
+      # For request stub to detect compatibility.
+      def detect_es_major_version
+        6
+      end
     }.configure(conf)
   end
 

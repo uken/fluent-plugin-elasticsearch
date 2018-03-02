@@ -24,6 +24,7 @@ module Fluent::Plugin
     Fluent::Plugin.register_output('elasticsearch', self)
 
     DEFAULT_BUFFER_TYPE = "memory"
+    DEFAULT_ELASTICSEARCH_VERSION = 5 # For compatibility.
 
     config_param :host, :string,  :default => 'localhost'
     config_param :port, :integer, :default => 9200
@@ -33,7 +34,10 @@ module Fluent::Plugin
     config_param :scheme, :string, :default => 'http'
     config_param :hosts, :string, :default => nil
     config_param :target_index_key, :string, :default => nil
-    config_param :target_type_key, :string, :default => nil
+    config_param :target_type_key, :string, :default => nil,
+                 :deprecated => <<EOC
+Elasticsearch 7.x or above will ignore this config. Please use fixed type_name instead.
+EOC
     config_param :time_key_format, :string, :default => nil
     config_param :time_precision, :integer, :default => 9
     config_param :include_timestamp, :bool, :default => false
@@ -151,6 +155,13 @@ module Fluent::Plugin
         log_level = conf['@log_level'] || conf['log_level']
         log.warn "Consider to specify log_level with @log_level." unless log_level
       end
+
+      @last_seen_major_version = DEFAULT_ELASTICSEARCH_VERSION
+    end
+
+    def detect_es_major_version
+      @_es_info ||= client.info
+      @_es_info["version"]["number"].to_i
     end
 
     def convert_compat_id_key(key)
@@ -356,6 +367,7 @@ module Fluent::Plugin
       tag = chunk.metadata.tag
       logstash_prefix, index_name, type_name = expand_placeholders(chunk.metadata)
       @error = Fluent::Plugin::ElasticsearchErrorHandler.new(self)
+      @last_seen_major_version = detect_es_major_version rescue DEFAULT_ELASTICSEARCH_VERSION
 
       chunk.msgpack_each do |time, record|
         @error.records += 1
@@ -402,6 +414,9 @@ module Fluent::Plugin
         end
 
         target_type_parent, target_type_child_key = @target_type_key ? get_parent_of(record, @target_type_key) : nil
+        if @last_seen_major_version >= 6
+          log.warn "Detected a 6.x and above: `@type_name` will be used as the document `_type`."
+        end
         if target_type_parent && target_type_parent[target_type_child_key]
           target_type = target_type_parent.delete(target_type_child_key)
         else
