@@ -416,9 +416,12 @@ EOC
         target_type_parent, target_type_child_key = @target_type_key ? get_parent_of(record, @target_type_key) : nil
         if target_type_parent && target_type_parent[target_type_child_key]
           target_type = target_type_parent.delete(target_type_child_key)
-          if @last_seen_major_version >= 6
-            log.warn "Detected ES 6.x and above: `@type_name` will be used as the document `_type`."
+          if @last_seen_major_version == 6
+            log.warn "Detected ES 6.x: `@type_name` will be used as the document `_type`."
             target_type = type_name
+          elsif @last_seen_major_version >= 7
+            log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
+            target_type = '_doc'
           end
         else
           target_type = type_name

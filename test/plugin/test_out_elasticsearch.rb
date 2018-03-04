@@ -19,7 +19,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     log.out.logs.slice!(0, log.out.logs.length)
   end
 
-  def driver(conf='')
+  def driver(conf='', es_version=5)
     @driver ||= Fluent::Test::Driver::Output.new(Fluent::Plugin::ElasticsearchOutput) {
       # v0.12's test driver assume format definition. This simulates ObjectBufferedOutput format
       if !defined?(Fluent::Plugin::Output)
@@ -27,11 +27,15 @@ class ElasticsearchOutput < Test::Unit::TestCase
           [time, record].to_msgpack
         end
       end
-      # For request stub to detect compatibility.
-      def detect_es_major_version
-        [2, 5, 6].sample
-      end
     }.configure(conf)
+    # For request stub to detect compatibility.
+    @es_version ||= es_version
+    Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
+      def detect_es_major_version
+        #{@es_version}
+      end
+    CODE
+    @driver
   end
 
   def sample_record
@@ -860,19 +864,20 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal('mytype.test', index_cmds.first['index']['_type'])
   end
 
-  def test_writes_to_target_type_key
-    driver.configure("target_type_key @target_type\n")
+  data("old"           => {"es_version" => 2, "_type" => "local-override"},
+       "old_behavior"  => {"es_version" => 5, "_type" => "local-override"},
+       "border"        => {"es_version" => 6, "_type" => "fluentd"},
+       "fixed_behavior"=> {"es_version" => 7, "_type" => "_doc"},
+      )
+  def test_writes_to_target_type_key(data)
+    driver('', data["es_version"]).configure("target_type_key @target_type\n")
     stub_elastic_ping
     stub_elastic
     record = sample_record.clone
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge('@target_type' => 'local-override'))
     end
-    if driver.instance.detect_es_major_version >= 6
-      assert_equal('fluentd', index_cmds.first['index']['_type'])
-    else
-      assert_equal('local-override', index_cmds.first['index']['_type'])
-    end
+    assert_equal(data["_type"], index_cmds.first['index']['_type'])
     assert_nil(index_cmds[1]['@target_type'])
   end
 
@@ -897,8 +902,13 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal('mytype', index_cmds.first['index']['_type'])
   end
 
-  def test_writes_to_target_type_key_nested
-    driver.configure("target_type_key kubernetes.labels.log_type\n")
+  data("old"           => {"es_version" => 2, "_type" => "local-override"},
+       "old_behavior"  => {"es_version" => 5, "_type" => "local-override"},
+       "border"        => {"es_version" => 6, "_type" => "fluentd"},
+       "fixed_behavior"=> {"es_version" => 7, "_type" => "_doc"},
+      )
+  def test_writes_to_target_type_key_nested(data)
+    driver('', data["es_version"]).configure("target_type_key kubernetes.labels.log_type\n")
     stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
@@ -908,11 +918,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
         }
       }))
     end
-    if driver.instance.detect_es_major_version >= 6
-      assert_equal('fluentd', index_cmds.first['index']['_type'])
-    else
-      assert_equal('local-override', index_cmds.first['index']['_type'])
-    end
+    assert_equal(data["_type"], index_cmds.first['index']['_type'])
     assert_nil(index_cmds[1]['kubernetes']['labels']['log_type'])
   end
 
