@@ -4,6 +4,10 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 2.8.0
+- Remove outdated generating hash id support module (#373)
+- Check Elasticsearch major version (#371)
+
 ### 2.7.0
 - Configureable content type (#367)
 
