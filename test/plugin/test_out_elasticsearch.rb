@@ -19,7 +19,14 @@ class ElasticsearchOutput < Test::Unit::TestCase
     log.out.logs.slice!(0, log.out.logs.length)
   end
 
-  def driver(conf='')
+  def driver(conf='', es_version=5)
+    # For request stub to detect compatibility.
+    @es_version ||= es_version
+    Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
+      def detect_es_major_version
+        #{@es_version}
+      end
+    CODE
     @driver ||= Fluent::Test::Driver::Output.new(Fluent::Plugin::ElasticsearchOutput) {
       # v0.12's test driver assume format definition. This simulates ObjectBufferedOutput format
       if !defined?(Fluent::Plugin::Output)
@@ -230,6 +237,14 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_raise(Fluent::ConfigError) {
       instance = driver(config).instance
     }
+  end
+
+  test 'Detected Elasticsearch 7' do
+    config = %{
+      type_name changed
+    }
+    instance = driver(config, 7).instance
+    assert_equal '_doc', instance.type_name
   end
 
   test 'lack of tag in chunk_keys' do
@@ -665,7 +680,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal('fluentd', index_cmds.first['index']['_type'])
+    assert_equal('_doc', index_cmds.first['index']['_type'])
   end
 
   def test_writes_to_speficied_index
@@ -836,35 +851,46 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
 
-  def test_writes_to_speficied_type
-    driver.configure("type_name mytype\n")
+  data("border"        => {"es_version" => 6, "_type" => "mytype"},
+       "fixed_behavior"=> {"es_version" => 7, "_type" => "_doc"},
+      )
+  def test_writes_to_speficied_type(data)
+    driver('', data["es_version"]).configure("type_name mytype\n")
     stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal('mytype', index_cmds.first['index']['_type'])
+    assert_equal(data['_type'], index_cmds.first['index']['_type'])
   end
 
-  def test_writes_to_speficied_type_with_placeholders
-    driver.configure("type_name mytype.${tag}\n")
+  data("border"        => {"es_version" => 6, "_type" => "mytype.test"},
+       "fixed_behavior"=> {"es_version" => 7, "_type" => "_doc"},
+      )
+  def test_writes_to_speficied_type_with_placeholders(data)
+    driver('', data["es_version"]).configure("type_name mytype.${tag}\n")
     stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal('mytype.test', index_cmds.first['index']['_type'])
+    assert_equal(data['_type'], index_cmds.first['index']['_type'])
   end
 
-  def test_writes_to_target_type_key
-    driver.configure("target_type_key @target_type\n")
+  data("old"           => {"es_version" => 2, "_type" => "local-override"},
+       "old_behavior"  => {"es_version" => 5, "_type" => "local-override"},
+       "border"        => {"es_version" => 6, "_type" => "_doc"},
+       "fixed_behavior"=> {"es_version" => 7, "_type" => "_doc"},
+      )
+  def test_writes_to_target_type_key(data)
+    driver('', data["es_version"]).configure("target_type_key @target_type\n")
     stub_elastic_ping
     stub_elastic
     record = sample_record.clone
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge('@target_type' => 'local-override'))
     end
-    assert_equal('local-override', index_cmds.first['index']['_type'])
+    assert_equal(data["_type"], index_cmds.first['index']['_type'])
     assert_nil(index_cmds[1]['@target_type'])
   end
 
@@ -875,7 +901,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal('fluentd', index_cmds.first['index']['_type'])
+    assert_equal('_doc', index_cmds.first['index']['_type'])
   end
 
   def test_writes_to_target_type_key_fallack_to_type_name
@@ -889,8 +915,13 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal('mytype', index_cmds.first['index']['_type'])
   end
 
-  def test_writes_to_target_type_key_nested
-    driver.configure("target_type_key kubernetes.labels.log_type\n")
+  data("old"           => {"es_version" => 2, "_type" => "local-override"},
+       "old_behavior"  => {"es_version" => 5, "_type" => "local-override"},
+       "border"        => {"es_version" => 6, "_type" => "_doc"},
+       "fixed_behavior"=> {"es_version" => 7, "_type" => "_doc"},
+      )
+  def test_writes_to_target_type_key_nested(data)
+    driver('', data["es_version"]).configure("target_type_key kubernetes.labels.log_type\n")
     stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
@@ -900,7 +931,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
         }
       }))
     end
-    assert_equal('local-override', index_cmds.first['index']['_type'])
+    assert_equal(data["_type"], index_cmds.first['index']['_type'])
     assert_nil(index_cmds[1]['kubernetes']['labels']['log_type'])
   end
 
@@ -915,7 +946,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
         }
       }))
     end
-    assert_equal('fluentd', index_cmds.first['index']['_type'])
+    assert_equal('_doc', index_cmds.first['index']['_type'])
   end
 
   def test_writes_to_speficied_host

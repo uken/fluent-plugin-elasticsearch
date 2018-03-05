@@ -24,6 +24,8 @@ module Fluent::Plugin
     Fluent::Plugin.register_output('elasticsearch', self)
 
     DEFAULT_BUFFER_TYPE = "memory"
+    DEFAULT_ELASTICSEARCH_VERSION = 5 # For compatibility.
+    DEFAULT_TYPE_NAME = "_doc".freeze
 
     config_param :host, :string,  :default => 'localhost'
     config_param :port, :integer, :default => 9200
@@ -33,7 +35,10 @@ module Fluent::Plugin
     config_param :scheme, :string, :default => 'http'
     config_param :hosts, :string, :default => nil
     config_param :target_index_key, :string, :default => nil
-    config_param :target_type_key, :string, :default => nil
+    config_param :target_type_key, :string, :default => nil,
+                 :deprecated => <<EOC
+Elasticsearch 7.x or above will ignore this config. Please use fixed type_name instead.
+EOC
     config_param :time_key_format, :string, :default => nil
     config_param :time_precision, :integer, :default => 9
     config_param :include_timestamp, :bool, :default => false
@@ -42,7 +47,7 @@ module Fluent::Plugin
     config_param :logstash_prefix_separator, :string, :default => '-'
     config_param :logstash_dateformat, :string, :default => "%Y.%m.%d"
     config_param :utc_index, :bool, :default => true
-    config_param :type_name, :string, :default => "fluentd"
+    config_param :type_name, :string, :default => DEFAULT_TYPE_NAME
     config_param :index_name, :string, :default => "fluentd"
     config_param :id_key, :string, :default => nil
     config_param :write_operation, :string, :default => "index"
@@ -151,6 +156,17 @@ module Fluent::Plugin
         log_level = conf['@log_level'] || conf['log_level']
         log.warn "Consider to specify log_level with @log_level." unless log_level
       end
+
+      @last_seen_major_version = detect_es_major_version rescue DEFAULT_ELASTICSEARCH_VERSION
+      if @last_seen_major_version >= 7 && @type_name != DEFAULT_TYPE_NAME
+        log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
+        @type_name = '_doc'.freeze
+      end
+    end
+
+    def detect_es_major_version
+      @_es_info ||= client.info
+      @_es_info["version"]["number"].to_i
     end
 
     def convert_compat_id_key(key)
@@ -356,6 +372,7 @@ module Fluent::Plugin
       tag = chunk.metadata.tag
       logstash_prefix, index_name, type_name = expand_placeholders(chunk.metadata)
       @error = Fluent::Plugin::ElasticsearchErrorHandler.new(self)
+      @last_seen_major_version = detect_es_major_version rescue DEFAULT_ELASTICSEARCH_VERSION
 
       chunk.msgpack_each do |time, record|
         @error.records += 1
@@ -404,8 +421,20 @@ module Fluent::Plugin
         target_type_parent, target_type_child_key = @target_type_key ? get_parent_of(record, @target_type_key) : nil
         if target_type_parent && target_type_parent[target_type_child_key]
           target_type = target_type_parent.delete(target_type_child_key)
+          if @last_seen_major_version == 6
+            log.warn "Detected ES 6.x: `@type_name` will be used as the document `_type`."
+            target_type = type_name
+          elsif @last_seen_major_version >= 7
+            log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
+            target_type = '_doc'.freeze
+          end
         else
-          target_type = type_name
+          if @last_seen_major_version >= 7 && target_type != DEFAULT_TYPE_NAME
+            log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
+            target_type = '_doc'.freeze
+          else
+            target_type = type_name
+          end
         end
 
         meta.clear
@@ -453,6 +482,7 @@ module Fluent::Plugin
         if retries < 2
           retries += 1
           @_es = nil
+          @_es_info = nil
           log.warn "Could not push logs to Elasticsearch, resetting connection and trying again. #{e.message}"
           sleep 2**retries
           retry
@@ -460,6 +490,7 @@ module Fluent::Plugin
         raise ConnectionFailure, "Could not push logs to Elasticsearch after #{retries} retries. #{e.message}"
       rescue Exception
         @_es = nil if @reconnect_on_error
+        @_es_info = nil if @reconnect_on_error
         raise
       end
     end
