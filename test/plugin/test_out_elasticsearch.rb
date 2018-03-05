@@ -851,24 +851,30 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
 
-  def test_writes_to_speficied_type
-    driver.configure("type_name mytype\n")
+  data("border"        => {"es_version" => 6, "_type" => "mytype"},
+       "fixed_behavior"=> {"es_version" => 7, "_type" => "_doc"},
+      )
+  def test_writes_to_speficied_type(data)
+    driver('', data["es_version"]).configure("type_name mytype\n")
     stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal('mytype', index_cmds.first['index']['_type'])
+    assert_equal(data['_type'], index_cmds.first['index']['_type'])
   end
 
-  def test_writes_to_speficied_type_with_placeholders
-    driver.configure("type_name mytype.${tag}\n")
+  data("border"        => {"es_version" => 6, "_type" => "mytype.test"},
+       "fixed_behavior"=> {"es_version" => 7, "_type" => "_doc"},
+      )
+  def test_writes_to_speficied_type_with_placeholders(data)
+    driver('', data["es_version"]).configure("type_name mytype.${tag}\n")
     stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal('mytype.test', index_cmds.first['index']['_type'])
+    assert_equal(data['_type'], index_cmds.first['index']['_type'])
   end
 
   data("old"           => {"es_version" => 2, "_type" => "local-override"},

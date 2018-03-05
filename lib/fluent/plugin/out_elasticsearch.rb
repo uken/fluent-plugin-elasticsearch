@@ -356,12 +356,7 @@ EOC
     def expand_placeholders(metadata)
       logstash_prefix = extract_placeholders(@logstash_prefix, metadata)
       index_name = extract_placeholders(@index_name, metadata)
-      if @last_seen_major_version >= 7
-        log.warn "Detected ES 7.x or above: `type_name` will be used as the document `_type`."
-        type_name = '_doc'.freeze
-      else
-        type_name = extract_placeholders(@type_name, metadata)
-      end
+      type_name = extract_placeholders(@type_name, metadata)
       return logstash_prefix, index_name, type_name
     end
 
@@ -434,7 +429,12 @@ EOC
             target_type = '_doc'.freeze
           end
         else
-          target_type = type_name
+          if @last_seen_major_version >= 7 && target_type != DEFAULT_TYPE_NAME
+            log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
+            target_type = '_doc'.freeze
+          else
+            target_type = type_name
+          end
         end
 
         meta.clear
