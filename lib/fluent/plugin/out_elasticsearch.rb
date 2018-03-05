@@ -482,6 +482,7 @@ EOC
         if retries < 2
           retries += 1
           @_es = nil
+          @_es_info = nil
           log.warn "Could not push logs to Elasticsearch, resetting connection and trying again. #{e.message}"
           sleep 2**retries
           retry
@@ -489,6 +490,7 @@ EOC
         raise ConnectionFailure, "Could not push logs to Elasticsearch after #{retries} retries. #{e.message}"
       rescue Exception
         @_es = nil if @reconnect_on_error
+        @_es_info = nil if @reconnect_on_error
         raise
       end
     end
