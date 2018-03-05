@@ -25,6 +25,7 @@ module Fluent::Plugin
 
     DEFAULT_BUFFER_TYPE = "memory"
     DEFAULT_ELASTICSEARCH_VERSION = 5 # For compatibility.
+    DEFAULT_TYPE_NAME = "_doc".freeze
 
     config_param :host, :string,  :default => 'localhost'
     config_param :port, :integer, :default => 9200
@@ -46,7 +47,7 @@ EOC
     config_param :logstash_prefix_separator, :string, :default => '-'
     config_param :logstash_dateformat, :string, :default => "%Y.%m.%d"
     config_param :utc_index, :bool, :default => true
-    config_param :type_name, :string, :default => "fluentd"
+    config_param :type_name, :string, :default => DEFAULT_TYPE_NAME
     config_param :index_name, :string, :default => "fluentd"
     config_param :id_key, :string, :default => nil
     config_param :write_operation, :string, :default => "index"
@@ -157,6 +158,10 @@ EOC
       end
 
       @last_seen_major_version = DEFAULT_ELASTICSEARCH_VERSION
+      if @last_seen_major_version >= 7 && @type_name != DEFAULT_TYPE_NAME
+        log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
+        @type_name = '_doc'.freeze
+      end
     end
 
     def detect_es_major_version
@@ -351,7 +356,12 @@ EOC
     def expand_placeholders(metadata)
       logstash_prefix = extract_placeholders(@logstash_prefix, metadata)
       index_name = extract_placeholders(@index_name, metadata)
-      type_name = extract_placeholders(@type_name, metadata)
+      if @last_seen_major_version >= 7
+        log.warn "Detected ES 7.x or above: `type_name` will be used as the document `_type`."
+        type_name = '_doc'.freeze
+      else
+        type_name = extract_placeholders(@type_name, metadata)
+      end
       return logstash_prefix, index_name, type_name
     end
 
@@ -421,7 +431,7 @@ EOC
             target_type = type_name
           elsif @last_seen_major_version >= 7
             log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
-            target_type = '_doc'
+            target_type = '_doc'.freeze
           end
         else
           target_type = type_name

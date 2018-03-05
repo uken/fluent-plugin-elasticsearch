@@ -673,7 +673,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal('fluentd', index_cmds.first['index']['_type'])
+    assert_equal('_doc', index_cmds.first['index']['_type'])
   end
 
   def test_writes_to_speficied_index
@@ -866,7 +866,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   data("old"           => {"es_version" => 2, "_type" => "local-override"},
        "old_behavior"  => {"es_version" => 5, "_type" => "local-override"},
-       "border"        => {"es_version" => 6, "_type" => "fluentd"},
+       "border"        => {"es_version" => 6, "_type" => "_doc"},
        "fixed_behavior"=> {"es_version" => 7, "_type" => "_doc"},
       )
   def test_writes_to_target_type_key(data)
@@ -888,7 +888,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal('fluentd', index_cmds.first['index']['_type'])
+    assert_equal('_doc', index_cmds.first['index']['_type'])
   end
 
   def test_writes_to_target_type_key_fallack_to_type_name
@@ -904,7 +904,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   data("old"           => {"es_version" => 2, "_type" => "local-override"},
        "old_behavior"  => {"es_version" => 5, "_type" => "local-override"},
-       "border"        => {"es_version" => 6, "_type" => "fluentd"},
+       "border"        => {"es_version" => 6, "_type" => "_doc"},
        "fixed_behavior"=> {"es_version" => 7, "_type" => "_doc"},
       )
   def test_writes_to_target_type_key_nested(data)
@@ -933,7 +933,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
         }
       }))
     end
-    assert_equal('fluentd', index_cmds.first['index']['_type'])
+    assert_equal('_doc', index_cmds.first['index']['_type'])
   end
 
   def test_writes_to_speficied_host

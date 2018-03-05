@@ -260,7 +260,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal('fluentd', index_cmds.first['index']['_type'])
+    assert_equal('_doc', index_cmds.first['index']['_type'])
   end
 
   def test_writes_to_specified_index
