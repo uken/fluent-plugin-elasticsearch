@@ -343,27 +343,6 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_equal(2000, total)
   end
 
-  class AdditionalHashIdMechanismTest < self
-    data("default"            => {"hash_id_key" => '_id'},
-         "custom hash_id_key" => {"hash_id_key" => '_hash_id'},
-        )
-    def test_writes_with_genrate_hash(data)
-      assert_raise_message(/Use bundled filter-elasticsearch-genid instead./) do
-        driver.configure(Fluent::Config::Element.new(
-                           'ROOT', '', {
-                             '@type' => 'elasticsearch',
-                             'id_key' => data["hash_id_key"],
-                           }, [
-                             Fluent::Config::Element.new('hash', '', {
-                                                           'keys' => ['request_id'],
-                                                           'hash_id_key' => data["hash_id_key"],
-                                                         }, [])
-                           ]
-                         ))
-      end
-    end
-  end
-
   def test_makes_bulk_request
     stub_elastic_ping
     stub_elastic
