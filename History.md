@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 1.13.3
+- backport removing outdated generating hash id support module (#374)
+
 ### 1.13.2
 - backport preventing error when using template in elasticsearch_dynamic for elementally use case (#364)
 
