@@ -13,7 +13,6 @@ require 'fluent/plugin/output'
 require_relative 'elasticsearch_constants'
 require_relative 'elasticsearch_error_handler'
 require_relative 'elasticsearch_index_template'
-require_relative 'generate_hash_id_support'
 
 module Fluent::Plugin
   class ElasticsearchOutput < Output
@@ -89,7 +88,6 @@ EOC
     end
 
     include Fluent::ElasticsearchIndexTemplate
-    include Fluent::Plugin::GenerateHashIdSupport
     include Fluent::Plugin::ElasticsearchConstants
 
     def initialize
