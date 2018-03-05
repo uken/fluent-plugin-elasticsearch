@@ -20,6 +20,13 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def driver(conf='', es_version=5)
+    # For request stub to detect compatibility.
+    @es_version ||= es_version
+    Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
+      def detect_es_major_version
+        #{@es_version}
+      end
+    CODE
     @driver ||= Fluent::Test::Driver::Output.new(Fluent::Plugin::ElasticsearchOutput) {
       # v0.12's test driver assume format definition. This simulates ObjectBufferedOutput format
       if !defined?(Fluent::Plugin::Output)
@@ -28,14 +35,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
         end
       end
     }.configure(conf)
-    # For request stub to detect compatibility.
-    @es_version ||= es_version
-    Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
-      def detect_es_major_version
-        #{@es_version}
-      end
-    CODE
-    @driver
   end
 
   def sample_record
@@ -238,6 +237,14 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_raise(Fluent::ConfigError) {
       instance = driver(config).instance
     }
+  end
+
+  test 'Detected Elasticsearch 7' do
+    config = %{
+      type_name changed
+    }
+    instance = driver(config, 7).instance
+    assert_equal '_doc', instance.type_name
   end
 
   test 'lack of tag in chunk_keys' do

@@ -157,7 +157,7 @@ EOC
         log.warn "Consider to specify log_level with @log_level." unless log_level
       end
 
-      @last_seen_major_version = DEFAULT_ELASTICSEARCH_VERSION
+      @last_seen_major_version = detect_es_major_version rescue DEFAULT_ELASTICSEARCH_VERSION
       if @last_seen_major_version >= 7 && @type_name != DEFAULT_TYPE_NAME
         log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
         @type_name = '_doc'.freeze
