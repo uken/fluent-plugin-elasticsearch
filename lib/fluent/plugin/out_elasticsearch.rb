@@ -13,7 +13,6 @@ require 'fluent/output'
 require_relative 'elasticsearch_constants'
 require_relative 'elasticsearch_error_handler'
 require_relative 'elasticsearch_index_template'
-require_relative 'generate_hash_id_support'
 
 class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   class ConnectionFailure < StandardError; end
@@ -72,7 +71,6 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   config_param :with_transporter_log, :bool, :default => false
 
   include Fluent::ElasticsearchIndexTemplate
-  include Fluent::GenerateHashIdSupport
   include Fluent::ElasticsearchConstants
 
   def initialize

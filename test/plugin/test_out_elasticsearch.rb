@@ -205,21 +205,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_false instance.with_transporter_log
   end
 
-  def test_configure_with_invaild_generate_id_config
-    assert_raise_message(/Use bundled filter-elasticsearch-genid instead./) do
-      driver.configure(Fluent::Config::Element.new(
-                         'ROOT', '', {
-                           '@type' => 'elasticsearch',
-                           'id_key' =>'id_mismatch',
-                         }, [
-                           Fluent::Config::Element.new('hash', '', {
-                                                         'hash_id_key' => '_hash',
-                                                       }, [])
-                         ]
-                       ))
-    end
-  end
-
   def test_template_already_present
     config = %{
       host            logs.google.com
@@ -625,27 +610,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.emit(sample_record)
     driver.run
     assert_equal('myindex', index_cmds.first['index']['_index'])
-  end
-
-  class AdditionalHashIdMechanismTest < self
-    data("default"            => {"hash_id_key" => '_id'},
-         "custom hash_id_key" => {"hash_id_key" => '_hash_id'},
-        )
-    def test_writes_with_genrate_hash(data)
-      assert_raise_message(/Use bundled filter-elasticsearch-genid instead./) do
-        driver.configure(Fluent::Config::Element.new(
-                           'ROOT', '', {
-                             '@type' => 'elasticsearch',
-                             'id_key' => data["hash_id_key"],
-                           }, [
-                             Fluent::Config::Element.new('hash', '', {
-                                                           'keys' => ['request_id'],
-                                                           'hash_id_key' => data["hash_id_key"],
-                                                         }, [])
-                           ]
-                         ))
-      end
-    end
   end
 
   def test_writes_to_speficied_index_uppercase
