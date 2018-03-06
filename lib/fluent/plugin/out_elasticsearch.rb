@@ -24,6 +24,7 @@ module Fluent::Plugin
 
     DEFAULT_BUFFER_TYPE = "memory"
     DEFAULT_ELASTICSEARCH_VERSION = 5 # For compatibility.
+    DEFAULT_TYPE_NAME_ES_7x = "_doc".freeze
     DEFAULT_TYPE_NAME = "fluentd".freeze
 
     config_param :host, :string,  :default => 'localhost'
@@ -156,11 +157,10 @@ EOC
       end
 
       @last_seen_major_version = detect_es_major_version rescue DEFAULT_ELASTICSEARCH_VERSION
-      if @last_seen_major_version >= 7 && @type_name != DEFAULT_TYPE_NAME
+      if @last_seen_major_version >= 7 && @type_name != DEFAULT_TYPE_NAME_ES_7x
         log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
         @type_name = '_doc'.freeze
       end
-      @last_seen_major_version = DEFAULT_ELASTICSEARCH_VERSION
     end
 
     def detect_es_major_version
@@ -425,10 +425,10 @@ EOC
             target_type = type_name
           elsif @last_seen_major_version >= 7
             log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
-            target_type = '_doc'
+            target_type = '_doc'.freeze
           end
         else
-          if @last_seen_major_version >= 7 && target_type != DEFAULT_TYPE_NAME
+          if @last_seen_major_version >= 7 && target_type != DEFAULT_TYPE_NAME_ES_7x
             log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
             target_type = '_doc'.freeze
           else
