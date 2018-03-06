@@ -24,6 +24,7 @@ module Fluent::Plugin
 
     DEFAULT_BUFFER_TYPE = "memory"
     DEFAULT_ELASTICSEARCH_VERSION = 5 # For compatibility.
+    DEFAULT_TYPE_NAME = "fluentd".freeze
 
     config_param :host, :string,  :default => 'localhost'
     config_param :port, :integer, :default => 9200
@@ -45,7 +46,7 @@ EOC
     config_param :logstash_prefix_separator, :string, :default => '-'
     config_param :logstash_dateformat, :string, :default => "%Y.%m.%d"
     config_param :utc_index, :bool, :default => true
-    config_param :type_name, :string, :default => "fluentd"
+    config_param :type_name, :string, :default => DEFAULT_TYPE_NAME
     config_param :index_name, :string, :default => "fluentd"
     config_param :id_key, :string, :default => nil
     config_param :write_operation, :string, :default => "index"

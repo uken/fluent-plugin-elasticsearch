@@ -37,6 +37,10 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }.configure(conf)
   end
 
+  def default_type_name
+    Fluent::Plugin::ElasticsearchOutput::DEFAULT_TYPE_NAME
+  end
+
   def sample_record
     {'age' => 26, 'request_id' => '42', 'parent_id' => 'parent', 'routing_id' => 'routing'}
   end
@@ -220,6 +224,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_nil instance.client_key_pass
     assert_false instance.with_transporter_log
     assert_equal :"application/x-ndjson", instance.content_type
+    assert_equal "fluentd", default_type_name
   end
 
   test 'configure Content-Type' do
@@ -665,7 +670,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal('fluentd', index_cmds.first['index']['_type'])
+    assert_equal(default_type_name, index_cmds.first['index']['_type'])
   end
 
   def test_writes_to_speficied_index
@@ -865,7 +870,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal('fluentd', index_cmds.first['index']['_type'])
+    assert_equal(default_type_name, index_cmds.first['index']['_type'])
   end
 
   def test_writes_to_target_type_key_fallack_to_type_name
@@ -910,7 +915,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
         }
       }))
     end
-    assert_equal('fluentd', index_cmds.first['index']['_type'])
+    assert_equal(default_type_name, index_cmds.first['index']['_type'])
   end
 
   def test_writes_to_speficied_host
