@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 2.8.1
+- Restore default value of type name #(377)
+
 ### 2.8.0
 - Remove outdated generating hash id support module (#373)
 - Check Elasticsearch major version (#371)
