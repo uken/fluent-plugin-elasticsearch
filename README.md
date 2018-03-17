@@ -573,12 +573,13 @@ with_transporter_log true
 
 ### content_type
 
-With `content_type application/json`, elasticsearch plugin adds `application/json` as `Content-Type` in payload.
+With `content_type application/x-ndjson`, elasticsearch plugin adds `application/x-ndjson` as `Content-Type` in payload.
 
-Default value is `application/x-ndjson` which is encourage to use Elasticsearch bulk request.
+Default value is `application/json` which is default Content-Type of Elasticsearch requests.
+If you will not use template, it recommends to set `content_type application/x-ndjson`.
 
 ```
-content_type application/json
+content_type application/x-ndjson
 ```
 
 ### Client/host certificate options
