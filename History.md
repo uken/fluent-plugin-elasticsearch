@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 2.8.2
+- Revert content type header default value (#383)
+
 ### 2.8.1
 - Restore default value of type name #(377)
 
