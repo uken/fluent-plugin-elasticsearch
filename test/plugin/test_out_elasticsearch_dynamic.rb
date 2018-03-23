@@ -474,13 +474,9 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     driver.configure("logstash_format true\n")
     stub_elastic_ping
     stub_elastic
-    begin
-      time = Fluent::EventTime.new(Time.now.to_i, 000000000)
-    rescue
-      time = Fluent::Engine.now
-    end
+    time = Fluent::EventTime.new(Time.now.to_i, 000000000)
     driver.run(default_tag: 'test') do
-      driver.feed(time.to_i, sample_record)
+      driver.feed(time, sample_record)
     end
     assert(index_cmds[1].has_key? '@timestamp')
     assert_equal(index_cmds[1]['@timestamp'], Time.at(time).iso8601(9))
@@ -491,13 +487,9 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
                       time_precision 3\n")
     stub_elastic_ping
     stub_elastic
-    begin
     time = Fluent::EventTime.new(Time.now.to_i, 000000000)
-    rescue
-      time = Fluent::Engine.now
-    end
     driver.run(default_tag: 'test') do
-      driver.feed(time.to_i, sample_record)
+      driver.feed(time, sample_record)
     end
     assert(index_cmds[1].has_key? '@timestamp')
     assert_equal(index_cmds[1]['@timestamp'], Time.at(time).iso8601(3))
