@@ -160,7 +160,7 @@ module Fluent::Plugin
             time = Time.parse record[dynamic_conf['time_key']]
             record['@timestamp'] = record[dynamic_conf['time_key']] unless time_key_exclude_timestamp
           else
-            record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
+            record.merge!({"@timestamp" => Time.at(time).iso8601(@time_precision)})
           end
         end
 
