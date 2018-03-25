@@ -479,13 +479,25 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     driver.configure("logstash_format true\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.now
-    time = Fluent::EventTime.from_time(ts.to_time)
+    time = Fluent::EventTime.new(Time.now.to_i, 000000000)
     driver.run(default_tag: 'test') do
       driver.feed(time, sample_record)
     end
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], ts.iso8601)
+    assert_equal(index_cmds[1]['@timestamp'], Time.at(time).iso8601(9))
+  end
+
+  def test_uses_subsecond_precision_when_configured
+    driver.configure("logstash_format true
+                      time_precision 3\n")
+    stub_elastic_ping
+    stub_elastic
+    time = Fluent::EventTime.new(Time.now.to_i, 000000000)
+    driver.run(default_tag: 'test') do
+      driver.feed(time, sample_record)
+    end
+    assert(index_cmds[1].has_key? '@timestamp')
+    assert_equal(index_cmds[1]['@timestamp'], Time.at(time).iso8601(3))
   end
 
   def test_uses_custom_timestamp_when_included_in_record
@@ -852,7 +864,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     stub_request(:post, "http://localhost:9200/_bulk").with do |req|
       raise ZeroDivisionError, "any not host_unreachable_exceptions exception"
     end
-    
+
     driver.configure("reconnect_on_error true\n")
 
     assert_raise(ZeroDivisionError) {
