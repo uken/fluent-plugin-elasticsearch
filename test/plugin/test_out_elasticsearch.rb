@@ -1395,7 +1395,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("logstash_format true\n")
     stub_elastic_ping
     stub_elastic
-    time = Fluent::EventTime.new(Time.now.to_i, 000000000)
+    time = Fluent::EventTime.new(Time.now.to_i, 123456789)
     driver.run(default_tag: 'test') do
       driver.feed(time, sample_record)
     end
@@ -1408,7 +1408,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
                       time_precision 3\n")
     stub_elastic_ping
     stub_elastic
-    time = Fluent::EventTime.new(Time.now.to_i, 000000000)
+    time = Fluent::EventTime.new(Time.now.to_i, 123456789)
     driver.run(default_tag: 'test') do
       driver.feed(time, sample_record)
     end
