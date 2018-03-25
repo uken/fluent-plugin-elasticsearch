@@ -210,8 +210,13 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   def test_content_type_header
     stub_request(:head, "http://localhost:9200/").
       to_return(:status => 200, :body => "", :headers => {})
-    elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
-      with(headers: { "Content-Type" => "application/json" })
+    if Elasticsearch::VERSION >= "6.0.2"
+      elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
+                          with(headers: { "Content-Type" => "application/x-ndjson" })
+    else
+      elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
+                          with(headers: { "Content-Type" => "application/json" })
+    end
     driver.emit(sample_record)
     driver.run
     assert_requested(elastic_request)
