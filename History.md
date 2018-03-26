@@ -4,6 +4,9 @@
 - Log ES response errors (#230)
 - Use latest elasticsearch-ruby (#240)
 
+### 2.8.4
+- Use nanosecond precision in elasticsearch_dynamic (#387)
+
 ### 2.8.3
 - Specify SSL/TLS version in out_elasticsearch_dynamic (#385)
 
