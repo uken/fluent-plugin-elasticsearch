@@ -1,8 +1,6 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
-- Log ES response errors (#230)
-- Use latest elasticsearch-ruby (#240)
 
 ### 2.8.4
 - Use nanosecond precision in elasticsearch_dynamic (#387)
@@ -94,6 +92,10 @@
 
 ### 1.9.4
 - Include 'Content-Type' header in `transport_options`
+
+### 1.9.3
+- Use latest elasticsearch-ruby (#240)
+- Log ES response errors (#230)
 
 ### 1.9.2
 - Fix elasticsearch_dynamic for v0.14 (#224)
