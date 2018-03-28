@@ -80,7 +80,11 @@ EOC
     config_param :reconnect_on_error, :bool, :default => false
     config_param :pipeline, :string, :default => nil
     config_param :with_transporter_log, :bool, :default => false
-    config_param :content_type, :enum, list: [:"application/json", :"application/x-ndjson"], :default => :"application/json"
+    config_param :content_type, :enum, list: [:"application/json", :"application/x-ndjson"], :default => :"application/json",
+                 :deprecated => <<EOC
+elasticsearch gem v6.0.2 starts to use correct Content-Type. Please upgrade elasticserach gem and stop to use this option.
+see: https://github.com/elastic/elasticsearch-ruby/pull/514
+EOC
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE
