@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 2.8.5
+- Add deprecated option into content_type parameter (#391)
+
 ### 2.8.4
 - Use nanosecond precision in elasticsearch_dynamic (#387)
 
