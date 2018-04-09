@@ -55,6 +55,10 @@ module Fluent::Plugin
                                                                                 headers: { 'Content-Type' => @content_type.to_s },
                                                                                 request: { timeout: @request_timeout },
                                                                                 ssl: { verify: @ssl_verify, ca_file: @ca_file, version: @ssl_version }
+                                                                              },
+                                                                              http: {
+                                                                                user: @user,
+                                                                                password: @password
                                                                               }
                                                                             }), &adapter_conf)
         es = Elasticsearch::Client.new transport: transport
