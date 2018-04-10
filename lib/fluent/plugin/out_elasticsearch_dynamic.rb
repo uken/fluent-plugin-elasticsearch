@@ -52,6 +52,10 @@ class Fluent::ElasticsearchOutputDynamic < Fluent::ElasticsearchOutput
                                                                               headers: { 'Content-Type' => 'application/json' },
                                                                               request: { timeout: @request_timeout },
                                                                               ssl: { verify: @ssl_verify, ca_file: @ca_file }
+                                                                            },
+                                                                            http: {
+                                                                              user: @user,
+                                                                              password: @password
                                                                             }
                                                                           }), &adapter_conf)
       es = Elasticsearch::Client.new transport: transport
