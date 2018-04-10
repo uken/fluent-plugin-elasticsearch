@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 1.13.4
+- backport auth: Fix missing auth tokens after reloading connections (#397)
+
 ### 1.13.3
 - backport removing outdated generating hash id support module (#374)
 
