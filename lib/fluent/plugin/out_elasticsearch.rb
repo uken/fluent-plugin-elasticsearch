@@ -56,6 +56,7 @@ EOC
     config_param :request_timeout, :time, :default => 5
     config_param :reload_connections, :bool, :default => true
     config_param :reload_on_failure, :bool, :default => false
+    config_param :retry_on_failure, :integer, :default => 5
     config_param :resurrect_after, :time, :default => 60
     config_param :time_key, :string, :default => nil
     config_param :time_key_exclude_timestamp, :bool, :default => false
@@ -227,7 +228,7 @@ EOC
                                                                               reload_connections: @reload_connections,
                                                                               reload_on_failure: @reload_on_failure,
                                                                               resurrect_after: @resurrect_after,
-                                                                              retry_on_failure: 5,
+                                                                              retry_on_failure: @retry_on_failure,
                                                                               logger: @transport_logger,
                                                                               transport_options: {
                                                                                 headers: { 'Content-Type' => @content_type.to_s },
