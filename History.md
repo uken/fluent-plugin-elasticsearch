@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 2.8.6
+- auth: Fix missing auth tokens after reloading connections (#394)
+
 ### 2.8.5
 - Add deprecated option into content_type parameter (#391)
 
