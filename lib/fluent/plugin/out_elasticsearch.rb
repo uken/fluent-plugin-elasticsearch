@@ -182,6 +182,10 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
                                                                               headers: { 'Content-Type' => 'application/json' },
                                                                               request: { timeout: @request_timeout },
                                                                               ssl: { verify: @ssl_verify, ca_file: @ca_file, version: @ssl_version }
+                                                                            },
+                                                                            http: {
+                                                                              user: @user,
+                                                                              password: @password
                                                                             }
                                                                           }), &adapter_conf)
       es = Elasticsearch::Client.new transport: transport

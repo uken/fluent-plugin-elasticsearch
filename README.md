@@ -90,19 +90,13 @@ This plugin creates Elasticsearch indices by merely writing to them. Consider us
 
 ```
 hosts host1:port1,host2:port2,host3:port3
-# or
-hosts https://customhost.com:443/path,https://username:password@host-failover.com:443
 ```
 
 You can specify multiple Elasticsearch hosts with separator ",".
 
 If you specify multiple hosts, this plugin will load balance updates to Elasticsearch. This is an [elasticsearch-ruby](https://github.com/elasticsearch/elasticsearch-ruby) feature, the default strategy is round-robin.
 
-And this plugin will escape required URL encoded characters within `%{}` placeholders.
-
-```
-hosts https://%{j+hn}:%{passw@rd}@host1:443/elastic/,http://host2
-```
+**Note:** Up until v1.13.3, it was allowed to embed the username/password in the URL. However, this syntax is deprecated as of v1.13.4 because it was found to cause serious connection problems (See #394). Please migrate your settings to use the `user` and `password` field (described below) instead.
 
 ### user, password, path, scheme, ssl_verify
 
@@ -115,7 +109,7 @@ path /elastic_search/
 scheme https
 ```
 
-You can specify user and password for HTTP basic auth. If used in conjunction with a hosts list, then these options will be used by default i.e. if you do not provide any of these options within the hosts listed.
+You can specify user and password for HTTP Basic authentication.
 
 And this plugin will escape required URL encoded characters within `%{}` placeholders.
 
