@@ -321,76 +321,79 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
     chunk.msgpack_each do |time, record|
       @error.records += 1
       next unless record.is_a? Hash
-
-      if @flatten_hashes
-        record = flatten_record(record)
-      end
-
-      if @hash_config
-        record = generate_hash_id_key(record)
-      end
-
-      dt = nil
-      if @logstash_format || @include_timestamp
-        if record.has_key?(TIMESTAMP_FIELD)
-          rts = record[TIMESTAMP_FIELD]
-          dt = parse_time(rts, time, tag)
-        elsif record.has_key?(@time_key)
-          rts = record[@time_key]
-          dt = parse_time(rts, time, tag)
-          record[TIMESTAMP_FIELD] = rts unless @time_key_exclude_timestamp
-        else
-          dt = Time.at(time).to_datetime
-          record[TIMESTAMP_FIELD] = dt.iso8601(@time_precision)
-        end
-      end
-
-      target_index_parent, target_index_child_key = @target_index_key ? get_parent_of(record, @target_index_key) : nil
-      if target_index_parent && target_index_parent[target_index_child_key]
-        target_index = target_index_parent.delete(target_index_child_key)
-      elsif @logstash_format
-        dt = dt.new_offset(0) if @utc_index
-        target_index = "#{@logstash_prefix}#{@logstash_prefix_separator}#{dt.strftime(@logstash_dateformat)}"
-      else
-        target_index = @index_name
-      end
-
-      # Change target_index to lower-case since Elasticsearch doesn't
-      # allow upper-case characters in index names.
-      target_index = target_index.downcase
-      if @include_tag_key
-        record[@tag_key] = tag
-      end
-
-      target_type_parent, target_type_child_key = @target_type_key ? get_parent_of(record, @target_type_key) : nil
-      if target_type_parent && target_type_parent[target_type_child_key]
-        target_type = target_type_parent.delete(target_type_child_key)
-      else
-        target_type = @type_name
-      end
-
-      meta.clear
-      meta["_index".freeze] = target_index
-      meta["_type".freeze] = target_type
-
-      if @pipeline
-        meta["pipeline".freeze] = @pipeline
-      end
-
-      @meta_config_map.each do |record_key, meta_key|
-        meta[meta_key] = record[record_key] if record[record_key]
-      end
-
-      if @remove_keys
-        @remove_keys.each { |key| record.delete(key) }
-      end
-
-      append_record_to_messages(@write_operation, meta, header, record, bulk_message)
-      @error.bulk_message_count += 1
+      process_message(tag, meta, header, time, record, bulk_message)
     end
 
     send_bulk(bulk_message) unless bulk_message.empty?
     bulk_message.clear
+  end
+
+  def process_message(tag, meta, header, time, record, bulk_message)
+    if @flatten_hashes
+      record = flatten_record(record)
+    end
+
+    if @hash_config
+      record = generate_hash_id_key(record)
+    end
+
+    dt = nil
+    if @logstash_format || @include_timestamp
+      if record.has_key?(TIMESTAMP_FIELD)
+        rts = record[TIMESTAMP_FIELD]
+        dt = parse_time(rts, time, tag)
+      elsif record.has_key?(@time_key)
+        rts = record[@time_key]
+        dt = parse_time(rts, time, tag)
+        record[TIMESTAMP_FIELD] = rts unless @time_key_exclude_timestamp
+      else
+        dt = Time.at(time).to_datetime
+        record[TIMESTAMP_FIELD] = dt.iso8601(@time_precision)
+      end
+    end
+
+    target_index_parent, target_index_child_key = @target_index_key ? get_parent_of(record, @target_index_key) : nil
+    if target_index_parent && target_index_parent[target_index_child_key]
+      target_index = target_index_parent.delete(target_index_child_key)
+    elsif @logstash_format
+      dt = dt.new_offset(0) if @utc_index
+      target_index = "#{@logstash_prefix}#{@logstash_prefix_separator}#{dt.strftime(@logstash_dateformat)}"
+    else
+      target_index = @index_name
+    end
+
+    # Change target_index to lower-case since Elasticsearch doesn't
+    # allow upper-case characters in index names.
+    target_index = target_index.downcase
+    if @include_tag_key
+      record[@tag_key] = tag
+    end
+
+    target_type_parent, target_type_child_key = @target_type_key ? get_parent_of(record, @target_type_key) : nil
+    if target_type_parent && target_type_parent[target_type_child_key]
+      target_type = target_type_parent.delete(target_type_child_key)
+    else
+      target_type = @type_name
+    end
+
+    meta.clear
+    meta["_index".freeze] = target_index
+    meta["_type".freeze] = target_type
+
+    if @pipeline
+      meta["pipeline".freeze] = @pipeline
+    end
+
+    @meta_config_map.each do |record_key, meta_key|
+      meta[meta_key] = record[record_key] if record[record_key]
+    end
+
+    if @remove_keys
+      @remove_keys.each { |key| record.delete(key) }
+    end
+
+    append_record_to_messages(@write_operation, meta, header, record, bulk_message)
+    @error.bulk_message_count += 1
   end
 
   # returns [parent, child_key] of child described by path array in record's tree
