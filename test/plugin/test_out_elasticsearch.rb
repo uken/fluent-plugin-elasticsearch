@@ -37,7 +37,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def stub_elastic(url="http://localhost:9200/_bulk")
     stub_request(:post, url).with do |req|
-      @index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
+        @index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
     end
   end
 
@@ -181,6 +181,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_request(:post, url).to_return(lambda { |req| bodystr = make_response_body(req, 0, 500, error); body = JSON.parse(bodystr); body['items'][0]['unknown'] = body['items'][0].delete('create'); { :status => 200, :body => body.to_json, :headers => { 'Content-Type' => 'json' } } })
   end
 
+  def assert_logs_include(logs, msg)
+    matches = logs.grep /#{msg}/
+    assert_equal(1, matches.length, "Logs do not contain '#{msg}' '#{logs}'")
+  end
+
   def test_configure
     config = %{
       host     logs.google.com
@@ -203,6 +208,38 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_nil instance.client_cert
     assert_nil instance.client_key_pass
     assert_false instance.with_transporter_log
+    assert_not_nil instance.dlq_handler
+    assert_equal 'drop', instance.dlq_handler['type']
+  end
+
+  def test_configure_with_dlq_file_handler
+    require 'tmpdir'
+    dir = Dir.mktmpdir
+    config = %Q{
+      host     logs.google.com
+      port     777
+      scheme   https
+      path     /es/
+      user     john
+      password doe
+      dlq_handler {"type":"file", "dir":"#{dir}"}
+    }
+    instance = driver('test', config).instance
+
+    assert_equal 'logs.google.com', instance.host
+    assert_equal 777, instance.port
+    assert_equal 'https', instance.scheme
+    assert_equal '/es/', instance.path
+    assert_equal 'john', instance.user
+    assert_equal 'doe', instance.password
+    assert_equal :TLSv1, instance.ssl_version
+    assert_nil instance.client_key
+    assert_nil instance.client_cert
+    assert_nil instance.client_key_pass
+    assert_false instance.with_transporter_log
+    assert_not_nil instance.dlq_handler
+    assert_equal 'file', instance.dlq_handler['type']
+    assert_true Dir.exists?(dir)
   end
 
   def test_template_already_present
@@ -590,6 +627,30 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.emit(sample_record)
     driver.run
     assert_requested(elastic_request)
+  end
+
+  def test_write_message_with_dlq_drop_handler
+    driver.configure("target_index_key bad_value\n")
+    log = driver.instance.router.emit_error_handler.log
+    stub_elastic_ping
+    stub_elastic
+    driver.emit({'bad_value'=>"\255"})
+    driver.run
+    assert_logs_include(log.out.logs, 'Dropping')
+  end
+
+  def test_write_message_with_dlq_file_handler
+    log = driver.instance.router.emit_error_handler.log
+    dir = Dir.mktmpdir
+    driver.configure("dlq_handler {\"type\":\"file\", \"dir\":\"#{dir}\"}\n
+      target_index_key bad_value\n
+    ")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit({'bad_value'=>"\255"})
+    driver.run
+    logs = File.readlines(File.join(dir,'dlq'))
+    assert_logs_include(logs, 'invalid')
   end
 
   def test_writes_to_default_index

@@ -69,6 +69,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   config_param :reconnect_on_error, :bool, :default => false
   config_param :pipeline, :string, :default => nil
   config_param :with_transporter_log, :bool, :default => false
+  config_param :dlq_handler, :hash, :default => { 'type' =>'drop' }
 
   include Fluent::ElasticsearchIndexTemplate
   include Fluent::ElasticsearchConstants
@@ -128,6 +129,44 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
       @transport_logger = log
       log_level = conf['@log_level'] || conf['log_level']
       log.warn "Consider to specify log_level with @log_level." unless log_level
+    end
+
+    configure_dlq_handler
+
+  end
+
+  def configure_dlq_handler
+    dlq_type = @dlq_handler && @dlq_handler.is_a?(Hash) ? dlq_type = @dlq_handler['type'] : nil
+    return unless dlq_type
+
+    case dlq_type.downcase
+    when 'drop'
+      log.info('Configuring the DROP dead letter queue handler')
+      require_relative 'dead_letter_queue_drop_handler'
+      extend Fluent::DeadLetterQueueDropHandler
+    when 'file'
+      log.info("Configuring the File dead letter queue handler: ")
+      dir = @dlq_handler ['dir'] || '/var/lib/fluentd/dlq'
+      shift_age = @dlq_handler['max_files'] || 0
+      shift_size = @dlq_handler['max_file_size'] || 1048576
+      log.info("Configuring the File dead letter queue handler: ")
+      log.info("                Directory: #{dir}")
+      log.info("  Max number of DLQ files: #{shift_age}")
+      log.info("            Max file size: #{shift_size}")
+      unless Dir.exists?(dir)
+        Dir.mkdir(dir)
+        log.info("Created DLQ directory: '#{dir}'")
+      end
+      require 'logger'
+      require 'json'
+      file = File.join(dir, 'dlq')
+      @dlq_file = Logger.new(file, shift_age, shift_size)
+      @dlq_file.level = Logger::INFO
+      @dlq_file.formatter = proc { |severity, datetime, progname, msg| "#{msg.dump}\n" }
+      log.info ("Created DLQ file #{file}")
+
+      require_relative 'dead_letter_queue_file_handler'
+      extend Fluent::DeadLetterQueueFileHandler
     end
   end
 
@@ -321,76 +360,83 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
     chunk.msgpack_each do |time, record|
       @error.records += 1
       next unless record.is_a? Hash
-
-      if @flatten_hashes
-        record = flatten_record(record)
+      begin
+        process_message(tag, meta, header, time, record, bulk_message)
+      rescue=>e
+        handle_chunk_error(self, tag, e, time, record)
       end
-
-      if @hash_config
-        record = generate_hash_id_key(record)
-      end
-
-      dt = nil
-      if @logstash_format || @include_timestamp
-        if record.has_key?(TIMESTAMP_FIELD)
-          rts = record[TIMESTAMP_FIELD]
-          dt = parse_time(rts, time, tag)
-        elsif record.has_key?(@time_key)
-          rts = record[@time_key]
-          dt = parse_time(rts, time, tag)
-          record[TIMESTAMP_FIELD] = rts unless @time_key_exclude_timestamp
-        else
-          dt = Time.at(time).to_datetime
-          record[TIMESTAMP_FIELD] = dt.iso8601(@time_precision)
-        end
-      end
-
-      target_index_parent, target_index_child_key = @target_index_key ? get_parent_of(record, @target_index_key) : nil
-      if target_index_parent && target_index_parent[target_index_child_key]
-        target_index = target_index_parent.delete(target_index_child_key)
-      elsif @logstash_format
-        dt = dt.new_offset(0) if @utc_index
-        target_index = "#{@logstash_prefix}#{@logstash_prefix_separator}#{dt.strftime(@logstash_dateformat)}"
-      else
-        target_index = @index_name
-      end
-
-      # Change target_index to lower-case since Elasticsearch doesn't
-      # allow upper-case characters in index names.
-      target_index = target_index.downcase
-      if @include_tag_key
-        record[@tag_key] = tag
-      end
-
-      target_type_parent, target_type_child_key = @target_type_key ? get_parent_of(record, @target_type_key) : nil
-      if target_type_parent && target_type_parent[target_type_child_key]
-        target_type = target_type_parent.delete(target_type_child_key)
-      else
-        target_type = @type_name
-      end
-
-      meta.clear
-      meta["_index".freeze] = target_index
-      meta["_type".freeze] = target_type
-
-      if @pipeline
-        meta["pipeline".freeze] = @pipeline
-      end
-
-      @meta_config_map.each do |record_key, meta_key|
-        meta[meta_key] = record[record_key] if record[record_key]
-      end
-
-      if @remove_keys
-        @remove_keys.each { |key| record.delete(key) }
-      end
-
-      append_record_to_messages(@write_operation, meta, header, record, bulk_message)
-      @error.bulk_message_count += 1
     end
 
     send_bulk(bulk_message) unless bulk_message.empty?
     bulk_message.clear
+  end
+
+  def process_message(tag, meta, header, time, record, bulk_message)
+    if @flatten_hashes
+      record = flatten_record(record)
+    end
+
+    if @hash_config
+      record = generate_hash_id_key(record)
+    end
+
+    dt = nil
+    if @logstash_format || @include_timestamp
+      if record.has_key?(TIMESTAMP_FIELD)
+        rts = record[TIMESTAMP_FIELD]
+        dt = parse_time(rts, time, tag)
+      elsif record.has_key?(@time_key)
+        rts = record[@time_key]
+        dt = parse_time(rts, time, tag)
+        record[TIMESTAMP_FIELD] = rts unless @time_key_exclude_timestamp
+      else
+        dt = Time.at(time).to_datetime
+        record[TIMESTAMP_FIELD] = dt.iso8601(@time_precision)
+      end
+    end
+
+    target_index_parent, target_index_child_key = @target_index_key ? get_parent_of(record, @target_index_key) : nil
+    if target_index_parent && target_index_parent[target_index_child_key]
+      target_index = target_index_parent.delete(target_index_child_key)
+    elsif @logstash_format
+      dt = dt.new_offset(0) if @utc_index
+      target_index = "#{@logstash_prefix}#{@logstash_prefix_separator}#{dt.strftime(@logstash_dateformat)}"
+    else
+      target_index = @index_name
+    end
+
+    # Change target_index to lower-case since Elasticsearch doesn't
+    # allow upper-case characters in index names.
+    target_index = target_index.downcase
+    if @include_tag_key
+      record[@tag_key] = tag
+    end
+
+    target_type_parent, target_type_child_key = @target_type_key ? get_parent_of(record, @target_type_key) : nil
+    if target_type_parent && target_type_parent[target_type_child_key]
+      target_type = target_type_parent.delete(target_type_child_key)
+    else
+      target_type = @type_name
+    end
+
+    meta.clear
+    meta["_index".freeze] = target_index
+    meta["_type".freeze] = target_type
+
+    if @pipeline
+      meta["pipeline".freeze] = @pipeline
+    end
+
+    @meta_config_map.each do |record_key, meta_key|
+      meta[meta_key] = record[record_key] if record[record_key]
+    end
+
+    if @remove_keys
+      @remove_keys.each { |key| record.delete(key) }
+    end
+
+    append_record_to_messages(@write_operation, meta, header, record, bulk_message)
+    @error.bulk_message_count += 1
   end
 
   # returns [parent, child_key] of child described by path array in record's tree
