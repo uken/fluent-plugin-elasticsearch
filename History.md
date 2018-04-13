@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 1.14.0
+- introduce dead letter queue to handle issues unpacking file buffer chunks (#398)
+
 ### 1.13.4
 - backport auth: Fix missing auth tokens after reloading connections (#397)
 
