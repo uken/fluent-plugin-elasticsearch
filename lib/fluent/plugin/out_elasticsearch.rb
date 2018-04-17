@@ -10,12 +10,23 @@ rescue LoadError
 end
 
 require 'fluent/output'
+require 'fluent/event'
 require_relative 'elasticsearch_constants'
 require_relative 'elasticsearch_error_handler'
 require_relative 'elasticsearch_index_template'
 
 class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   class ConnectionFailure < StandardError; end
+
+  # RetryRecordsError privides a list of records to be
+  # put back in the pipeline for cases where a bulk request
+  # failed (e.g some records succeed while others failed)
+  class RetryRecordsError < StandardError
+    attr_reader :records
+    def initialize(records)
+        @records = records
+    end
+  end
 
   Fluent::Plugin.register_output('elasticsearch', self)
 
@@ -319,17 +330,19 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
     meta = {}
     @error = Fluent::ElasticsearchErrorHandler.new(self)
 
+    records = []
     chunk.msgpack_each do |time, record|
       @error.records += 1
       next unless record.is_a? Hash
       begin
         process_message(tag, meta, header, time, record, bulk_message)
+        records << { time: time, record: record }
       rescue=>e
         router.emit_error_event(tag, time, record, e)
       end
     end
 
-    send_bulk(bulk_message) unless bulk_message.empty?
+    send_bulk(bulk_message, tag, records) unless bulk_message.empty?
     bulk_message.clear
   end
 
@@ -408,11 +421,20 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
     [parent_object, path[-1]]
   end
 
-  def send_bulk(data)
+  # send_bulk given a specific bulk request, the original tag,
+  # and an array of hash records that have :time, :record
+  def send_bulk(data, tag, records)
     retries = 0
     begin
       response = client.bulk body: data
-      @error.handle_error(response) if response['errors']
+      @error.handle_error(response, tag, records) if response['errors']
+    rescue RetryRecordsError => e
+      es = Fluent::MultiEventStream.new.tap do |es|
+        e.records.each do |e|
+          es.add(e[:time], e[:record])
+        end
+      end
+      router.emit_stream(tag, es)
     rescue *client.transport.host_unreachable_exceptions => e
       if retries < 2
         retries += 1

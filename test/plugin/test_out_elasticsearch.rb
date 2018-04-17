@@ -150,33 +150,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_request(:post, url).to_return(lambda { |req| { :status => 200, :body => make_response_body(req, 1, 500, error), :headers => { 'Content-Type' => 'json' } } })
   end
 
-  def stub_elastic_unrecognized_error(url="http://localhost:9200/_bulk")
-    error = {
-      "status" => 500,
-      "type" => "some-other-type",
-      "reason" => "some-other-reason"
-    }
-    stub_request(:post, url).to_return(lambda { |req| { :status => 200, :body => make_response_body(req, 1, 504, error), :headers => { 'Content-Type' => 'json' } } })
-  end
-
-  def stub_elastic_version_mismatch(url="http://localhost:9200/_bulk")
-    error = {
-      "status" => 500,
-      "category" => "some-other-type",
-      "reason" => "some-other-reason"
-    }
-    stub_request(:post, url).to_return(lambda { |req| { :status => 200, :body => make_response_body(req, 1, 500, error), :headers => { 'Content-Type' => 'json' } } })
-  end
-
-  def stub_elastic_index_to_create(url="http://localhost:9200/_bulk")
-    error = {
-      "category" => "some-other-type",
-      "reason" => "some-other-reason",
-      "type" => "some-other-type"
-    }
-    stub_request(:post, url).to_return(lambda { |req| { :status => 200, :body => make_response_body(req, 0, 500, error), :headers => { 'Content-Type' => 'json' } } })
-  end
-
   def stub_elastic_unexpected_response_op(url="http://localhost:9200/_bulk")
     error = {
       "category" => "some-other-type",
@@ -1377,47 +1350,67 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_bulk_error
     stub_elastic_ping
-    stub_elastic_bulk_error
+    stub_request(:post, 'http://localhost:9200/_bulk')
+        .to_return(lambda do |req| 
+      { :status => 200, 
+        :headers => { 'Content-Type' => 'json' }, 
+        :body => %({
+          "took" : 1,
+          "errors" : true,
+          "items" : [
+            {
+              "create" : {
+                "_index" : "foo",
+                "_type"  : "bar",
+                "_id" : "abc",
+                "status" : 500,
+                "error" : {
+                  "type" : "some unrecognized type",
+                  "reason":"some error to cause version mismatch"
+                }
+              }
+            },
+            {
+              "create" : {
+                "_index" : "foo",
+                "_type"  : "bar",
+                "_id" : "abc",
+                "status" : 201
+              }
+            },
+            {
+              "create" : {
+                "_index" : "foo",
+                "_type"  : "bar",
+                "_id" : "abc",
+                "status" : 500,
+                "error" : {
+                  "type" : "some unrecognized type",
+                  "reason":"some error to cause version mismatch"
+                }
+              }
+            },
+            {
+              "create" : {
+                "_index" : "foo",
+                "_type"  : "bar",
+                "_id" : "abc",
+                "_id" : "abc",
+                "status" : 409
+              }
+            }
+           ]
+        })
+     }
+    end)
 
-    assert_raise(Fluent::ElasticsearchErrorHandler::ElasticsearchError) {
-      driver.emit(sample_record)
-      driver.emit(sample_record)
-      driver.emit(sample_record)
-      driver.run
-    }
-  end
-
-  def test_bulk_error_version_mismatch
-    stub_elastic_ping
-    stub_elastic_version_mismatch
-
-    assert_raise(Fluent::ElasticsearchErrorHandler::ElasticsearchVersionMismatch) {
-      driver.emit(sample_record)
-      driver.emit(sample_record)
-      driver.emit(sample_record)
-      driver.run
-    }
-  end
-
-  def test_bulk_index_into_a_create
-    stub_elastic_ping
-    stub_elastic_index_to_create
-
-    assert_raise(Fluent::ElasticsearchErrorHandler::ElasticsearchError) {
-      driver.emit(sample_record)
-      driver.run
-    }
-    assert(index_cmds[0].has_key?("create"))
-  end
-
-  def test_bulk_unexpected_response_op
-    stub_elastic_ping
-    stub_elastic_unexpected_response_op
-
-    assert_raise(Fluent::ElasticsearchErrorHandler::ElasticsearchVersionMismatch) {
-      driver.emit(sample_record)
-      driver.run
-    }
+    driver.emit(sample_record, 1)
+    driver.emit(sample_record, 2)
+    driver.emit(sample_record, 3)
+    driver.emit(sample_record, 4)
+    driver.expect_emit('test', 1, sample_record)
+    driver.expect_emit('test', 3, sample_record)
+    driver.run
   end
 
   def test_update_should_not_write_if_theres_no_id

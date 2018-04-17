@@ -4,20 +4,22 @@ class Fluent::ElasticsearchErrorHandler
   include Fluent::ElasticsearchConstants
 
   attr_accessor :records, :bulk_message_count
-  class BulkIndexQueueFull < StandardError; end
-  class ElasticsearchOutOfMemory < StandardError; end
   class ElasticsearchVersionMismatch < StandardError; end
-  class UnrecognizedElasticsearchError < StandardError; end
   class ElasticsearchError < StandardError; end
+
   def initialize(plugin, records = 0, bulk_message_count = 0)
     @plugin = plugin
     @records = records
     @bulk_message_count = bulk_message_count
   end
 
-  def handle_error(response)
+  def handle_error(response, tag, records)
+    if records.length != response['items'].length
+      raise ElasticsearchError, "The number of records submitted do not match the number returned. Unable to process bulk response"
+    end
+    retry_records = []
     stats = Hash.new(0)
-    response['items'].each do |item|
+    response['items'].each_with_index do |item, index|
       if item.has_key?(@plugin.write_operation)
         write_operation = @plugin.write_operation
       elsif INDEX_OP == @plugin.write_operation && item.has_key?(CREATE_OP)
@@ -41,13 +43,20 @@ class Fluent::ElasticsearchErrorHandler
         stats[:successes] += 1
       when CREATE_OP == write_operation && 409 == status
         stats[:duplicates] += 1
+      when 400 == status
+        stats[:bad_argument] += 1
+        record = records[index]
+        @plugin.router.emit_error_event(tag, record[:time], record[:record], '400 - Rejected by Elasticsearch')
       else
+        retry_records << records[index]
         if item[write_operation].has_key?('error') && item[write_operation]['error'].has_key?('type')
           type = item[write_operation]['error']['type']
         else
           # When we don't have a type field, something changed in the API
           # expected return values (ES 2.x)
           stats[:errors_bad_resp] += 1
+          record = records[index]
+          @plugin.router.emit_error_event(tag, record[:time], record[:record], status + '- No error type provided in the response')
           next
         end
         stats[type] += 1
@@ -58,19 +67,6 @@ class Fluent::ElasticsearchErrorHandler
       stats.each_pair { |key, value| msg << "#{value} #{key}" }
       @plugin.log.debug msg.join(', ')
     end
-    case
-    when stats[:errors_bad_resp] > 0
-      @plugin.log.on_debug { @plugin.log.debug("Unable to parse response from elasticsearch, likely an API version mismatch:  #{response}") }
-      raise ElasticsearchVersionMismatch, "Unable to parse error response from Elasticsearch, likely an API version mismatch. Add '@log_level debug' to your config to see the full response"
-    when stats[:successes] + stats[:duplicates] == bulk_message_count
-      @plugin.log.info("retry succeeded - successes=#{stats[:successes]} duplicates=#{stats[:duplicates]}")
-    when stats['es_rejected_execution_exception'] > 0
-      raise BulkIndexQueueFull, 'Bulk index queue is full, retrying'
-    when stats['out_of_memory_error'] > 0
-      raise ElasticsearchOutOfMemory, 'Elasticsearch has exhausted its heap, retrying'
-    else
-      @plugin.log.on_debug { @plugin.log.debug("Elasticsearch errors returned, retrying:  #{response}") }
-      raise ElasticsearchError, "Elasticsearch returned errors, retrying. Add '@log_level debug' to your config to see the full response"
-    end
+    raise Fluent::ElasticsearchOutput::RetryRecordsError.new(retry_records) if retry_records.length > 0
   end
 end
