@@ -69,7 +69,6 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   config_param :reconnect_on_error, :bool, :default => false
   config_param :pipeline, :string, :default => nil
   config_param :with_transporter_log, :bool, :default => false
-  config_param :dlq_handler, :hash, :default => { 'type' =>'drop' }
 
   include Fluent::ElasticsearchIndexTemplate
   include Fluent::ElasticsearchConstants
@@ -131,43 +130,6 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
       log.warn "Consider to specify log_level with @log_level." unless log_level
     end
 
-    configure_dlq_handler
-
-  end
-
-  def configure_dlq_handler
-    dlq_type = @dlq_handler && @dlq_handler.is_a?(Hash) ? dlq_type = @dlq_handler['type'] : nil
-    return unless dlq_type
-
-    case dlq_type.downcase
-    when 'drop'
-      log.info('Configuring the DROP dead letter queue handler')
-      require_relative 'dead_letter_queue_drop_handler'
-      extend Fluent::DeadLetterQueueDropHandler
-    when 'file'
-      log.info("Configuring the File dead letter queue handler: ")
-      dir = @dlq_handler ['dir'] || '/var/lib/fluentd/dlq'
-      shift_age = @dlq_handler['max_files'] || 0
-      shift_size = @dlq_handler['max_file_size'] || 1048576
-      log.info("Configuring the File dead letter queue handler: ")
-      log.info("                Directory: #{dir}")
-      log.info("  Max number of DLQ files: #{shift_age}")
-      log.info("            Max file size: #{shift_size}")
-      unless Dir.exists?(dir)
-        Dir.mkdir(dir)
-        log.info("Created DLQ directory: '#{dir}'")
-      end
-      require 'logger'
-      require 'json'
-      file = File.join(dir, 'dlq')
-      @dlq_file = Logger.new(file, shift_age, shift_size)
-      @dlq_file.level = Logger::INFO
-      @dlq_file.formatter = proc { |severity, datetime, progname, msg| "#{msg.dump}\n" }
-      log.info ("Created DLQ file #{file}")
-
-      require_relative 'dead_letter_queue_file_handler'
-      extend Fluent::DeadLetterQueueFileHandler
-    end
   end
 
   def create_meta_config_map
@@ -363,7 +325,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
       begin
         process_message(tag, meta, header, time, record, bulk_message)
       rescue=>e
-        handle_chunk_error(self, tag, e, time, record)
+        router.emit_error_event(tag, time, record, e)
       end
     end
 

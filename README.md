@@ -49,7 +49,6 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [time_parse_error_tag](#time_parse_error_tag)
   + [reconnect_on_error](#reconnect_on_error)
   + [with_transporter_log](#with_transporter_log)
-  + [dlq_handler](#dlq_handler)
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Proxy Support](#proxy-support)
   + [Buffered output options](#buffered-output-options)
@@ -473,17 +472,6 @@ We recommend to set this true if you start to debug this plugin.
 
 ```
 with_transporter_log true
-```
-
-### dlq_handler
-Adds an error handler for processing corrupt messages from message buffers.
-There are [known cases](https://bugzilla.redhat.com/show_bug.cgi?id=1562004) where
-fluentd is stuck processing messages because the file buffer is corrupt.  Fluentd
-is unable to clear faulty buffer chunks.
-
-```
-dlq_handler {'type':'drop'}        #default is to log and drop messages
-dlq_handler {'type':'file', 'dir':'/tmp/fluentd/dlq', 'max_files':5, 'max_file_size':104857600}
 ```
 
 ### Client/host certificate options
