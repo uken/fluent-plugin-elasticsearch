@@ -380,7 +380,7 @@ EOC
       meta = {}
 
       tag = chunk.metadata.tag
-      logstash_prefix, index_name, type_name = expand_placeholders(chunk.metadata)
+      extracted_values = expand_placeholders(chunk.metadata)
       @error = Fluent::Plugin::ElasticsearchErrorHandler.new(self)
       @last_seen_major_version = detect_es_major_version rescue DEFAULT_ELASTICSEARCH_VERSION
 
@@ -388,89 +388,94 @@ EOC
         @error.records += 1
         next unless record.is_a? Hash
 
-        if @flatten_hashes
-          record = flatten_record(record)
-        end
-
-        if @hash_config
-          record = generate_hash_id_key(record)
-        end
-
-        dt = nil
-        if @logstash_format || @include_timestamp
-          if record.has_key?(TIMESTAMP_FIELD)
-            rts = record[TIMESTAMP_FIELD]
-            dt = parse_time(rts, time, tag)
-          elsif record.has_key?(@time_key)
-            rts = record[@time_key]
-            dt = parse_time(rts, time, tag)
-            record[TIMESTAMP_FIELD] = dt.iso8601(@time_precision) unless @time_key_exclude_timestamp
-          else
-            dt = Time.at(time).to_datetime
-            record[TIMESTAMP_FIELD] = dt.iso8601(@time_precision)
-          end
-        end
-
-        target_index_parent, target_index_child_key = @target_index_key ? get_parent_of(record, @target_index_key) : nil
-        if target_index_parent && target_index_parent[target_index_child_key]
-          target_index = target_index_parent.delete(target_index_child_key)
-        elsif @logstash_format
-          dt = dt.new_offset(0) if @utc_index
-          target_index = "#{logstash_prefix}#{@logstash_prefix_separator}#{dt.strftime(@logstash_dateformat)}"
-        else
-          target_index = index_name
-        end
-
-        # Change target_index to lower-case since Elasticsearch doesn't
-        # allow upper-case characters in index names.
-        target_index = target_index.downcase
-        if @include_tag_key
-          record[@tag_key] = tag
-        end
-
-        target_type_parent, target_type_child_key = @target_type_key ? get_parent_of(record, @target_type_key) : nil
-        if target_type_parent && target_type_parent[target_type_child_key]
-          target_type = target_type_parent.delete(target_type_child_key)
-          if @last_seen_major_version == 6
-            log.warn "Detected ES 6.x: `@type_name` will be used as the document `_type`."
-            target_type = type_name
-          elsif @last_seen_major_version >= 7
-            log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
-            target_type = '_doc'.freeze
-          end
-        else
-          if @last_seen_major_version >= 7 && target_type != DEFAULT_TYPE_NAME_ES_7x
-            log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
-            target_type = '_doc'.freeze
-          else
-            target_type = type_name
-          end
-        end
-
-        meta.clear
-        meta["_index".freeze] = target_index
-        meta["_type".freeze] = target_type
-
-        if @pipeline
-          meta["pipeline".freeze] = @pipeline
-        end
-
-        @meta_config_map.each do |record_accessor, meta_key|
-          if raw_value = record_accessor.call(record)
-            meta[meta_key] = raw_value
-          end
-        end
-
-        if @remove_keys
-          @remove_keys.each { |key| record.delete(key) }
-        end
-
-        append_record_to_messages(@write_operation, meta, header, record, bulk_message)
-        @error.bulk_message_count += 1
+        process_message(tag, meta, header, time, record, bulk_message, extracted_values)
       end
-
       send_bulk(bulk_message) unless bulk_message.empty?
       bulk_message.clear
+    end
+
+    def process_message(tag, meta, header, time, record, bulk_message, extracted_values)
+      logstash_prefix, index_name, type_name = extracted_values
+
+      if @flatten_hashes
+        record = flatten_record(record)
+      end
+
+      if @hash_config
+        record = generate_hash_id_key(record)
+      end
+
+      dt = nil
+      if @logstash_format || @include_timestamp
+        if record.has_key?(TIMESTAMP_FIELD)
+          rts = record[TIMESTAMP_FIELD]
+          dt = parse_time(rts, time, tag)
+        elsif record.has_key?(@time_key)
+          rts = record[@time_key]
+          dt = parse_time(rts, time, tag)
+          record[TIMESTAMP_FIELD] = dt.iso8601(@time_precision) unless @time_key_exclude_timestamp
+        else
+          dt = Time.at(time).to_datetime
+          record[TIMESTAMP_FIELD] = dt.iso8601(@time_precision)
+        end
+      end
+
+      target_index_parent, target_index_child_key = @target_index_key ? get_parent_of(record, @target_index_key) : nil
+      if target_index_parent && target_index_parent[target_index_child_key]
+        target_index = target_index_parent.delete(target_index_child_key)
+      elsif @logstash_format
+        dt = dt.new_offset(0) if @utc_index
+        target_index = "#{logstash_prefix}#{@logstash_prefix_separator}#{dt.strftime(@logstash_dateformat)}"
+      else
+        target_index = index_name
+      end
+
+      # Change target_index to lower-case since Elasticsearch doesn't
+      # allow upper-case characters in index names.
+      target_index = target_index.downcase
+      if @include_tag_key
+        record[@tag_key] = tag
+      end
+
+      target_type_parent, target_type_child_key = @target_type_key ? get_parent_of(record, @target_type_key) : nil
+      if target_type_parent && target_type_parent[target_type_child_key]
+        target_type = target_type_parent.delete(target_type_child_key)
+        if @last_seen_major_version == 6
+          log.warn "Detected ES 6.x: `@type_name` will be used as the document `_type`."
+          target_type = type_name
+        elsif @last_seen_major_version >= 7
+          log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
+          target_type = '_doc'.freeze
+        end
+      else
+        if @last_seen_major_version >= 7 && target_type != DEFAULT_TYPE_NAME_ES_7x
+          log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
+          target_type = '_doc'.freeze
+        else
+          target_type = type_name
+        end
+      end
+
+      meta.clear
+      meta["_index".freeze] = target_index
+      meta["_type".freeze] = target_type
+
+      if @pipeline
+        meta["pipeline".freeze] = @pipeline
+      end
+
+      @meta_config_map.each do |record_accessor, meta_key|
+        if raw_value = record_accessor.call(record)
+          meta[meta_key] = raw_value
+        end
+      end
+
+      if @remove_keys
+        @remove_keys.each { |key| record.delete(key) }
+      end
+
+      append_record_to_messages(@write_operation, meta, header, record, bulk_message)
+      @error.bulk_message_count += 1
     end
 
     # returns [parent, child_key] of child described by path array in record's tree
