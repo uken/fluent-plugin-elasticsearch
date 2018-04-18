@@ -134,6 +134,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def stub_elastic_bulk_rejected(url="http://localhost:9200/_bulk")
     error = {
+      "status" => 500,
       "type" => "es_rejected_execution_exception",
       "reason" => "rejected execution of org.elasticsearch.transport.TransportService$4@1a34d37a on EsThreadPoolExecutor[bulk, queue capacity = 50, org.elasticsearch.common.util.concurrent.EsThreadPoolExecutor@312a2162[Running, pool size = 32, active threads = 32, queued tasks = 50, completed tasks = 327053]]"
     }
@@ -142,6 +143,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def stub_elastic_out_of_memory(url="http://localhost:9200/_bulk")
     error = {
+      "status" => 500,
       "type" => "out_of_memory_error",
       "reason" => "Java heap space"
     }
@@ -150,6 +152,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def stub_elastic_unrecognized_error(url="http://localhost:9200/_bulk")
     error = {
+      "status" => 500,
       "type" => "some-other-type",
       "reason" => "some-other-reason"
     }
@@ -158,6 +161,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def stub_elastic_version_mismatch(url="http://localhost:9200/_bulk")
     error = {
+      "status" => 500,
       "category" => "some-other-type",
       "reason" => "some-other-reason"
     }
@@ -1417,25 +1421,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(connection_resets, 1)
   end
 
-  def test_bulk_bad_arguments
-    log = driver.instance.router.emit_error_handler.log
-    log.level = 'debug'
-    driver = driver('@log_level debug')
-
-    stub_elastic_ping
-    stub_elastic_bad_argument
-
-    driver.emit(sample_record)
-    driver.emit(sample_record)
-    driver.emit(sample_record)
-    driver.run
-
-    matches = log.out.logs.grep /Elasticsearch rejected document:/
-    assert_equal(1, matches.length, "Message 'Elasticsearch rejected document: ...' was not emitted")
-    matches = log.out.logs.grep /documents due to invalid field arguments/
-    assert_equal(1, matches.length, "Message 'Elasticsearch rejected # documents due to invalid field arguments ...' was not emitted")
-  end
-
   def test_bulk_error
     stub_elastic_ping
     stub_elastic_bulk_error
@@ -1453,42 +1438,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic_version_mismatch
 
     assert_raise(Fluent::ElasticsearchErrorHandler::ElasticsearchVersionMismatch) {
-      driver.emit(sample_record)
-      driver.emit(sample_record)
-      driver.emit(sample_record)
-      driver.run
-    }
-  end
-
-  def test_bulk_error_unrecognized_error
-    stub_elastic_ping
-    stub_elastic_unrecognized_error
-
-    assert_raise(Fluent::ElasticsearchErrorHandler::UnrecognizedElasticsearchError) {
-      driver.emit(sample_record)
-      driver.emit(sample_record)
-      driver.emit(sample_record)
-      driver.run
-    }
-  end
-
-  def test_bulk_error_out_of_memory
-    stub_elastic_ping
-    stub_elastic_out_of_memory
-
-    assert_raise(Fluent::ElasticsearchErrorHandler::ElasticsearchOutOfMemory) {
-      driver.emit(sample_record)
-      driver.emit(sample_record)
-      driver.emit(sample_record)
-      driver.run
-    }
-  end
-
-  def test_bulk_error_queue_full
-    stub_elastic_ping
-    stub_elastic_bulk_rejected
-
-    assert_raise(Fluent::ElasticsearchErrorHandler::BulkIndexQueueFull) {
       driver.emit(sample_record)
       driver.emit(sample_record)
       driver.emit(sample_record)
