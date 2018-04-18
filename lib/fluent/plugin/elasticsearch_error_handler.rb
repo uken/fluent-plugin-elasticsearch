@@ -16,12 +16,7 @@ class Fluent::Plugin::ElasticsearchErrorHandler
   end
 
   def handle_error(response)
-    errors = Hash.new(0)
-    errors_bad_resp = 0
-    errors_unrecognized = 0
-    successes = 0
-    duplicates = 0
-    bad_arguments = 0
+    stats = Hash.new(0)
     response['items'].each do |item|
       if item.has_key?(@plugin.write_operation)
         write_operation = @plugin.write_operation
@@ -30,7 +25,7 @@ class Fluent::Plugin::ElasticsearchErrorHandler
       else
         # When we don't have an expected ops field, something changed in the API
         # expected return values (ES 2.x)
-        errors_bad_resp += 1
+        stats[:errors_bad_resp] += 1
         next
       end
       if item[write_operation].has_key?('status')
@@ -38,58 +33,44 @@ class Fluent::Plugin::ElasticsearchErrorHandler
       else
         # When we don't have a status field, something changed in the API
         # expected return values (ES 2.x)
-        errors_bad_resp += 1
+        stats[:errors_bad_resp] += 1
         next
       end
       case
+      when [200, 201].include?(status)
+        stats[:successes] += 1
       when CREATE_OP == write_operation && 409 == status
-        duplicates += 1
-      when 400 == status
-        bad_arguments += 1
-        @plugin.log.debug "Elasticsearch rejected document: #{item}"
-      when [429, 500].include?(status)
+        stats[:duplicates] += 1
+      else
         if item[write_operation].has_key?('error') && item[write_operation]['error'].has_key?('type')
           type = item[write_operation]['error']['type']
         else
           # When we don't have a type field, something changed in the API
           # expected return values (ES 2.x)
-          errors_bad_resp += 1
+          stats[:errors_bad_resp] += 1
           next
         end
-        errors[type] += 1
-      when [200, 201].include?(status)
-        successes += 1
-      else
-        errors_unrecognized += 1
+        stats[type] += 1
       end
     end
-    if errors_bad_resp > 0
-      msg = "Unable to parse error response from Elasticsearch, likely an API version mismatch  #{response}"
-      @plugin.log.error msg
-      raise ElasticsearchVersionMismatch, msg
+    if stats[:errors_bad_resp] > 0
+      @plugin.log.on_debug { @plugin.log.debug("Unable to parse response from elasticsearch, likely an API version mismatch:  #{response}") }
+      raise ElasticsearchVersionMismatch, "Unable to parse error response from Elasticsearch, likely an API version mismatch. Add '@log_level debug' to your config to see the full response"
     end
-    if bad_arguments > 0
-      @plugin.log.warn "Elasticsearch rejected #{bad_arguments} documents due to invalid field arguments"
+    @plugin.log.on_debug do
+      msg = ["Indexed (op = #{@plugin.write_operation})"]
+      stats.each_pair { |key, value| msg << "#{value} #{key}" }
+      @plugin.log.debug msg.join(', ')
     end
-    if duplicates > 0
-      @plugin.log.info "Encountered #{duplicates} duplicate(s) of #{successes} indexing chunk, ignoring"
-    end
-    msg = "Indexed (op = #{@plugin.write_operation}) #{successes} successfully, #{duplicates} duplicate(s), #{bad_arguments} bad argument(s), #{errors_unrecognized} unrecognized error(s)"
-    errors.each_key do |key|
-      msg << ", #{errors[key]} #{key} error(s)"
-    end
-    @plugin.log.debug msg
-    if errors_unrecognized > 0
-      raise UnrecognizedElasticsearchError, "Unrecognized elasticsearch errors returned, retrying  #{response}"
-    end
-    errors.each_key do |key|
+    stats.each_key do |key|
       case key
       when 'out_of_memory_error'
-        raise ElasticsearchOutOfMemory, "Elasticsearch has exhausted its heap, retrying"
+        raise ElasticsearchOutOfMemory, 'Elasticsearch has exhausted its heap, retrying'
       when 'es_rejected_execution_exception'
-        raise BulkIndexQueueFull, "Bulk index queue is full, retrying"
+        raise BulkIndexQueueFull, 'Bulk index queue is full, retrying'
       else
-        raise ElasticsearchError, "Elasticsearch errors returned, retrying  #{response}"
+        @plugin.log.on_debug { @plugin.log.debug("Elasticsearch errors returned, retrying:  #{response}") }
+        raise ElasticsearchError, "Elasticsearch returned errors, retrying. Add '@log_level debug' to your config to see the full response"
       end
     end
   end

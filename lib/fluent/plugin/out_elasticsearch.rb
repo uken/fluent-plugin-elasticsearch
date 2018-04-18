@@ -484,10 +484,7 @@ EOC
       retries = 0
       begin
         response = client.bulk body: data
-        if response['errors']
-          @error.handle_error(response)
-          log.error "Could not push log to Elasticsearch: #{response}"
-        end
+        @error.handle_error(response) if response['errors']
       rescue *client.transport.host_unreachable_exceptions => e
         if retries < 2
           retries += 1
