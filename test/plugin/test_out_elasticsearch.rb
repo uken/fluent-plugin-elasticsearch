@@ -205,6 +205,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_request(:post, url).to_return(lambda { |req| bodystr = make_response_body(req, 0, 500, error); body = JSON.parse(bodystr); body['items'][0]['unknown'] = body['items'][0].delete('create'); { :status => 200, :body => body.to_json, :headers => { 'Content-Type' => 'json' } } })
   end
 
+  def assert_logs_include(logs, msg)
+    matches = logs.grep /#{msg}/
+    assert_equal(1, matches.length, "Logs do not contain '#{msg}' '#{logs}'")
+  end
+
   def test_configure
     config = %{
       host     logs.google.com
@@ -662,6 +667,18 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.feed(sample_record)
     end
     assert_requested(elastic_request)
+  end
+
+  def test_write_message_with_bad_chunk
+    driver.configure("target_index_key bad_value\n@log_level debug\n")
+    stub_elastic_ping
+    stub_elastic
+    driver.run(default_tag: 'test') do
+      driver.feed({'bad_value'=>"\255"})
+    end
+    error_log = driver.error_events.map {|e| e.last.message }
+
+    assert_logs_include(error_log, /(input string invalid)|(invalid byte sequence in UTF-8)/)
   end
 
   def test_writes_to_default_index

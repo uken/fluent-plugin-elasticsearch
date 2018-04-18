@@ -388,7 +388,11 @@ EOC
         @error.records += 1
         next unless record.is_a? Hash
 
-        process_message(tag, meta, header, time, record, bulk_message, extracted_values)
+        begin
+          process_message(tag, meta, header, time, record, bulk_message, extracted_values)
+        rescue => e
+          router.emit_error_event(tag, time, record, e)
+        end
       end
       send_bulk(bulk_message) unless bulk_message.empty?
       bulk_message.clear
