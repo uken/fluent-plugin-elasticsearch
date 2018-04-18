@@ -604,7 +604,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     driver.emit({'bad_value'=>"\255"})
     driver.run
-    assert_logs_include(log.out.logs, 'input string invalid')
+    assert_logs_include(log.out.logs, /(input string invalid)|(invalid byte sequence in UTF-8)/)
   end
 
   def test_writes_to_default_index
