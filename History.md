@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 1.15.0
+- revert dlq to use router.emit_error_event instead (#402)
+- Don't log full response on error (#399)
+
 ### 1.14.0
 - introduce dead letter queue to handle issues unpacking file buffer chunks (#398)
 
