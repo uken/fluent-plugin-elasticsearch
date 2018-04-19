@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 2.9.0
+- DLQ revisited v1 uplifted #398, #402 (#404)
+
 ### 2.8.6
 - auth: Fix missing auth tokens after reloading connections (#394)
 
