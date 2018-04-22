@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 1.15.1
+- successful operation if all duplicates (#406)
+
 ### 1.15.0
 - revert dlq to use router.emit_error_event instead (#402)
 - Don't log full response on error (#399)
