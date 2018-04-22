@@ -62,6 +62,10 @@ class Fluent::Plugin::ElasticsearchErrorHandler
       stats.each_pair { |key, value| msg << "#{value} #{key}" }
       @plugin.log.debug msg.join(', ')
     end
+    if stats[:successes] + stats[:duplicates] == bulk_message_count
+      @plugin.log.debug("retry succeeded - all #{bulk_message_count} records were successfully sent")
+      return
+    end
     stats.each_key do |key|
       case key
       when 'out_of_memory_error'
