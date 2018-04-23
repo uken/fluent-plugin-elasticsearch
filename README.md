@@ -28,7 +28,7 @@ Current maintainers: @cosmo0920
   + [time_precision](#time_precision)
   + [time_key](#time_key)
   + [time_key_exclude_timestamp](#time_key_exclude_timestamp)
-  + [include_timestamp](#time_key_exclude_timestamp)
+  + [include_timestamp](#include_timestamp)
   + [utc_index](#utc_index)
   + [target_index_key](#target_index_key)
   + [target_type_key](#target_type_key)
