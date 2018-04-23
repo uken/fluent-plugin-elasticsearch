@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 2.9.1
+- Uplift Merge pull request #406 from richm/v0.12-successes-duplicates-no-retry (#407)
+
 ### 2.9.0
 - DLQ revisited v1 uplifted #398, #402 (#404)
 
