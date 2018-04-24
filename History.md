@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 1.15.2
+- handle case where stats not processed in order; add testing (#410)
+
 ### 1.15.1
 - successful operation if all duplicates (#406)
 
