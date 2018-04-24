@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 2.9.2
+- Uplift Merge pull request #410 from richm/v0.12-consistent-errors-and-tests (#411)
+- Add correct link for include_timestamp (#408)
+
 ### 2.9.1
 - Uplift Merge pull request #406 from richm/v0.12-successes-duplicates-no-retry (#407)
 
