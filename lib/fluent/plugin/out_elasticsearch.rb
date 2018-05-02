@@ -10,6 +10,7 @@ rescue LoadError
 end
 
 require 'fluent/plugin/output'
+require 'fluent/event'
 require_relative 'elasticsearch_constants'
 require_relative 'elasticsearch_error_handler'
 require_relative 'elasticsearch_index_template'
@@ -17,6 +18,16 @@ require_relative 'elasticsearch_index_template'
 module Fluent::Plugin
   class ElasticsearchOutput < Output
     class ConnectionFailure < StandardError; end
+
+    # RetryStreamError privides a stream to be
+    # put back in the pipeline for cases where a bulk request
+    # failed (e.g some records succeed while others failed)
+    class RetryStreamError < StandardError
+      attr_reader :retry_stream
+      def initialize(retry_stream)
+        @retry_stream = retry_stream
+      end
+    end
 
     helpers :event_emitter, :compat_parameters, :record_accessor
 
@@ -375,26 +386,26 @@ EOC
     end
 
     def write(chunk)
+      bulk_message_count = 0
       bulk_message = ''
       header = {}
       meta = {}
 
       tag = chunk.metadata.tag
       extracted_values = expand_placeholders(chunk.metadata)
-      @error = Fluent::Plugin::ElasticsearchErrorHandler.new(self)
       @last_seen_major_version = detect_es_major_version rescue DEFAULT_ELASTICSEARCH_VERSION
 
       chunk.msgpack_each do |time, record|
-        @error.records += 1
         next unless record.is_a? Hash
-
         begin
           process_message(tag, meta, header, time, record, bulk_message, extracted_values)
+          bulk_message_count += 1
         rescue => e
           router.emit_error_event(tag, time, record, e)
         end
       end
-      send_bulk(bulk_message) unless bulk_message.empty?
+
+      send_bulk(bulk_message, tag, chunk, bulk_message_count) unless bulk_message.empty?
       bulk_message.clear
     end
 
@@ -479,7 +490,6 @@ EOC
       end
 
       append_record_to_messages(@write_operation, meta, header, record, bulk_message)
-      @error.bulk_message_count += 1
     end
 
     # returns [parent, child_key] of child described by path array in record's tree
@@ -489,11 +499,18 @@ EOC
       [parent_object, path[-1]]
     end
 
-    def send_bulk(data)
+    # send_bulk given a specific bulk request, the original tag,
+    # chunk, and bulk_message_count
+    def send_bulk(data, tag, chunk, bulk_message_count)
       retries = 0
       begin
         response = client.bulk body: data
-        @error.handle_error(response) if response['errors']
+        if response['errors']
+          error = Fluent::Plugin::ElasticsearchErrorHandler.new(self)
+          error.handle_error(response, tag, chunk, bulk_message_count)
+        end
+      rescue RetryStreamError => e
+        router.emit_stream(tag, e.retry_stream)
       rescue *client.transport.host_unreachable_exceptions => e
         if retries < 2
           retries += 1
