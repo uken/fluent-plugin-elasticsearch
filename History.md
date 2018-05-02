@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 1.16.0
+- evaluate bulk request failures and reroute failed messages (#405)
+
 ### 1.15.2
 - handle case where stats not processed in order; add testing (#410)
 
