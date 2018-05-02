@@ -405,7 +405,7 @@ EOC
         end
       end
 
-      send_bulk(bulk_message, tag, chunk, bulk_message_count) unless bulk_message.empty?
+      send_bulk(bulk_message, tag, chunk, bulk_message_count, extracted_values) unless bulk_message.empty?
       bulk_message.clear
     end
 
@@ -501,13 +501,13 @@ EOC
 
     # send_bulk given a specific bulk request, the original tag,
     # chunk, and bulk_message_count
-    def send_bulk(data, tag, chunk, bulk_message_count)
+    def send_bulk(data, tag, chunk, bulk_message_count, extracted_values)
       retries = 0
       begin
         response = client.bulk body: data
         if response['errors']
           error = Fluent::Plugin::ElasticsearchErrorHandler.new(self)
-          error.handle_error(response, tag, chunk, bulk_message_count)
+          error.handle_error(response, tag, chunk, bulk_message_count, extracted_values)
         end
       rescue RetryStreamError => e
         router.emit_stream(tag, e.retry_stream)

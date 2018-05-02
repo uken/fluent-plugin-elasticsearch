@@ -22,7 +22,7 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
        @error_events.add(time, record)
     end
 
-    def process_message(tag, meta, header, time, record, bulk_message)
+    def process_message(tag, meta, header, time, record, bulk_message, extracted_values)
       if record.has_key?('raise') && record['raise']
         raise Exception('process_message')
       end
@@ -70,7 +70,8 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
       ]
      }))
     chunk = MockChunk.new(records)
-    @handler.handle_error(response, 'atag', chunk, records.length)
+    dummy_extracted_values = []
+    @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values)
     assert_equal(1, @plugin.error_events.instance_variable_get(:@time_array).size)
   end
 
@@ -167,7 +168,8 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
 
     begin
       failed = false
-      @handler.handle_error(response, 'atag', chunk, response['items'].length)
+      dummy_extracted_values = []
+      @handler.handle_error(response, 'atag', chunk, response['items'].length, dummy_extracted_values)
     rescue Fluent::Plugin::ElasticsearchOutput::RetryStreamError=>e
       failed = true
       records = [].tap do |records|

@@ -1782,8 +1782,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.feed(4, sample_record)
     end
 
-    expect = [['test', 1, sample_record].to_msgpack,
-              ['test', 3, sample_record].to_msgpack]
+    expect = [['test', 1, sample_record],
+              ['test', 3, sample_record]]
     assert_equal expect, driver.events
   end
 
