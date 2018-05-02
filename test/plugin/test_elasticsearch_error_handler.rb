@@ -1,4 +1,5 @@
 require 'helper'
+require 'fluent/plugin/out_elasticsearch'
 require 'fluent/plugin/elasticsearch_error_handler'
 require 'json'
 
@@ -6,10 +7,35 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
 
   class TestPlugin
     attr_reader :log
-    attr_reader :write_operation
+    attr_reader :write_operation, :error_events
     def initialize(log)
       @log = log
       @write_operation = 'index'
+      @error_events = Fluent::MultiEventStream.new
+    end
+
+    def router
+      self
+    end
+
+    def emit_error_event(tag, time, record, e)
+       @error_events.add(time, record)
+    end
+
+    def process_message(tag, meta, header, time, record, bulk_message)
+      if record.has_key?('raise') && record['raise']
+        raise Exception('process_message')
+      end
+    end
+  end
+
+  class MockChunk
+    def initialize(records)
+      @records = records
+      @index = 0
+    end
+    def msgpack_each
+      @records.each { |item| yield(item[:time],item[:record]) }
     end
   end
 
@@ -31,7 +57,8 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
     JSON.parse(value)
   end
 
-  def test_errors 
+  def test_dlq_400_responses
+    records = [{time: 123, record: {"foo" => "bar"}}]
     response = parse_response(%({
       "took" : 0,
       "errors" : true,
@@ -39,160 +66,36 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
         {
           "create" : {
             "_index" : "foo",
-            "_type"  : "bar",
-            "_id" : "abc",
-            "status" : 500,
-            "error" : {
-              "type" : "some unrecognized type",
-              "reason":"unrecognized error"
-            }
-          }
-        },
-        {
-          "create" : {
-            "_index" : "foo",
-            "_type"  : "bar",
-            "_id" : "abc",
-            "status" : 500,
-            "error" : {
-              "type" : "some unrecognized type",
-              "reason":"unrecognized error"
-            }
-          }
-        },
-        {
-          "create" : {
-            "_index" : "foo",
-            "_type"  : "bar",
-            "_id" : "abc",
-            "status" : 201
-          }
-        },
-        {
-          "create" : {
-            "_index" : "foo",
-            "_type"  : "bar",
-            "_id" : "abc",
-            "status" : 409
-          }
-        },
-        {
-          "create" : {
-            "_index" : "foo",
-            "_type"  : "bar",
-            "_id" : "abc",
             "status" : 400,
-            "error" : {
-              "type" : "some unrecognized type",
+            "_type"  : "bar",
               "reason":"unrecognized error"
             }
-          }
         }
       ]
-    }))
+     }))
+    chunk = MockChunk.new(records)
+    @handler.handle_error(response, 'atag', chunk, records.length)
+    assert_equal(1, @plugin.error_events.instance_variable_get(:@time_array).size)
+  end
 
-    assert_raise Fluent::ElasticsearchErrorHandler::ElasticsearchError do 
-        @handler.handle_error(response)
+  def test_retry_error
+    records = []
+    error_records = Hash.new(false)
+    error_records.merge!({0=>true, 4=>true, 9=>true})
+    10.times do |i|
+      records << {time: 12345, record: {"message"=>"record #{i}","_id"=>i,"raise"=>error_records[i]}}
     end
+    chunk = MockChunk.new(records)
 
-  end
-
-  def test_elasticsearch_version_mismatch_raises_error
-    response = parse_response(%(
-      {
-      "took" : 0,
-      "errors" : true,
-      "items" : [
-        {
-          "create" : {
-            "_index" : "foo",
-            "_type"  : "bar",
-            "_id" : "abc",
-            "status" : 500,
-            "error" : {
-              "reason":"some error to cause version mismatch"
-            }
-          }
-        }
-      ]
-      }
-    ))
-
-    assert_raise Fluent::ElasticsearchErrorHandler::ElasticsearchVersionMismatch do 
-        @handler.handle_error(response)
-    end
-
-  end
-
-  def test_retry_with_successes_and_duplicates
-    response = parse_response(%(
-      {
-      "took" : 0,
-      "errors" : true,
-      "items" : [
-        {
-          "create" : {
-            "_index" : "foo",
-            "_type"  : "bar",
-            "_id" : "abc",
-            "status" : 409,
-            "error" : {
-              "reason":"duplicate ID"
-            }
-          }
-        },
-        {
-          "create" : {
-            "_index" : "foo",
-            "_type"  : "bar",
-            "_id" : "abc",
-            "status" : 201
-          }
-        }
-      ]
-      }
-    ))
-
-    @plugin.instance_variable_set(:@write_operation, 'create')
-    @handler.instance_variable_set(:@bulk_message_count, 2)
-    @handler.handle_error(response)
-    assert_match /retry succeeded - successes=1 duplicates=1/, @log.out.logs[0]
-  end
-
-  def test_bulk_rejection_errors
     response = parse_response(%({
-      "took" : 0,
+      "took" : 1,
       "errors" : true,
       "items" : [
         {
           "create" : {
             "_index" : "foo",
             "_type"  : "bar",
-            "_id" : "abc",
-            "status" : 500,
-            "error" : {
-              "type" : "some unrecognized type",
-              "reason":"unrecognized error"
-            }
-          }
-        },
-        {
-          "create" : {
-            "_index" : "foo",
-            "_type"  : "bar",
-            "_id" : "abc",
-            "status" : 500,
-            "error" : {
-              "type" : "some unrecognized type",
-              "reason":"unrecognized error"
-            }
-          }
-        },
-        {
-          "create" : {
-            "_index" : "foo",
-            "_type"  : "bar",
-            "_id" : "abc",
+            "_id" : "1",
             "status" : 201
           }
         },
@@ -200,7 +103,19 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
           "create" : {
             "_index" : "foo",
             "_type"  : "bar",
-            "_id" : "abc",
+            "_id" : "2",
+            "status" : 500,
+            "error" : {
+              "type" : "some unrecognized type",
+              "reason":"unrecognized error"
+            }
+          }
+        },
+        {
+          "create" : {
+            "_index" : "foo",
+            "_type"  : "bar",
+            "_id" : "3",
             "status" : 409
           }
         },
@@ -208,37 +123,22 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
           "create" : {
             "_index" : "foo",
             "_type"  : "bar",
-            "_id" : "abc",
+            "_id" : "5",
+            "status" : 500,
+            "error" : {
+              "reason":"unrecognized error - no type field"
+            }
+          }
+        },
+        {
+          "create" : {
+            "_index" : "foo",
+            "_type"  : "bar",
+            "_id" : "6",
             "status" : 429,
             "error" : {
               "type" : "es_rejected_execution_exception",
-              "reason":"Elasticsearch could not process bulk index request"
-            }
-          }
-        }
-      ]
-    }))
-
-    assert_raise Fluent::ElasticsearchErrorHandler::BulkIndexQueueFull do
-        @handler.handle_error(response)
-    end
-
-  end
-
-  def test_out_of_memory_errors
-    response = parse_response(%({
-      "took" : 0,
-      "errors" : true,
-      "items" : [
-        {
-          "create" : {
-            "_index" : "foo",
-            "_type"  : "bar",
-            "_id" : "abc",
-            "status" : 500,
-            "error" : {
-              "type" : "some unrecognized type",
-              "reason":"unrecognized error"
+              "reason":"unable to fulfill request at this time, try again later"
             }
           }
         },
@@ -246,48 +146,47 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
           "create" : {
             "_index" : "foo",
             "_type"  : "bar",
-            "_id" : "abc",
-            "status" : 500,
-            "error" : {
-              "type" : "some unrecognized type",
-              "reason":"unrecognized error"
-            }
-          }
-        },
-        {
-          "create" : {
-            "_index" : "foo",
-            "_type"  : "bar",
-            "_id" : "abc",
-            "status" : 201
-          }
-        },
-        {
-          "create" : {
-            "_index" : "foo",
-            "_type"  : "bar",
-            "_id" : "abc",
-            "status" : 409
-          }
-        },
-        {
-          "create" : {
-            "_index" : "foo",
-            "_type"  : "bar",
-            "_id" : "abc",
+            "_id" : "7",
             "status" : 400,
             "error" : {
-              "type" : "out_of_memory_error",
-              "reason":"Elasticsearch exhausted its heap"
+              "type" : "some unrecognized type",
+              "reason":"unrecognized error"
+            }
+          }
+        },
+        {
+          "create" : {
+            "_index" : "foo",
+            "_type"  : "bar",
+            "_id" : "8",
+            "status" : 500,
+            "error" : {
+              "type" : "some unrecognized type",
+              "reason":"unrecognized error"
             }
           }
         }
       ]
     }))
 
-    assert_raise Fluent::ElasticsearchErrorHandler::ElasticsearchOutOfMemory do
-        @handler.handle_error(response)
+    begin
+      failed = false
+      @handler.handle_error(response, 'atag', chunk, response['items'].length)
+    rescue Fluent::ElasticsearchOutput::RetryStreamError=>e
+      failed = true
+      records = [].tap do |records|
+        e.retry_stream.each {|time, record| records << record}
+      end
+      assert_equal 3, records.length
+      assert_equal 2, records[0]['_id']
+      assert_equal 6, records[1]['_id']
+      assert_equal 8, records[2]['_id']
+      errors = @plugin.error_events.collect {|time, record| record}
+      assert_equal 2, errors.length
+      assert_equal 5, errors[0]['_id']
+      assert_equal 7, errors[1]['_id']
     end
+    assert_true failed
 
   end
 
