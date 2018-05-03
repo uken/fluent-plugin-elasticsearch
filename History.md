@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 2.10.0
+- Uplift Merge pull request #405 from jcantrill/sanitize_bulk (#414)
+
 ### 2.9.2
 - Uplift Merge pull request #410 from richm/v0.12-consistent-errors-and-tests (#411)
 - Add correct link for include_timestamp (#408)
