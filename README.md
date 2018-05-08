@@ -45,6 +45,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [remove_keys](#remove_keys)
   + [remove_keys_on_update](#remove_keys_on_update)
   + [remove_keys_on_update_key](#remove_keys_on_update_key)
+  + [retry_tag](#retry_tag)
   + [write_operation](#write_operation)
   + [time_parse_error_tag](#time_parse_error_tag)
   + [reconnect_on_error](#reconnect_on_error)
@@ -434,6 +435,21 @@ present in the record then the keys in record are used, if the `remove_keys_on_u
 ```
 remove_keys_on_update_key keys_to_skip
 ```
+
+### retry_tag
+
+This setting allows custom routing of messages in response to bulk request failures.  The default behavior is to emit
+failed records using the same tag that was provided.  When set to a value other then `nil`, failed messages are emitted
+with the specified tag:
+
+```
+retry_tag 'retry_es'
+```
+**NOTE:** `retry_tag` is optional. If you would rather use labels to reroute retries, add a label (e.g '@label @SOMELABEL') to your fluent
+elasticsearch plugin configuration. Retry records are, by default, submitted for retry to the ROOT label, which means
+records will flow through your fluentd pipeline from the beginning.  This may nor may not be a problem if the pipeline
+is idempotent - that is - you can process a record again with no changes.  Use tagging or labeling to ensure your retry
+records are not processed again by your fluentd processing pipeline.
 
 ### write_operation
 
