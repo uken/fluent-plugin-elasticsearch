@@ -1718,6 +1718,40 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(connection_resets, 1)
   end
 
+  def test_bulk_error_retags_when_configured
+    driver.configure("retry_tag retry\n")
+    stub_elastic_ping
+    stub_request(:post, 'http://localhost:9200/_bulk')
+        .to_return(lambda do |req|
+      { :status => 200,
+        :headers => { 'Content-Type' => 'json' },
+        :body => %({
+          "took" : 1,
+          "errors" : true,
+          "items" : [
+            {
+              "create" : {
+                "_index" : "foo",
+                "_type"  : "bar",
+                "_id" : "abc",
+                "status" : 500,
+                "error" : {
+                  "type" : "some unrecognized type",
+                  "reason":"some error to cause version mismatch"
+                }
+              }
+            }
+           ]
+        })
+     }
+    end)
+
+    driver.run(default_tag: 'test') do
+      driver.feed(1, sample_record)
+    end
+
+    assert_equal [['retry', 1, sample_record]], driver.events
+  end
 
   def test_bulk_error
     stub_elastic_ping
