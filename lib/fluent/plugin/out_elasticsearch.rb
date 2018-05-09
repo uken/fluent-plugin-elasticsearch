@@ -67,6 +67,7 @@ EOC
     config_param :request_timeout, :time, :default => 5
     config_param :reload_connections, :bool, :default => true
     config_param :reload_on_failure, :bool, :default => false
+    config_param :retry_tag, :string, :default=>nil
     config_param :resurrect_after, :time, :default => 60
     config_param :time_key, :string, :default => nil
     config_param :time_key_exclude_timestamp, :bool, :default => false
@@ -510,7 +511,8 @@ EOC
           error.handle_error(response, tag, chunk, bulk_message_count, extracted_values)
         end
       rescue RetryStreamError => e
-        router.emit_stream(tag, e.retry_stream)
+        emit_tag = @retry_tag ? @retry_tag : tag
+        router.emit_stream(emit_tag, e.retry_stream)
       rescue *client.transport.host_unreachable_exceptions => e
         if retries < 2
           retries += 1
