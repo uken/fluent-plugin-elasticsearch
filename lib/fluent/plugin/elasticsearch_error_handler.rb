@@ -61,7 +61,7 @@ class Fluent::Plugin::ElasticsearchErrorHandler
         stats[:duplicates] += 1
       when 400 == status
         stats[:bad_argument] += 1
-        @plugin.router.emit_error_event(tag, time, rawrecord, '400 - Rejected by Elasticsearch')
+        @plugin.router.emit_error_event(tag, time, rawrecord, ElasticsearchError.new('400 - Rejected by Elasticsearch'))
       else
         if item[write_operation].has_key?('error') && item[write_operation]['error'].has_key?('type')
           type = item[write_operation]['error']['type']
@@ -71,7 +71,7 @@ class Fluent::Plugin::ElasticsearchErrorHandler
           # When we don't have a type field, something changed in the API
           # expected return values (ES 2.x)
           stats[:errors_bad_resp] += 1
-          @plugin.router.emit_error_event(tag, time, rawrecord, "#{status} - No error type provided in the response")
+          @plugin.router.emit_error_event(tag, time, rawrecord, ElasticsearchError.new("#{status} - No error type provided in the response"))
           next
         end
         stats[type] += 1

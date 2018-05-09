@@ -11,7 +11,7 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
     def initialize(log)
       @log = log
       @write_operation = 'index'
-      @error_events = Fluent::MultiEventStream.new
+      @error_events = []
     end
 
     def router
@@ -19,7 +19,7 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
     end
 
     def emit_error_event(tag, time, record, e)
-       @error_events.add(time, record)
+       @error_events << {:tag => tag, :time=>time, :record=>record, :error=>e}
     end
 
     def process_message(tag, meta, header, time, record, bulk_message, extracted_values)
@@ -72,7 +72,8 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
     chunk = MockChunk.new(records)
     dummy_extracted_values = []
     @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values)
-    assert_equal(1, @plugin.error_events.instance_variable_get(:@time_array).size)
+    assert_equal(1, @plugin.error_events.size)
+    assert_true(@plugin.error_events[0][:error].respond_to?(:backtrace))
   end
 
   def test_retry_error
@@ -179,10 +180,13 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
       assert_equal 2, records[0]['_id']
       assert_equal 6, records[1]['_id']
       assert_equal 8, records[2]['_id']
-      errors = @plugin.error_events.collect {|time, record| record}
-      assert_equal 2, errors.length
-      assert_equal 5, errors[0]['_id']
-      assert_equal 7, errors[1]['_id']
+      error_ids = @plugin.error_events.collect {|h| h[:record]['_id']}
+      assert_equal 2, error_ids.length
+      assert_equal 5, error_ids[0]
+      assert_equal 7, error_ids[1]
+      @plugin.error_events.collect {|h| h[:error]}.each do |e|
+        assert_true e.respond_to?(:backtrace)
+      end
     end
     assert_true failed
 
