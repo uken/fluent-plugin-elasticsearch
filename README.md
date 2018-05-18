@@ -311,7 +311,7 @@ The path to the file containing the template to install.
 Specify index templates in form of hash. Can contain multiple templates.
 
 ```
-templates { "templane_name_1": "path_to_template_1_file", "templane_name_2": "path_to_template_2_file"}
+templates { "template_name_1": "path_to_template_1_file", "template_name_2": "path_to_template_2_file"}
 ```
 
 If `template_file` and `template_name` are set, then this parameter will be ignored.
