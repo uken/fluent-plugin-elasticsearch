@@ -426,6 +426,21 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
 
+  def test_writes_to_logstash_index_with_specified_prefix_and_separator
+    separator = '_'
+    driver.configure("logstash_format true
+                      logstash_prefix_separator #{separator}
+                      logstash_prefix myprefix")
+    time = Time.parse Date.today.iso8601
+    logstash_index = "myprefix#{separator}#{time.getutc.strftime("%Y.%m.%d")}"
+    stub_elastic_ping
+    stub_elastic
+    driver.run(default_tag: 'test') do
+      driver.feed(time.to_i, sample_record)
+    end
+    assert_equal(logstash_index, index_cmds.first['index']['_index'])
+  end
+
   def test_writes_to_logstash_index_with_specified_prefix_uppercase
     driver.configure("logstash_format true
                       logstash_prefix MyPrefix")
