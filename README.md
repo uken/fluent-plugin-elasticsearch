@@ -36,6 +36,7 @@ Current maintainers: @cosmo0920
   + [template_file](#template_file)
   + [template_overwrite](#template_overwrite)
   + [templates](#templates)
+  + [max_retry_putting_template](#max_retry_putting_template)
   + [request_timeout](#request_timeout)
   + [reload_connections](#reload_connections)
   + [reload_on_failure](#reload_on_failure)
@@ -325,6 +326,17 @@ template_overwrite true # defaults to false
 ```
 
 One of [template_file](#template_file) or [templates](#templates) must also be specified if this is set.
+
+### max_retry_putting_template
+
+You can specify times of retry putting template.
+
+This is useful when Elasticsearch plugin cannot connect Elasticsearch to put template.
+Usually, booting up clustered Elasticsearch containers are much slower than launching Fluentd container.
+
+```
+max_retry_putting_template 15 # defaults to 10
+```
 
 ### request_timeout
 
