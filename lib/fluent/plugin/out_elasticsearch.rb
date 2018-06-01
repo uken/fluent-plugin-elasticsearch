@@ -86,6 +86,7 @@ EOC
     config_param :template_file, :string, :default => nil
     config_param :template_overwrite, :bool, :default => false
     config_param :templates, :hash, :default => nil
+    config_param :max_retry_putting_template, :integer, :default => 10
     config_param :include_tag_key, :bool, :default => false
     config_param :tag_key, :string, :default => 'tag'
     config_param :time_parse_error_tag, :string, :default => 'Fluent::ElasticsearchOutput::TimeParser.error'
@@ -136,9 +137,13 @@ EOC
       end
 
       if @template_name && @template_file
-        template_install(@template_name, @template_file, @template_overwrite)
+        retry_install(@max_retry_putting_template) do
+          template_install(@template_name, @template_file, @template_overwrite)
+        end
       elsif @templates
-        templates_hash_install(@templates, @template_overwrite)
+        retry_install(@max_retry_putting_template) do
+          templates_hash_install(@templates, @template_overwrite)
+        end
       end
 
       # Consider missing the prefix of "$." in nested key specifiers.
