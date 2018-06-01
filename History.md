@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 2.10.2
+- Use logstash_prefix_separator on elasticsearch_dynamic (#427)
+
 ### 2.10.1
 - Uplift Merge pull request #419 from jcantrill/retry_prefix (#421)
 - Uplift Merge pull request #418 from jcantrill/emit_exception (#420)
