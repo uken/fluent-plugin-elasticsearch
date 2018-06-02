@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 2.10.3
+- Add retry mechanism for template installation (#428)
+
 ### 2.10.2
 - Use logstash_prefix_separator on elasticsearch_dynamic (#427)
 
