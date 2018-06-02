@@ -364,6 +364,43 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
   end
 
+  def test_template_retry_install
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_template.json')
+
+    config = %{
+      host            logs.google.com
+      port            778
+      scheme          https
+      path            /es/
+      user            john
+      password        doe
+      template_name   logstash
+      template_file   #{template_file}
+      max_retry_putting_template 3
+    }
+
+    connection_resets = 0
+    # connection start
+    stub_request(:head, "https://john:doe@logs.google.com:778/es//").with do |req|
+      connection_resets += 1
+    end
+    # check if template exists
+    stub_request(:get, "https://john:doe@logs.google.com:778/es//_template/logstash").with do |req|
+      raise Fluent::Plugin::ElasticsearchOutput::ConnectionFailure, "Test message"
+    end
+    # creation
+    stub_request(:put, "https://john:doe@logs.google.com:778/es//_template/logstash").with do |req|
+      raise Fluent::Plugin::ElasticsearchOutput::ConnectionFailure, "Test message"
+    end
+
+    assert_raise(Fluent::Plugin::ElasticsearchOutput::ConnectionFailure) do
+      driver(config)
+    end
+
+    assert_equal(connection_resets, 4)
+  end
+
   def test_templates_create
     cwd = File.dirname(__FILE__)
     template_file = File.join(cwd, 'test_template.json')
