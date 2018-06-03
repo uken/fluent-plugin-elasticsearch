@@ -226,6 +226,15 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
   end
 
+  test 'invalid specification of times of retrying template installation' do
+    config = %{
+      max_retry_putting_template -3
+    }
+    assert_raise(Fluent::ConfigError) {
+      instance = driver(config).instance
+    }
+  end
+
   test 'Detected Elasticsearch 7' do
     config = %{
       type_name changed
