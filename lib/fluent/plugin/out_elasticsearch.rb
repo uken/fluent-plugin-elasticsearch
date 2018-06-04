@@ -136,6 +136,7 @@ EOC
         @remove_keys_on_update = @remove_keys_on_update.split ','
       end
 
+      raise Fluent::ConfigError, "'max_retry_putting_template' must be positive number." if @max_retry_putting_template < 0
       if @template_name && @template_file
         retry_install(@max_retry_putting_template) do
           template_install(@template_name, @template_file, @template_overwrite)
