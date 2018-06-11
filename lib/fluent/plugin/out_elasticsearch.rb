@@ -68,6 +68,8 @@ module Fluent::Plugin
     config_param :template_name, :string, :default => nil
     config_param :template_file, :string, :default => nil
     config_param :template_overwrite, :bool, :default => false
+    config_param :customize_template, :hash, :default => nil
+    config_param :index_prefix, :string, :default => "logstash"
     config_param :templates, :hash, :default => nil
     config_param :include_tag_key, :bool, :default => false
     config_param :tag_key, :string, :default => 'tag'
@@ -116,11 +118,10 @@ module Fluent::Plugin
 
       if @template_name && @template_file
         if @customize_template
-          template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template)
+          template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @index_prefix)
         else
-          templates_hash_install(@templates, @template_overwrite)
+          template_install(@template_name, @template_file, @template_overwrite)
         end
-        #template_install(@template_name, @template_file, @template_overwrite)
       elsif @templates
         templates_hash_install(@templates, @template_overwrite)
       end
