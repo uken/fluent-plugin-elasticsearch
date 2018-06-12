@@ -38,6 +38,7 @@ Current maintainers: @cosmo0920
   + [customize_template](#customize_template)
   + [index_prefix](#index_prefix)
   + [templates](#templates)
+  + [max_retry_putting_template](#max_retry_putting_template)
   + [request_timeout](#request_timeout)
   + [reload_connections](#reload_connections)
   + [reload_on_failure](#reload_on_failure)
