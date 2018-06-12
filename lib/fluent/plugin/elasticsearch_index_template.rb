@@ -4,7 +4,7 @@ module Fluent::ElasticsearchIndexTemplate
     if !File.exists?(template_file)
       raise "If you specify a template_name you must specify a valid template file (checked '#{template_file}')!"
     end
-    file_contents = IO.read(template_file).gsub(/\n/,'').gsub(/##alias_name##/,name)
+    file_contents = IO.read(template_file).gsub(/\n/,'')
     JSON.parse(file_contents)
   end
 
