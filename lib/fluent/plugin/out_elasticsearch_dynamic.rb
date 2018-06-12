@@ -13,8 +13,6 @@ module Fluent::Plugin
     DYNAMIC_PARAM_NAMES = %W[hosts host port include_timestamp logstash_format logstash_prefix logstash_dateformat time_key utc_index index_name tag_key type_name id_key parent_key routing_key write_operation]
     DYNAMIC_PARAM_SYMBOLS = DYNAMIC_PARAM_NAMES.map { |n| "@#{n}".to_sym }
 
-    include Fluent::Plugin::GenerateHashIdSupport
-
     attr_reader :dynamic_config
 
     def configure(conf)
@@ -35,8 +33,8 @@ module Fluent::Plugin
       {'id_key' => '_id', 'parent_key' => '_parent', 'routing_key' => '_routing'}
     end
 
-    def client(host)
 
+    def client(host = nil)
       # check here to see if we already have a client connection for the given host
       connection_options = get_connection_options(host)
 
@@ -54,9 +52,13 @@ module Fluent::Plugin
                                                                               retry_on_failure: 5,
                                                                               logger: @transport_logger,
                                                                               transport_options: {
-                                                                                headers: { 'Content-Type' => 'application/json' },
+                                                                                headers: { 'Content-Type' => @content_type.to_s },
                                                                                 request: { timeout: @request_timeout },
-                                                                                ssl: { verify: @ssl_verify, ca_file: @ca_file }
+                                                                                ssl: { verify: @ssl_verify, ca_file: @ca_file, version: @ssl_version }
+                                                                              },
+                                                                              http: {
+                                                                                user: @user,
+                                                                                password: @password
                                                                               }
                                                                             }), &adapter_conf)
         es = Elasticsearch::Client.new transport: transport
@@ -162,15 +164,15 @@ module Fluent::Plugin
             time = Time.parse record[dynamic_conf['time_key']]
             record['@timestamp'] = record[dynamic_conf['time_key']] unless time_key_exclude_timestamp
           else
-            record.merge!({"@timestamp" => Time.at(time).to_datetime.to_s})
+            record.merge!({"@timestamp" => Time.at(time).iso8601(@time_precision)})
           end
         end
 
         if eval_or_val(dynamic_conf['logstash_format'])
           if eval_or_val(dynamic_conf['utc_index'])
-            target_index = "#{dynamic_conf['logstash_prefix']}-#{Time.at(time).getutc.strftime("#{dynamic_conf['logstash_dateformat']}")}"
+            target_index = "#{dynamic_conf['logstash_prefix']}#{@logstash_prefix_separator}#{Time.at(time).getutc.strftime("#{dynamic_conf['logstash_dateformat']}")}"
           else
-            target_index = "#{dynamic_conf['logstash_prefix']}-#{Time.at(time).strftime("#{dynamic_conf['logstash_dateformat']}")}"
+            target_index = "#{dynamic_conf['logstash_prefix']}#{@logstash_prefix_separator}#{Time.at(time).strftime("#{dynamic_conf['logstash_dateformat']}")}"
           end
         else
           target_index = dynamic_conf['index_name']
@@ -277,6 +279,7 @@ module Fluent::Plugin
     def is_existing_connection(host)
       # check if the host provided match the current connection
       return false if @_es.nil?
+      return false if @current_config.nil?
       return false if host.length != @current_config.length
 
       for i in 0...host.length

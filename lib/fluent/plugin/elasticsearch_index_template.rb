@@ -26,6 +26,24 @@ module Fluent::ElasticsearchIndexTemplate
     return false
   end
 
+  def retry_install(max_retries)
+    return unless block_given?
+    retries = 0
+    begin
+      yield
+    rescue Fluent::Plugin::ElasticsearchOutput::ConnectionFailure, Timeout::Error => e
+      @_es = nil
+      @_es_info = nil
+      if retries < max_retries
+        retries += 1
+        sleep 2**retries
+        log.warn "Could not push template(s) to Elasticsearch, resetting connection and trying again. #{e.message}"
+        retry
+      end
+      raise Fluent::Plugin::ElasticsearchOutput::ConnectionFailure, "Could not push template(s) to Elasticsearch after #{retries} retries. #{e.message}"
+    end
+  end
+
   def template_put(name, template)
     client.indices.put_template(:name => name, :body => template)
   end

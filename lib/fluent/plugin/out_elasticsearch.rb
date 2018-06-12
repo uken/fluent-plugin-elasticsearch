@@ -10,20 +10,33 @@ rescue LoadError
 end
 
 require 'fluent/plugin/output'
+require 'fluent/event'
 require_relative 'elasticsearch_constants'
 require_relative 'elasticsearch_error_handler'
 require_relative 'elasticsearch_index_template'
-require_relative 'generate_hash_id_support'
 
 module Fluent::Plugin
   class ElasticsearchOutput < Output
     class ConnectionFailure < StandardError; end
+
+    # RetryStreamError privides a stream to be
+    # put back in the pipeline for cases where a bulk request
+    # failed (e.g some records succeed while others failed)
+    class RetryStreamError < StandardError
+      attr_reader :retry_stream
+      def initialize(retry_stream)
+        @retry_stream = retry_stream
+      end
+    end
 
     helpers :event_emitter, :compat_parameters, :record_accessor
 
     Fluent::Plugin.register_output('elasticsearch', self)
 
     DEFAULT_BUFFER_TYPE = "memory"
+    DEFAULT_ELASTICSEARCH_VERSION = 5 # For compatibility.
+    DEFAULT_TYPE_NAME_ES_7x = "_doc".freeze
+    DEFAULT_TYPE_NAME = "fluentd".freeze
 
     config_param :host, :string,  :default => 'localhost'
     config_param :port, :integer, :default => 9200
@@ -33,7 +46,10 @@ module Fluent::Plugin
     config_param :scheme, :string, :default => 'http'
     config_param :hosts, :string, :default => nil
     config_param :target_index_key, :string, :default => nil
-    config_param :target_type_key, :string, :default => nil
+    config_param :target_type_key, :string, :default => nil,
+                 :deprecated => <<EOC
+Elasticsearch 7.x or above will ignore this config. Please use fixed type_name instead.
+EOC
     config_param :time_key_format, :string, :default => nil
     config_param :time_precision, :integer, :default => 9
     config_param :include_timestamp, :bool, :default => false
@@ -42,7 +58,7 @@ module Fluent::Plugin
     config_param :logstash_prefix_separator, :string, :default => '-'
     config_param :logstash_dateformat, :string, :default => "%Y.%m.%d"
     config_param :utc_index, :bool, :default => true
-    config_param :type_name, :string, :default => "fluentd"
+    config_param :type_name, :string, :default => DEFAULT_TYPE_NAME
     config_param :index_name, :string, :default => "fluentd"
     config_param :id_key, :string, :default => nil
     config_param :write_operation, :string, :default => "index"
@@ -51,6 +67,7 @@ module Fluent::Plugin
     config_param :request_timeout, :time, :default => 5
     config_param :reload_connections, :bool, :default => true
     config_param :reload_on_failure, :bool, :default => false
+    config_param :retry_tag, :string, :default=>nil
     config_param :resurrect_after, :time, :default => 60
     config_param :time_key, :string, :default => nil
     config_param :time_key_exclude_timestamp, :bool, :default => false
@@ -71,12 +88,18 @@ module Fluent::Plugin
     config_param :customize_template, :hash, :default => nil
     config_param :index_prefix, :string, :default => "logstash"
     config_param :templates, :hash, :default => nil
+    config_param :max_retry_putting_template, :integer, :default => 10
     config_param :include_tag_key, :bool, :default => false
     config_param :tag_key, :string, :default => 'tag'
     config_param :time_parse_error_tag, :string, :default => 'Fluent::ElasticsearchOutput::TimeParser.error'
     config_param :reconnect_on_error, :bool, :default => false
     config_param :pipeline, :string, :default => nil
     config_param :with_transporter_log, :bool, :default => false
+    config_param :content_type, :enum, list: [:"application/json", :"application/x-ndjson"], :default => :"application/json",
+                 :deprecated => <<EOC
+elasticsearch gem v6.0.2 starts to use correct Content-Type. Please upgrade elasticserach gem and stop to use this option.
+see: https://github.com/elastic/elasticsearch-ruby/pull/514
+EOC
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE
@@ -85,7 +108,6 @@ module Fluent::Plugin
     end
 
     include Fluent::ElasticsearchIndexTemplate
-    include Fluent::Plugin::GenerateHashIdSupport
     include Fluent::Plugin::ElasticsearchConstants
 
     def initialize
@@ -116,6 +138,7 @@ module Fluent::Plugin
         @remove_keys_on_update = @remove_keys_on_update.split ','
       end
 
+      raise Fluent::ConfigError, "'max_retry_putting_template' must be positive number." if @max_retry_putting_template < 0
       if @template_name && @template_file
         retry_install(@max_retry_putting_template) do
           if @customize_template
@@ -125,7 +148,9 @@ module Fluent::Plugin
           end
         end
       elsif @templates
-        templates_hash_install(@templates, @template_overwrite)
+        retry_install(@max_retry_putting_template) do
+          templates_hash_install(@templates, @template_overwrite)
+        end
       end
 
       # Consider missing the prefix of "$." in nested key specifiers.
@@ -158,6 +183,20 @@ module Fluent::Plugin
         log_level = conf['@log_level'] || conf['log_level']
         log.warn "Consider to specify log_level with @log_level." unless log_level
       end
+
+      @last_seen_major_version = detect_es_major_version rescue DEFAULT_ELASTICSEARCH_VERSION
+      if @last_seen_major_version == 6 && @type_name != DEFAULT_TYPE_NAME_ES_7x
+        log.info "Detected ES 6.x: ES 7.x will only accept `_doc` in type_name."
+      end
+      if @last_seen_major_version >= 7 && @type_name != DEFAULT_TYPE_NAME_ES_7x
+        log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
+        @type_name = '_doc'.freeze
+      end
+    end
+
+    def detect_es_major_version
+      @_es_info ||= client.info
+      @_es_info["version"]["number"].to_i
     end
 
     def convert_compat_id_key(key)
@@ -215,9 +254,13 @@ module Fluent::Plugin
                                                                               retry_on_failure: 5,
                                                                               logger: @transport_logger,
                                                                               transport_options: {
-                                                                                headers: { 'Content-Type' => 'application/json' },
+                                                                                headers: { 'Content-Type' => @content_type.to_s },
                                                                                 request: { timeout: @request_timeout },
                                                                                 ssl: { verify: @ssl_verify, ca_file: @ca_file, version: @ssl_version }
+                                                                              },
+                                                                              http: {
+                                                                                user: @user,
+                                                                                password: @password
                                                                               }
                                                                             }), &adapter_conf)
         es = Elasticsearch::Client.new transport: transport
@@ -356,89 +399,110 @@ module Fluent::Plugin
     end
 
     def write(chunk)
+      bulk_message_count = 0
       bulk_message = ''
       header = {}
       meta = {}
 
       tag = chunk.metadata.tag
-      logstash_prefix, index_name, type_name = expand_placeholders(chunk.metadata)
-      @error = Fluent::Plugin::ElasticsearchErrorHandler.new(self)
+      extracted_values = expand_placeholders(chunk.metadata)
+      @last_seen_major_version = detect_es_major_version rescue DEFAULT_ELASTICSEARCH_VERSION
 
       chunk.msgpack_each do |time, record|
-        @error.records += 1
         next unless record.is_a? Hash
-
-        if @flatten_hashes
-          record = flatten_record(record)
+        begin
+          process_message(tag, meta, header, time, record, bulk_message, extracted_values)
+          bulk_message_count += 1
+        rescue => e
+          router.emit_error_event(tag, time, record, e)
         end
+      end
 
-        if @hash_config
-          record = generate_hash_id_key(record)
-        end
+      send_bulk(bulk_message, tag, chunk, bulk_message_count, extracted_values) unless bulk_message.empty?
+      bulk_message.clear
+    end
 
-        dt = nil
-        if @logstash_format || @include_timestamp
-          if record.has_key?(TIMESTAMP_FIELD)
-            rts = record[TIMESTAMP_FIELD]
-            dt = parse_time(rts, time, tag)
-          elsif record.has_key?(@time_key)
-            rts = record[@time_key]
-            dt = parse_time(rts, time, tag)
-            record[TIMESTAMP_FIELD] = rts unless @time_key_exclude_timestamp
-          else
-            dt = Time.at(time).to_datetime
-            record[TIMESTAMP_FIELD] = dt.iso8601(@time_precision)
-          end
-        end
+    def process_message(tag, meta, header, time, record, bulk_message, extracted_values)
+      logstash_prefix, index_name, type_name = extracted_values
 
-        target_index_parent, target_index_child_key = @target_index_key ? get_parent_of(record, @target_index_key) : nil
-        if target_index_parent && target_index_parent[target_index_child_key]
-          target_index = target_index_parent.delete(target_index_child_key)
-        elsif @logstash_format
-          dt = dt.new_offset(0) if @utc_index
-          target_index = "#{logstash_prefix}#{@logstash_prefix_separator}#{dt.strftime(@logstash_dateformat)}"
+      if @flatten_hashes
+        record = flatten_record(record)
+      end
+
+      if @hash_config
+        record = generate_hash_id_key(record)
+      end
+
+      dt = nil
+      if @logstash_format || @include_timestamp
+        if record.has_key?(TIMESTAMP_FIELD)
+          rts = record[TIMESTAMP_FIELD]
+          dt = parse_time(rts, time, tag)
+        elsif record.has_key?(@time_key)
+          rts = record[@time_key]
+          dt = parse_time(rts, time, tag)
+          record[TIMESTAMP_FIELD] = dt.iso8601(@time_precision) unless @time_key_exclude_timestamp
         else
-          target_index = index_name
+          dt = Time.at(time).to_datetime
+          record[TIMESTAMP_FIELD] = dt.iso8601(@time_precision)
         end
+      end
 
-        # Change target_index to lower-case since Elasticsearch doesn't
-        # allow upper-case characters in index names.
-        target_index = target_index.downcase
-        if @include_tag_key
-          record[@tag_key] = tag
+      target_index_parent, target_index_child_key = @target_index_key ? get_parent_of(record, @target_index_key) : nil
+      if target_index_parent && target_index_parent[target_index_child_key]
+        target_index = target_index_parent.delete(target_index_child_key)
+      elsif @logstash_format
+        dt = dt.new_offset(0) if @utc_index
+        target_index = "#{logstash_prefix}#{@logstash_prefix_separator}#{dt.strftime(@logstash_dateformat)}"
+      else
+        target_index = index_name
+      end
+
+      # Change target_index to lower-case since Elasticsearch doesn't
+      # allow upper-case characters in index names.
+      target_index = target_index.downcase
+      if @include_tag_key
+        record[@tag_key] = tag
+      end
+
+      target_type_parent, target_type_child_key = @target_type_key ? get_parent_of(record, @target_type_key) : nil
+      if target_type_parent && target_type_parent[target_type_child_key]
+        target_type = target_type_parent.delete(target_type_child_key)
+        if @last_seen_major_version == 6
+          log.warn "Detected ES 6.x: `@type_name` will be used as the document `_type`."
+          target_type = type_name
+        elsif @last_seen_major_version >= 7
+          log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
+          target_type = '_doc'.freeze
         end
-
-        target_type_parent, target_type_child_key = @target_type_key ? get_parent_of(record, @target_type_key) : nil
-        if target_type_parent && target_type_parent[target_type_child_key]
-          target_type = target_type_parent.delete(target_type_child_key)
+      else
+        if @last_seen_major_version >= 7 && target_type != DEFAULT_TYPE_NAME_ES_7x
+          log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
+          target_type = '_doc'.freeze
         else
           target_type = type_name
         end
-
-        meta.clear
-        meta["_index".freeze] = target_index
-        meta["_type".freeze] = target_type
-
-        if @pipeline
-          meta["pipeline".freeze] = @pipeline
-        end
-
-        @meta_config_map.each do |record_accessor, meta_key|
-          if raw_value = record_accessor.call(record)
-            meta[meta_key] = raw_value
-          end
-        end
-
-        if @remove_keys
-          @remove_keys.each { |key| record.delete(key) }
-        end
-
-        append_record_to_messages(@write_operation, meta, header, record, bulk_message)
-        @error.bulk_message_count += 1
       end
 
-      send_bulk(bulk_message) unless bulk_message.empty?
-      bulk_message.clear
+      meta.clear
+      meta["_index".freeze] = target_index
+      meta["_type".freeze] = target_type
+
+      if @pipeline
+        meta["pipeline".freeze] = @pipeline
+      end
+
+      @meta_config_map.each do |record_accessor, meta_key|
+        if raw_value = record_accessor.call(record)
+          meta[meta_key] = raw_value
+        end
+      end
+
+      if @remove_keys
+        @remove_keys.each { |key| record.delete(key) }
+      end
+
+      append_record_to_messages(@write_operation, meta, header, record, bulk_message)
     end
 
     # returns [parent, child_key] of child described by path array in record's tree
@@ -448,18 +512,24 @@ module Fluent::Plugin
       [parent_object, path[-1]]
     end
 
-    def send_bulk(data)
+    # send_bulk given a specific bulk request, the original tag,
+    # chunk, and bulk_message_count
+    def send_bulk(data, tag, chunk, bulk_message_count, extracted_values)
       retries = 0
       begin
         response = client.bulk body: data
         if response['errors']
-          @error.handle_error(response)
-          log.error "Could not push log to Elasticsearch: #{response}"
+          error = Fluent::Plugin::ElasticsearchErrorHandler.new(self)
+          error.handle_error(response, tag, chunk, bulk_message_count, extracted_values)
         end
+      rescue RetryStreamError => e
+        emit_tag = @retry_tag ? @retry_tag : tag
+        router.emit_stream(emit_tag, e.retry_stream)
       rescue *client.transport.host_unreachable_exceptions => e
         if retries < 2
           retries += 1
           @_es = nil
+          @_es_info = nil
           log.warn "Could not push logs to Elasticsearch, resetting connection and trying again. #{e.message}"
           sleep 2**retries
           retry
@@ -467,6 +537,7 @@ module Fluent::Plugin
         raise ConnectionFailure, "Could not push logs to Elasticsearch after #{retries} retries. #{e.message}"
       rescue Exception
         @_es = nil if @reconnect_on_error
+        @_es_info = nil if @reconnect_on_error
         raise
       end
     end

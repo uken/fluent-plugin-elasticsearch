@@ -16,7 +16,14 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     @driver = nil
   end
 
-  def driver(conf='')
+  def driver(conf='', es_version=5)
+    # For request stub to detect compatibility.
+    @es_version ||= es_version
+    Fluent::Plugin::ElasticsearchOutputDynamic.module_eval(<<-CODE)
+      def detect_es_major_version
+        #{@es_version}
+      end
+    CODE
     @driver ||= Fluent::Test::Driver::Output.new(Fluent::Plugin::ElasticsearchOutputDynamic) {
       # v0.12's test driver assume format definition. This simulates ObjectBufferedOutput format
       if !defined?(Fluent::Plugin::Output)
@@ -25,6 +32,10 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
         end
       end
     }.configure(conf)
+  end
+
+  def default_type_name
+    Fluent::Plugin::ElasticsearchOutput::DEFAULT_TYPE_NAME
   end
 
   def sample_record
@@ -85,6 +96,32 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_nil instance.client_cert
     assert_nil instance.client_key_pass
     assert_false instance.with_transporter_log
+    assert_equal :"application/json", instance.content_type
+  end
+
+  test 'configure Content-Type' do
+    config = %{
+      content_type application/x-ndjson
+    }
+    instance = driver(config).instance
+    assert_equal :"application/x-ndjson", instance.content_type
+  end
+
+  test 'invalid Content-Type' do
+    config = %{
+      content_type nonexistent/invalid
+    }
+    assert_raise(Fluent::ConfigError) {
+      instance = driver(config).instance
+    }
+  end
+
+  test 'Detected Elasticsearch 7' do
+    config = %{
+      type_name changed
+    }
+    instance = driver(config, 7).instance
+    assert_equal '_doc', instance.type_name
   end
 
   def test_defaults
@@ -219,8 +256,13 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   def test_content_type_header
     stub_request(:head, "http://localhost:9200/").
       to_return(:status => 200, :body => "", :headers => {})
-    elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
-      with(headers: { "Content-Type" => "application/json" })
+    if Elasticsearch::VERSION >= "6.0.2"
+      elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
+                          with(headers: { "Content-Type" => "application/x-ndjson" })
+    else
+      elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
+                          with(headers: { "Content-Type" => "application/json" })
+    end
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
@@ -242,7 +284,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal('fluentd', index_cmds.first['index']['_type'])
+    assert_equal(default_type_name, index_cmds.first['index']['_type'])
   end
 
   def test_writes_to_specified_index
@@ -325,27 +367,6 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_equal(2000, total)
   end
 
-  class AdditionalHashIdMechanismTest < self
-    data("default"            => {"hash_id_key" => '_id'},
-         "custom hash_id_key" => {"hash_id_key" => '_hash_id'},
-        )
-    def test_writes_with_genrate_hash(data)
-      assert_raise_message(/Use bundled filter-elasticsearch-genid instead./) do
-        driver.configure(Fluent::Config::Element.new(
-                           'ROOT', '', {
-                             '@type' => 'elasticsearch',
-                             'id_key' => data["hash_id_key"],
-                           }, [
-                             Fluent::Config::Element.new('hash', '', {
-                                                           'keys' => ['request_id'],
-                                                           'hash_id_key' => data["hash_id_key"],
-                                                         }, [])
-                           ]
-                         ))
-      end
-    end
-  end
-
   def test_makes_bulk_request
     stub_elastic_ping
     stub_elastic
@@ -369,7 +390,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
 
   def test_writes_to_logstash_index
     driver.configure("logstash_format true\n")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "logstash-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
@@ -382,7 +403,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   def test_writes_to_logstash_utc_index
     driver.configure("logstash_format true
                       utc_index false")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     utc_index = "logstash-#{time.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
@@ -395,8 +416,23 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   def test_writes_to_logstash_index_with_specified_prefix
     driver.configure("logstash_format true
                       logstash_prefix myprefix")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
+    stub_elastic_ping
+    stub_elastic
+    driver.run(default_tag: 'test') do
+      driver.feed(time.to_i, sample_record)
+    end
+    assert_equal(logstash_index, index_cmds.first['index']['_index'])
+  end
+
+  def test_writes_to_logstash_index_with_specified_prefix_and_separator
+    separator = '_'
+    driver.configure("logstash_format true
+                      logstash_prefix_separator #{separator}
+                      logstash_prefix myprefix")
+    time = Time.parse Date.today.iso8601
+    logstash_index = "myprefix#{separator}#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
@@ -408,7 +444,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   def test_writes_to_logstash_index_with_specified_prefix_uppercase
     driver.configure("logstash_format true
                       logstash_prefix MyPrefix")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
@@ -421,7 +457,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     def test_writes_to_logstash_index_with_specified_dateformat
     driver.configure("logstash_format true
                       logstash_dateformat %Y.%m")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "logstash-#{time.getutc.strftime("%Y.%m")}"
     stub_elastic_ping
     stub_elastic
@@ -435,7 +471,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     driver.configure("logstash_format true
                       logstash_prefix myprefix
                       logstash_dateformat %Y.%m")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m")}"
     stub_elastic_ping
     stub_elastic
@@ -458,20 +494,32 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     driver.configure("logstash_format true\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.now
-    time = Fluent::EventTime.from_time(ts.to_time)
+    time = Fluent::EventTime.new(Time.now.to_i, 123456789)
     driver.run(default_tag: 'test') do
       driver.feed(time, sample_record)
     end
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], ts.to_s)
+    assert_equal(index_cmds[1]['@timestamp'], Time.at(time).iso8601(9))
+  end
+
+  def test_uses_subsecond_precision_when_configured
+    driver.configure("logstash_format true
+                      time_precision 3\n")
+    stub_elastic_ping
+    stub_elastic
+    time = Fluent::EventTime.new(Time.now.to_i, 123456789)
+    driver.run(default_tag: 'test') do
+      driver.feed(time, sample_record)
+    end
+    assert(index_cmds[1].has_key? '@timestamp')
+    assert_equal(index_cmds[1]['@timestamp'], Time.at(time).iso8601(3))
   end
 
   def test_uses_custom_timestamp_when_included_in_record
     driver.configure("include_timestamp true\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('@timestamp' => ts))
     end
@@ -483,7 +531,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     driver.configure("logstash_format true\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('@timestamp' => ts))
     end
@@ -496,7 +544,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
                       time_key vtm\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('vtm' => ts))
     end
@@ -509,7 +557,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
                       time_key vtm\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('vtm' => ts))
     end
@@ -523,7 +571,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
                       time_key vtm\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('vtm' => ts))
     end
@@ -538,7 +586,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
                       time_key_exclude_timestamp true\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('vtm' => ts))
     end
@@ -551,7 +599,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
                       time_key_exclude_timestamp true\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('vtm' => ts))
     end
@@ -831,7 +879,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     stub_request(:post, "http://localhost:9200/_bulk").with do |req|
       raise ZeroDivisionError, "any not host_unreachable_exceptions exception"
     end
-    
+
     driver.configure("reconnect_on_error true\n")
 
     assert_raise(ZeroDivisionError) {

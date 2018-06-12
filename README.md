@@ -28,7 +28,7 @@ Current maintainers: @cosmo0920
   + [time_precision](#time_precision)
   + [time_key](#time_key)
   + [time_key_exclude_timestamp](#time_key_exclude_timestamp)
-  + [include_timestamp](#time_key_exclude_timestamp)
+  + [include_timestamp](#include_timestamp)
   + [utc_index](#utc_index)
   + [target_index_key](#target_index_key)
   + [target_type_key](#target_type_key)
@@ -49,10 +49,12 @@ Current maintainers: @cosmo0920
   + [remove_keys](#remove_keys)
   + [remove_keys_on_update](#remove_keys_on_update)
   + [remove_keys_on_update_key](#remove_keys_on_update_key)
+  + [retry_tag](#retry_tag)
   + [write_operation](#write_operation)
   + [time_parse_error_tag](#time_parse_error_tag)
   + [reconnect_on_error](#reconnect_on_error)
   + [with_transporter_log](#with_transporter_log)
+  + [content_type](#content_type)
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Proxy Support](#proxy-support)
   + [Buffer options](#buffer-options)
@@ -107,19 +109,13 @@ This plugin creates Elasticsearch indices by merely writing to them. Consider us
 
 ```
 hosts host1:port1,host2:port2,host3:port3
-# or
-hosts https://customhost.com:443/path,https://username:password@host-failover.com:443
 ```
 
 You can specify multiple Elasticsearch hosts with separator ",".
 
 If you specify multiple hosts, this plugin will load balance updates to Elasticsearch. This is an [elasticsearch-ruby](https://github.com/elasticsearch/elasticsearch-ruby) feature, the default strategy is round-robin.
 
-And this plugin will escape required URL encoded characters within `%{}` placeholders.
-
-```
-hosts https://%{j+hn}:%{passw@rd}@host1:443/elastic/,http://host2
-```
+**Note:** Up until v2.8.5, it was allowed to embed the username/password in the URL. However, this syntax is deprecated as of v2.8.6 because it was found to cause serious connection problems (See #394). Please migrate your settings to use the `user` and `password` field (described below) instead.
 
 ### user, password, path, scheme, ssl_verify
 
@@ -132,7 +128,7 @@ path /elastic_search/
 scheme https
 ```
 
-You can specify user and password for HTTP basic auth. If used in conjunction with a hosts list, then these options will be used by default i.e. if you do not provide any of these options within the hosts listed.
+You can specify user and password for HTTP Basic authentication.
 
 And this plugin will escape required URL encoded characters within `%{}` placeholders.
 
@@ -317,7 +313,7 @@ The path to the file containing the template to install.
 Specify index templates in form of hash. Can contain multiple templates.
 
 ```
-templates { "templane_name_1": "path_to_template_1_file", "templane_name_2": "path_to_template_2_file"}
+templates { "template_name_1": "path_to_template_1_file", "template_name_2": "path_to_template_2_file"}
 ```
 
 If `template_file` and `template_name` are set, then this parameter will be ignored.
@@ -350,6 +346,17 @@ template_overwrite true # defaults to false
 ```
 
 One of [template_file](#template_file) or [templates](#templates) must also be specified if this is set.
+
+### max_retry_putting_template
+
+You can specify times of retry putting template.
+
+This is useful when Elasticsearch plugin cannot connect Elasticsearch to put template.
+Usually, booting up clustered Elasticsearch containers are much slower than launching Fluentd container.
+
+```
+max_retry_putting_template 15 # defaults to 10
+```
 
 ### request_timeout
 
@@ -552,6 +559,21 @@ present in the record then the keys in record are used, if the `remove_keys_on_u
 remove_keys_on_update_key keys_to_skip
 ```
 
+### retry_tag
+
+This setting allows custom routing of messages in response to bulk request failures.  The default behavior is to emit
+failed records using the same tag that was provided.  When set to a value other then `nil`, failed messages are emitted
+with the specified tag:
+
+```
+retry_tag 'retry_es'
+```
+**NOTE:** `retry_tag` is optional. If you would rather use labels to reroute retries, add a label (e.g '@label @SOMELABEL') to your fluent
+elasticsearch plugin configuration. Retry records are, by default, submitted for retry to the ROOT label, which means
+records will flow through your fluentd pipeline from the beginning.  This may nor may not be a problem if the pipeline
+is idempotent - that is - you can process a record again with no changes.  Use tagging or labeling to ensure your retry
+records are not processed again by your fluentd processing pipeline.
+
 ### write_operation
 
 The write_operation can be any of:
@@ -589,6 +611,17 @@ We recommend to set this true if you start to debug this plugin.
 
 ```
 with_transporter_log true
+```
+
+### content_type
+
+With `content_type application/x-ndjson`, elasticsearch plugin adds `application/x-ndjson` as `Content-Type` in payload.
+
+Default value is `application/json` which is default Content-Type of Elasticsearch requests.
+If you will not use template, it recommends to set `content_type application/x-ndjson`.
+
+```
+content_type application/x-ndjson
 ```
 
 ### Client/host certificate options

@@ -1,11 +1,63 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
-- Log ES response errors (#230)
-- Use latest elasticsearch-ruby (#240)
+
+### 2.10.3
+- Add retry mechanism for template installation (#428)
+
+### 2.10.2
+- Use logstash_prefix_separator on elasticsearch_dynamic (#427)
+
+### 2.10.1
+- Uplift Merge pull request #419 from jcantrill/retry_prefix (#421)
+- Uplift Merge pull request #418 from jcantrill/emit_exception (#420)
+
+### 2.10.0
+- Uplift Merge pull request #405 from jcantrill/sanitize_bulk (#414)
+
+### 2.9.2
+- Uplift Merge pull request #410 from richm/v0.12-consistent-errors-and-tests (#411)
+- Add correct link for include_timestamp (#408)
+
+### 2.9.1
+- Uplift Merge pull request #406 from richm/v0.12-successes-duplicates-no-retry (#407)
+
+### 2.9.0
+- DLQ revisited v1 uplifted #398, #402 (#404)
+
+### 2.8.6
+- auth: Fix missing auth tokens after reloading connections (#394)
+
+### 2.8.5
+- Add deprecated option into content_type parameter (#391)
+
+### 2.8.4
+- Use nanosecond precision in elasticsearch_dynamic (#387)
+
+### 2.8.3
+- Specify SSL/TLS version in out_elasticsearch_dynamic (#385)
+
+### 2.8.2
+- Revert content type header default value (#383)
+
+### 2.8.1
+- Restore default value of type name #(377)
+
+### 2.8.0
+- Remove outdated generating hash id support module (#373)
+- Check Elasticsearch major version (#371)
+
+### 2.7.0
+- Configureable content type (#367)
+
+### 2.6.1
+- Prevent error when using template in elasticsearch_dynamic for elementally use case (#363)
+
+### 2.6.0
+- Handle high precision time format when using custom time_key (#360)
 
 ### 2.5.0
-- Using nested record in `id_key`, `parent_key`, and `routing_key` (#351
+- Using nested record in `id_key`, `parent_key`, and `routing_key` (#351)
 - Fix inverted case of a proper noun "Elasticsearch" (#349)
 
 ### 2.4.1
@@ -69,6 +121,10 @@
 
 ### 1.9.4
 - Include 'Content-Type' header in `transport_options`
+
+### 1.9.3
+- Use latest elasticsearch-ruby (#240)
+- Log ES response errors (#230)
 
 ### 1.9.2
 - Fix elasticsearch_dynamic for v0.14 (#224)

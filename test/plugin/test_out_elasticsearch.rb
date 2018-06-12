@@ -19,7 +19,14 @@ class ElasticsearchOutput < Test::Unit::TestCase
     log.out.logs.slice!(0, log.out.logs.length)
   end
 
-  def driver(conf='')
+  def driver(conf='', es_version=5)
+    # For request stub to detect compatibility.
+    @es_version ||= es_version
+    Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
+      def detect_es_major_version
+        #{@es_version}
+      end
+    CODE
     @driver ||= Fluent::Test::Driver::Output.new(Fluent::Plugin::ElasticsearchOutput) {
       # v0.12's test driver assume format definition. This simulates ObjectBufferedOutput format
       if !defined?(Fluent::Plugin::Output)
@@ -28,6 +35,10 @@ class ElasticsearchOutput < Test::Unit::TestCase
         end
       end
     }.configure(conf)
+  end
+
+  def default_type_name
+    Fluent::Plugin::ElasticsearchOutput::DEFAULT_TYPE_NAME
   end
 
   def sample_record
@@ -143,6 +154,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def stub_elastic_bulk_rejected(url="http://localhost:9200/_bulk")
     error = {
+      "status" => 500,
       "type" => "es_rejected_execution_exception",
       "reason" => "rejected execution of org.elasticsearch.transport.TransportService$4@1a34d37a on EsThreadPoolExecutor[bulk, queue capacity = 50, org.elasticsearch.common.util.concurrent.EsThreadPoolExecutor@312a2162[Running, pool size = 32, active threads = 32, queued tasks = 50, completed tasks = 327053]]"
     }
@@ -151,35 +163,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def stub_elastic_out_of_memory(url="http://localhost:9200/_bulk")
     error = {
+      "status" => 500,
       "type" => "out_of_memory_error",
       "reason" => "Java heap space"
     }
     stub_request(:post, url).to_return(lambda { |req| { :status => 200, :body => make_response_body(req, 1, 500, error), :headers => { 'Content-Type' => 'json' } } })
-  end
-
-  def stub_elastic_unrecognized_error(url="http://localhost:9200/_bulk")
-    error = {
-      "type" => "some-other-type",
-      "reason" => "some-other-reason"
-    }
-    stub_request(:post, url).to_return(lambda { |req| { :status => 200, :body => make_response_body(req, 1, 504, error), :headers => { 'Content-Type' => 'json' } } })
-  end
-
-  def stub_elastic_version_mismatch(url="http://localhost:9200/_bulk")
-    error = {
-      "category" => "some-other-type",
-      "reason" => "some-other-reason"
-    }
-    stub_request(:post, url).to_return(lambda { |req| { :status => 200, :body => make_response_body(req, 1, 500, error), :headers => { 'Content-Type' => 'json' } } })
-  end
-
-  def stub_elastic_index_to_create(url="http://localhost:9200/_bulk")
-    error = {
-      "category" => "some-other-type",
-      "reason" => "some-other-reason",
-      "type" => "some-other-type"
-    }
-    stub_request(:post, url).to_return(lambda { |req| { :status => 200, :body => make_response_body(req, 0, 500, error), :headers => { 'Content-Type' => 'json' } } })
   end
 
   def stub_elastic_unexpected_response_op(url="http://localhost:9200/_bulk")
@@ -188,6 +176,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
       "reason" => "some-other-reason"
     }
     stub_request(:post, url).to_return(lambda { |req| bodystr = make_response_body(req, 0, 500, error); body = JSON.parse(bodystr); body['items'][0]['unknown'] = body['items'][0].delete('create'); { :status => 200, :body => body.to_json, :headers => { 'Content-Type' => 'json' } } })
+  end
+
+  def assert_logs_include(logs, msg)
+    matches = logs.grep /#{msg}/
+    assert_equal(1, matches.length, "Logs do not contain '#{msg}' '#{logs}'")
   end
 
   def test_configure
@@ -212,6 +205,42 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_nil instance.client_cert
     assert_nil instance.client_key_pass
     assert_false instance.with_transporter_log
+    assert_equal :"application/json", instance.content_type
+    assert_equal "fluentd", default_type_name
+  end
+
+  test 'configure Content-Type' do
+    config = %{
+      content_type application/x-ndjson
+    }
+    instance = driver(config).instance
+    assert_equal :"application/x-ndjson", instance.content_type
+  end
+
+  test 'invalid Content-Type' do
+    config = %{
+      content_type nonexistent/invalid
+    }
+    assert_raise(Fluent::ConfigError) {
+      instance = driver(config).instance
+    }
+  end
+
+  test 'invalid specification of times of retrying template installation' do
+    config = %{
+      max_retry_putting_template -3
+    }
+    assert_raise(Fluent::ConfigError) {
+      instance = driver(config).instance
+    }
+  end
+
+  test 'Detected Elasticsearch 7' do
+    config = %{
+      type_name changed
+    }
+    instance = driver(config, 7).instance
+    assert_equal '_doc', instance.type_name
   end
 
   test 'lack of tag in chunk_keys' do
@@ -231,21 +260,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
                                              }, [])
                ]
              ))
-    end
-  end
-
-  test 'with invaild generate id config' do
-    assert_raise_message(/Use bundled filter-elasticsearch-genid instead./) do
-      driver.configure(Fluent::Config::Element.new(
-                         'ROOT', '', {
-                           '@type' => 'elasticsearch',
-                           'id_key' =>'id_mismatch',
-                         }, [
-                           Fluent::Config::Element.new('hash', '', {
-                                                         'hash_id_key' => '_hash',
-                                                       }, [])
-                         ]
-                       ))
     end
   end
 
@@ -357,6 +371,43 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_raise(RuntimeError) {
       driver(config)
     }
+  end
+
+  def test_template_retry_install
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_template.json')
+
+    config = %{
+      host            logs.google.com
+      port            778
+      scheme          https
+      path            /es/
+      user            john
+      password        doe
+      template_name   logstash
+      template_file   #{template_file}
+      max_retry_putting_template 3
+    }
+
+    connection_resets = 0
+    # connection start
+    stub_request(:head, "https://john:doe@logs.google.com:778/es//").with do |req|
+      connection_resets += 1
+    end
+    # check if template exists
+    stub_request(:get, "https://john:doe@logs.google.com:778/es//_template/logstash").with do |req|
+      raise Fluent::Plugin::ElasticsearchOutput::ConnectionFailure, "Test message"
+    end
+    # creation
+    stub_request(:put, "https://john:doe@logs.google.com:778/es//_template/logstash").with do |req|
+      raise Fluent::Plugin::ElasticsearchOutput::ConnectionFailure, "Test message"
+    end
+
+    assert_raise(Fluent::Plugin::ElasticsearchOutput::ConnectionFailure) do
+      driver(config)
+    end
+
+    assert_equal(connection_resets, 4)
   end
 
   def test_templates_create
@@ -624,12 +675,29 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_content_type_header
     stub_request(:head, "http://localhost:9200/").
       to_return(:status => 200, :body => "", :headers => {})
-    elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
-      with(headers: { "Content-Type" => "application/json" })
+    if Elasticsearch::VERSION >= "6.0.2"
+      elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
+                          with(headers: { "Content-Type" => "application/x-ndjson" })
+    else
+      elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
+                          with(headers: { "Content-Type" => "application/json" })
+    end
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
     assert_requested(elastic_request)
+  end
+
+  def test_write_message_with_bad_chunk
+    driver.configure("target_index_key bad_value\n@log_level debug\n")
+    stub_elastic_ping
+    stub_elastic
+    driver.run(default_tag: 'test') do
+      driver.feed({'bad_value'=>"\255"})
+    end
+    error_log = driver.error_events.map {|e| e.last.message }
+
+    assert_logs_include(error_log, /(input string invalid)|(invalid byte sequence in UTF-8)/)
   end
 
   def test_writes_to_default_index
@@ -647,7 +715,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal('fluentd', index_cmds.first['index']['_type'])
+    assert_equal(default_type_name, index_cmds.first['index']['_type'])
   end
 
   def test_writes_to_speficied_index
@@ -658,27 +726,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.feed(sample_record)
     end
     assert_equal('myindex', index_cmds.first['index']['_index'])
-  end
-
-  class AdditionalHashIdMechanismTest < self
-    data("default"            => {"hash_id_key" => '_id'},
-         "custom hash_id_key" => {"hash_id_key" => '_hash_id'},
-        )
-    def test_writes_with_genrate_hash(data)
-      assert_raise_message(/Use bundled filter-elasticsearch-genid instead./) do
-        driver.configure(Fluent::Config::Element.new(
-                           'ROOT', '', {
-                             '@type' => 'elasticsearch',
-                             'id_key' => data["hash_id_key"],
-                           }, [
-                             Fluent::Config::Element.new('hash', '', {
-                                                           'keys' => ['request_id'],
-                                                           'hash_id_key' => data["hash_id_key"],
-                                                         }, [])
-                           ]
-                         ))
-      end
-    end
   end
 
   class IndexNamePlaceholdersTest < self
@@ -706,7 +753,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
                        ))
       stub_elastic_ping
       stub_elastic
-      time = Time.parse Date.today.to_s
+      time = Time.parse Date.today.iso8601
       driver.run(default_tag: 'test') do
         driver.feed(time.to_i, sample_record)
       end
@@ -722,7 +769,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
                            Fluent::Config::Element.new('buffer', 'tag,pipeline_id', {}, [])
                          ]
                        ))
-      time = Time.parse Date.today.to_s
+      time = Time.parse Date.today.iso8601
       pipeline_id = "mypipeline"
       logstash_index = "myindex.#{pipeline_id}"
       stub_elastic_ping
@@ -761,7 +808,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_writes_to_target_index_key_logstash
     driver.configure("target_index_key @target_index
                       logstash_format true")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
@@ -773,7 +820,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
    def test_writes_to_target_index_key_logstash_uppercase
     driver.configure("target_index_key @target_index
                       logstash_format true")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
@@ -808,7 +855,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_writes_to_target_index_key_fallack_logstash
     driver.configure("target_index_key @target_index\n
                       logstash_format true")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "logstash-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
@@ -818,35 +865,46 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
 
-  def test_writes_to_speficied_type
-    driver.configure("type_name mytype\n")
+  data("border"        => {"es_version" => 6, "_type" => "mytype"},
+       "fixed_behavior"=> {"es_version" => 7, "_type" => "_doc"},
+      )
+  def test_writes_to_speficied_type(data)
+    driver('', data["es_version"]).configure("type_name mytype\n")
     stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal('mytype', index_cmds.first['index']['_type'])
+    assert_equal(data['_type'], index_cmds.first['index']['_type'])
   end
 
-  def test_writes_to_speficied_type_with_placeholders
-    driver.configure("type_name mytype.${tag}\n")
+  data("border"        => {"es_version" => 6, "_type" => "mytype.test"},
+       "fixed_behavior"=> {"es_version" => 7, "_type" => "_doc"},
+      )
+  def test_writes_to_speficied_type_with_placeholders(data)
+    driver('', data["es_version"]).configure("type_name mytype.${tag}\n")
     stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal('mytype.test', index_cmds.first['index']['_type'])
+    assert_equal(data['_type'], index_cmds.first['index']['_type'])
   end
 
-  def test_writes_to_target_type_key
-    driver.configure("target_type_key @target_type\n")
+  data("old"           => {"es_version" => 2, "_type" => "local-override"},
+       "old_behavior"  => {"es_version" => 5, "_type" => "local-override"},
+       "border"        => {"es_version" => 6, "_type" => "fluentd"},
+       "fixed_behavior"=> {"es_version" => 7, "_type" => "_doc"},
+      )
+  def test_writes_to_target_type_key(data)
+    driver('', data["es_version"]).configure("target_type_key @target_type\n")
     stub_elastic_ping
     stub_elastic
     record = sample_record.clone
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge('@target_type' => 'local-override'))
     end
-    assert_equal('local-override', index_cmds.first['index']['_type'])
+    assert_equal(data["_type"], index_cmds.first['index']['_type'])
     assert_nil(index_cmds[1]['@target_type'])
   end
 
@@ -857,7 +915,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal('fluentd', index_cmds.first['index']['_type'])
+    assert_equal(default_type_name, index_cmds.first['index']['_type'])
   end
 
   def test_writes_to_target_type_key_fallack_to_type_name
@@ -871,8 +929,13 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal('mytype', index_cmds.first['index']['_type'])
   end
 
-  def test_writes_to_target_type_key_nested
-    driver.configure("target_type_key kubernetes.labels.log_type\n")
+  data("old"           => {"es_version" => 2, "_type" => "local-override"},
+       "old_behavior"  => {"es_version" => 5, "_type" => "local-override"},
+       "border"        => {"es_version" => 6, "_type" => "fluentd"},
+       "fixed_behavior"=> {"es_version" => 7, "_type" => "_doc"},
+      )
+  def test_writes_to_target_type_key_nested(data)
+    driver('', data["es_version"]).configure("target_type_key kubernetes.labels.log_type\n")
     stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
@@ -882,7 +945,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
         }
       }))
     end
-    assert_equal('local-override', index_cmds.first['index']['_type'])
+    assert_equal(data["_type"], index_cmds.first['index']['_type'])
     assert_nil(index_cmds[1]['kubernetes']['labels']['log_type'])
   end
 
@@ -897,7 +960,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
         }
       }))
     end
-    assert_equal('fluentd', index_cmds.first['index']['_type'])
+    assert_equal(default_type_name, index_cmds.first['index']['_type'])
   end
 
   def test_writes_to_speficied_host
@@ -1040,7 +1103,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_writes_to_logstash_index_with_specified_prefix
     driver.configure("logstash_format true
                       logstash_prefix myprefix")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
@@ -1055,7 +1118,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("logstash_format true
                       logstash_prefix_separator #{separator}
                       logstash_prefix myprefix")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "myprefix#{separator}#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
@@ -1069,7 +1132,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     def test_writes_to_logstash_index_with_specified_prefix_and_tag_placeholder
       driver.configure("logstash_format true
                       logstash_prefix myprefix-${tag}")
-      time = Time.parse Date.today.to_s
+      time = Time.parse Date.today.iso8601
       logstash_index = "myprefix-test-#{time.getutc.strftime("%Y.%m.%d")}"
       stub_elastic_ping
       stub_elastic
@@ -1092,7 +1155,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
                                                        }, [])
                          ]
                        ))
-      time = Time.parse Date.today.to_s
+      time = Time.parse Date.today.iso8601
       logstash_index = "myprefix-#{time.getutc.strftime("%H")}-#{time.getutc.strftime("%Y.%m.%d")}"
       stub_elastic_ping
       stub_elastic
@@ -1112,7 +1175,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
                            Fluent::Config::Element.new('buffer', 'tag,pipeline_id', {}, [])
                          ]
                        ))
-      time = Time.parse Date.today.to_s
+      time = Time.parse Date.today.iso8601
       pipeline_id = "mypipeline"
       logstash_index = "myprefix-#{pipeline_id}-#{time.getutc.strftime("%Y.%m.%d")}"
       stub_elastic_ping
@@ -1127,7 +1190,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_writes_to_logstash_index_with_specified_prefix_uppercase
     driver.configure("logstash_format true
                       logstash_prefix MyPrefix")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
     stub_elastic_ping
     stub_elastic
@@ -1142,7 +1205,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     def test_writes_to_logstash_index_with_specified_dateformat
     driver.configure("logstash_format true
                       logstash_dateformat %Y.%m")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "logstash-#{time.getutc.strftime("%Y.%m")}"
     stub_elastic_ping
     stub_elastic
@@ -1156,7 +1219,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("logstash_format true
                       logstash_prefix myprefix
                       logstash_dateformat %Y.%m")
-    time = Time.parse Date.today.to_s
+    time = Time.parse Date.today.iso8601
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m")}"
     stub_elastic_ping
     stub_elastic
@@ -1202,10 +1265,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(time, sample_record)
     end
-    tf = "%Y-%m-%dT%H:%M:%S%:z"
-    timef = Fluent::TimeFormatter.new(tf, true, ENV["TZ"])
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(timef.format(Time.parse(index_cmds[1]['@timestamp'])).to_s, ts.to_s)
+    assert_equal(index_cmds[1]['@timestamp'], ts.iso8601(9))
   end
 
   def test_adds_timestamp_when_include_timestamp
@@ -1217,17 +1278,15 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(time, sample_record)
     end
-    tf = "%Y-%m-%dT%H:%M:%S%:z"
-    timef = Fluent::TimeFormatter.new(tf, true, ENV["TZ"])
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(timef.format(Time.parse(index_cmds[1]['@timestamp'])).to_s, ts.to_s)
+    assert_equal(index_cmds[1]['@timestamp'], ts.iso8601(9))
   end
 
   def test_uses_custom_timestamp_when_included_in_record
     driver.configure("logstash_format true\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('@timestamp' => ts))
     end
@@ -1239,7 +1298,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("include_timestamp true\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('@timestamp' => ts))
     end
@@ -1252,7 +1311,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
                       time_key vtm\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601(9)
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('vtm' => ts))
     end
@@ -1271,7 +1330,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.feed(sample_record.merge!('vtm' => ts))
     end
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], ts)
+    assert_equal(index_cmds[1]['@timestamp'], DateTime.parse(ts).iso8601(9))
     assert_equal("logstash-2001.02.03", index_cmds[0]['index']['_index'])
   end
 
@@ -1287,7 +1346,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.feed(sample_record.merge!('vtm' => ts))
     end
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], ts)
+    assert_equal(index_cmds[1]['@timestamp'], DateTime.parse(ts).iso8601(9))
     assert_equal("test", index_cmds[0]['index']['_index'])
   end
 
@@ -1297,7 +1356,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
                       time_key_exclude_timestamp true\n")
     stub_elastic_ping
     stub_elastic
-    ts = DateTime.new(2001,2,3).to_s
+    ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('vtm' => ts))
     end
@@ -1376,13 +1435,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("logstash_format true\n")
     stub_elastic_ping
     stub_elastic
-    begin
-      time = Fluent::EventTime.new(Time.now.to_i, 000000000)
-    rescue
-      time = Fluent::Engine.now
-    end
+    time = Fluent::EventTime.new(Time.now.to_i, 123456789)
     driver.run(default_tag: 'test') do
-      driver.feed(time.to_i, sample_record)
+      driver.feed(time, sample_record)
     end
     assert(index_cmds[1].has_key? '@timestamp')
     assert_equal(index_cmds[1]['@timestamp'], Time.at(time).iso8601(9))
@@ -1393,13 +1448,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
                       time_precision 3\n")
     stub_elastic_ping
     stub_elastic
-    begin
-    time = Fluent::EventTime.new(Time.now.to_i, 000000000)
-    rescue
-      time = Fluent::Engine.now
-    end
+    time = Fluent::EventTime.new(Time.now.to_i, 123456789)
     driver.run(default_tag: 'test') do
-      driver.feed(time.to_i, sample_record)
+      driver.feed(time, sample_record)
     end
     assert(index_cmds[1].has_key? '@timestamp')
     assert_equal(index_cmds[1]['@timestamp'], Time.at(time).iso8601(3))
@@ -1713,110 +1764,107 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(connection_resets, 1)
   end
 
-  def test_bulk_bad_arguments
-    driver = driver('@log_level debug')
-
+  def test_bulk_error_retags_when_configured
+    driver.configure("retry_tag retry\n")
     stub_elastic_ping
-    stub_elastic_bad_argument
+    stub_request(:post, 'http://localhost:9200/_bulk')
+        .to_return(lambda do |req|
+      { :status => 200,
+        :headers => { 'Content-Type' => 'json' },
+        :body => %({
+          "took" : 1,
+          "errors" : true,
+          "items" : [
+            {
+              "create" : {
+                "_index" : "foo",
+                "_type"  : "bar",
+                "_id" : "abc",
+                "status" : 500,
+                "error" : {
+                  "type" : "some unrecognized type",
+                  "reason":"some error to cause version mismatch"
+                }
+              }
+            }
+           ]
+        })
+     }
+    end)
 
-    driver.run(default_tag: 'test', shutdown: false) do
-      driver.feed(sample_record)
-      driver.feed(sample_record)
-      driver.feed(sample_record)
+    driver.run(default_tag: 'test') do
+      driver.feed(1, sample_record)
     end
 
-    matches = driver.logs.grep /Elasticsearch rejected document:/
-    assert_equal(1, matches.length, "Message 'Elasticsearch rejected document: ...' was not emitted")
-    matches = driver.logs.grep /documents due to invalid field arguments/
-    assert_equal(1, matches.length, "Message 'Elasticsearch rejected # documents due to invalid field arguments ...' was not emitted")
+    assert_equal [['retry', 1, sample_record]], driver.events
   end
 
   def test_bulk_error
     stub_elastic_ping
-    stub_elastic_bulk_error
+    stub_request(:post, 'http://localhost:9200/_bulk')
+        .to_return(lambda do |req|
+      { :status => 200,
+        :headers => { 'Content-Type' => 'json' },
+        :body => %({
+          "took" : 1,
+          "errors" : true,
+          "items" : [
+            {
+              "create" : {
+                "_index" : "foo",
+                "_type"  : "bar",
+                "_id" : "abc",
+                "status" : 500,
+                "error" : {
+                  "type" : "some unrecognized type",
+                  "reason":"some error to cause version mismatch"
+                }
+              }
+            },
+            {
+              "create" : {
+                "_index" : "foo",
+                "_type"  : "bar",
+                "_id" : "abc",
+                "status" : 201
+              }
+            },
+            {
+              "create" : {
+                "_index" : "foo",
+                "_type"  : "bar",
+                "_id" : "abc",
+                "status" : 500,
+                "error" : {
+                  "type" : "some unrecognized type",
+                  "reason":"some error to cause version mismatch"
+                }
+              }
+            },
+            {
+              "create" : {
+                "_index" : "foo",
+                "_type"  : "bar",
+                "_id" : "abc",
+                "_id" : "abc",
+                "status" : 409
+              }
+            }
+           ]
+        })
+     }
+    end)
 
-    assert_raise(Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchError) {
-      driver.run(default_tag: 'test', shutdown: false) do
-        driver.feed(sample_record)
-        driver.feed(sample_record)
-        driver.feed(sample_record)
-      end
-    }
-  end
+    driver.run(default_tag: 'test') do
+      driver.feed(1, sample_record)
+      driver.feed(2, sample_record)
+      driver.feed(3, sample_record)
+      driver.feed(4, sample_record)
+    end
 
-  def test_bulk_error_version_mismatch
-    stub_elastic_ping
-    stub_elastic_version_mismatch
-
-    assert_raise(Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchVersionMismatch) {
-      driver.run(default_tag: 'test', shutdown: false) do
-        driver.feed(sample_record)
-        driver.feed(sample_record)
-        driver.feed(sample_record)
-      end
-    }
-  end
-
-  def test_bulk_error_unrecognized_error
-    stub_elastic_ping
-    stub_elastic_unrecognized_error
-
-    assert_raise(Fluent::Plugin::ElasticsearchErrorHandler::UnrecognizedElasticsearchError) {
-      driver.run(default_tag: 'test', shutdown: false) do
-        driver.feed(sample_record)
-        driver.feed(sample_record)
-        driver.feed(sample_record)
-      end
-    }
-  end
-
-  def test_bulk_error_out_of_memory
-    stub_elastic_ping
-    stub_elastic_out_of_memory
-
-    assert_raise(Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchOutOfMemory) {
-      driver.run(default_tag: 'test', shutdown: false) do
-        driver.feed(sample_record)
-        driver.feed(sample_record)
-        driver.feed(sample_record)
-      end
-    }
-  end
-
-  def test_bulk_error_queue_full
-    stub_elastic_ping
-    stub_elastic_bulk_rejected
-
-    assert_raise(Fluent::Plugin::ElasticsearchErrorHandler::BulkIndexQueueFull) {
-      driver.run(default_tag: 'test', shutdown: false) do
-        driver.feed(sample_record)
-        driver.feed(sample_record)
-        driver.feed(sample_record)
-      end
-    }
-  end
-
-  def test_bulk_index_into_a_create
-    stub_elastic_ping
-    stub_elastic_index_to_create
-
-    assert_raise(Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchError) {
-      driver.run(default_tag: 'test', shutdown: false) do
-        driver.feed(sample_record)
-      end
-    }
-    assert(index_cmds[0].has_key?("create"))
-  end
-
-  def test_bulk_unexpected_response_op
-    stub_elastic_ping
-    stub_elastic_unexpected_response_op
-
-    assert_raise(Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchVersionMismatch) {
-      driver.run(default_tag: 'test', shutdown: false) do
-        driver.feed(sample_record)
-      end
-    }
+    expect = [['test', 1, sample_record],
+              ['test', 3, sample_record]]
+    assert_equal expect, driver.events
   end
 
   def test_update_should_not_write_if_theres_no_id
@@ -2003,4 +2051,5 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
     assert(index_cmds[0].has_key?("create"))
   end
+
 end

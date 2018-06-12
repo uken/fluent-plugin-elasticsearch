@@ -1,0 +1,35 @@
+version: '{build}'
+install:
+  - SET PATH=C:\Ruby%ruby_version%\bin;%PATH%
+  - "%devkit%\\devkitvars.bat"
+  - IF EXIST "%devkit%\\bin\\ridk.cmd" ridk.cmd enable
+  - ruby --version
+  - gem --version
+  - bundle install
+build: off
+test_script:
+  - bundle exec rake test
+
+# https://www.appveyor.com/docs/installed-software/#ruby
+environment:
+  matrix:
+    - ruby_version: "25-x64"
+      devkit: C:\Ruby23-x64\DevKit
+    - ruby_version: "25"
+      devkit: C:\Ruby23\DevKit
+    - ruby_version: "24-x64"
+      devkit: C:\Ruby23-x64\DevKit
+    - ruby_version: "24"
+      devkit: C:\Ruby23\DevKit
+    - ruby_version: "23-x64"
+      devkit: C:\Ruby23-x64\DevKit
+    - ruby_version: "22-x64"
+      devkit: C:\Ruby23-x64\DevKit
+    - ruby_version: "21-x64"
+      devkit: C:\Ruby23-x64\DevKit
+    - ruby_version: "21"
+      devkit: C:\Ruby23\DevKit
+      WIN_RAPID: true
+matrix:
+  allow_failures:
+    - ruby_version: "21"
