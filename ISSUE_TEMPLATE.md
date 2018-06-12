@@ -22,3 +22,4 @@ Provide example config and message
 * ES plugin 2.x.y or 1.x.y
   * paste boot log of fluentd or td-agent
   * paste result of ``fluent-gem list``, ``td-agent-gem list`` or your Gemfile.lock
+* ES version (optional)
