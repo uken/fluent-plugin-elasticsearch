@@ -35,8 +35,9 @@ Current maintainers: @cosmo0920
   + [template_name](#template_name)
   + [template_file](#template_file)
   + [template_overwrite](#template_overwrite)
-  + [templates](#templates)
   + [customize_template](#customize_template)
+  + [index_prefix](#index_prefix)
+  + [templates](#templates)
   + [request_timeout](#request_timeout)
   + [reload_connections](#reload_connections)
   + [reload_on_failure](#reload_on_failure)
@@ -326,6 +327,14 @@ customize_template {"string_1": "subs_value_1", "string_2": "subs_value_2"}
 ```
 
 If `template_file` and `template_name` are set, then this parameter will be in effect otherwise ignored.
+
+### index_prefix
+
+```
+index_prefix mylogs # defaults to "logstash"
+```
+
+If `customize_template` is set, then this parameter will be in effect otherwise ignored.
 
 
 ### template_overwrite

@@ -14,7 +14,7 @@ module Fluent::ElasticsearchIndexTemplate
     end
     file_contents = IO.read(template_file).gsub(/\n/,'')
     customize_template.each do |key, value|
-      file_contents = file_contents.gsub(/key/,value)
+      file_contents = file_contents.gsub(key,value.downcase)
     end
     JSON.parse(file_contents)
   end
@@ -62,17 +62,28 @@ module Fluent::ElasticsearchIndexTemplate
     end
   end
 
-  def template_custom_install(name, template_file, overwrite, customize_template)
+  def template_custom_install(name, template_file, overwrite, customize_template, index_prefix)
+    template_custom_name=name.downcase+'_alias_template'
+    alias_name=name.downcase+'-current'
     if overwrite
-      template_put(name, get_custom_template(template_file, customize_template))
-      log.info("Template '#{name}' overwritten with #{template_file}.")
+      template_put(template_custom_name, get_custom_template(template_file, customize_template))
+      log.info("Template '#{template_custom_name}' overwritten with #{template_file}.")
       return
     end
-    if !template_exists?(name)
-      template_put(name, get_custom_template(template_file, customize_template))
-      log.info("Template configured, but no template installed. Installed '#{name}' from #{template_file}.")
+    if !template_exists?(template_custom_name)
+      template_put(template_custom_name, get_custom_template(template_file, customize_template))
+      log.info("Template configured, but no template installed. Installed '#{template_custom_name}' from #{template_file}.")
     else
       log.info("Template configured and already installed.")
+    end
+    
+    if !client.indices.exists_alias(:name => alias_name)
+      index_name='<'+index_prefix.downcase+'-'+name.downcase+'-{now/d}-000001>'
+      indexcreation(index_name)
+      client.indices.put_alias(:index => index_name, :name => alias_name)
+      log.info("The alias '#{alias_name}' is created for the index '#{index_name}'")
+    else
+      log.info("The alias '#{alias_name}' is already present")
     end
   end
 
