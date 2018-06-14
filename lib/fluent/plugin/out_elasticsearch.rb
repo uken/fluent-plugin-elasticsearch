@@ -11,13 +11,14 @@ end
 
 require 'fluent/plugin/output'
 require 'fluent/event'
+require 'fluent/error'
 require_relative 'elasticsearch_constants'
 require_relative 'elasticsearch_error_handler'
 require_relative 'elasticsearch_index_template'
 
 module Fluent::Plugin
   class ElasticsearchOutput < Output
-    class ConnectionFailure < StandardError; end
+    class ConnectionFailure < Fluent::UnrecoverableError; end
 
     # RetryStreamError privides a stream to be
     # put back in the pipeline for cases where a bulk request

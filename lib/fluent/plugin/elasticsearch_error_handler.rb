@@ -1,11 +1,13 @@
 require 'fluent/event'
+require 'fluent/error'
 require_relative 'elasticsearch_constants'
 
 class Fluent::Plugin::ElasticsearchErrorHandler
   include Fluent::Plugin::ElasticsearchConstants
 
   attr_accessor :bulk_message_count
-  class ElasticsearchVersionMismatch < StandardError; end
+  class ElasticsearchVersionMismatch < Fluent::UnrecoverableError; end
+  class ElasticsearchSubmitMismatch < Fluent::UnrecoverableError; end
   class ElasticsearchError < StandardError; end
 
   def initialize(plugin)
@@ -18,7 +20,7 @@ class Fluent::Plugin::ElasticsearchErrorHandler
       raise ElasticsearchVersionMismatch, "The response format was unrecognized: #{response}"
     end
     if bulk_message_count != items.length
-        raise ElasticsearchError, "The number of records submitted #{bulk_message_count} do not match the number returned #{items.length}. Unable to process bulk response."
+      raise ElasticsearchSubmitMismatch, "The number of records submitted #{bulk_message_count} do not match the number returned #{items.length}. Unable to process bulk response."
     end
     retry_stream = Fluent::MultiEventStream.new
     stats = Hash.new(0)
