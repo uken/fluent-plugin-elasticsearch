@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 2.10.4
+- Use Fluent::UnrecoverableError as unrecoverable error class ancestors (#433)
+- Add parameter validation for retrying template installation (#429)
+
 ### 2.10.3
 - Add retry mechanism for template installation (#428)
 
