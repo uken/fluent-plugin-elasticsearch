@@ -14,7 +14,7 @@ class Fluent::ElasticsearchErrorHandler
 
   def handle_error(response, tag, chunk, bulk_message_count)
     items = response['items']
-    if items.nil? || !items.is_a?(Array) 
+    if items.nil? || !items.is_a?(Array)
       raise ElasticsearchVersionMismatch, "The response format was unrecognized: #{response}"
     end
     if bulk_message_count != items.length
@@ -30,7 +30,7 @@ class Fluent::ElasticsearchErrorHandler
       begin
         # we need a deep copy for process_message to alter
         processrecord = Marshal.load(Marshal.dump(rawrecord))
-        @plugin.process_message(tag, meta, header, time, processrecord, bulk_message)
+        next unless @plugin.process_message(tag, meta, header, time, processrecord, bulk_message)
       rescue => e
         stats[:bad_chunk_record] += 1
         next

@@ -18,6 +18,10 @@ require_relative 'elasticsearch_index_template'
 class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   class ConnectionFailure < StandardError; end
 
+  # MissingIdFieldError is raised for records that do not
+  # include the field for the unique record identifier
+  class MissingIdFieldError < StandardError; end
+
   # RetryStreamError privides a stream to be
   # put back in the pipeline for cases where a bulk request
   # failed (e.g some records succeed while others failed)
@@ -81,6 +85,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   config_param :reconnect_on_error, :bool, :default => false
   config_param :pipeline, :string, :default => nil
   config_param :with_transporter_log, :bool, :default => false
+  config_param :emit_error_for_missing_id, :bool, :default => false
 
   include Fluent::ElasticsearchIndexTemplate
   include Fluent::ElasticsearchConstants
@@ -267,6 +272,13 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
     end.join(', ')
   end
 
+  # append_record_to_messages adds a record to the bulk message
+  # payload to be submitted to Elasticsearch.  Records that do
+  # not include '_id' field are skipped when 'write_operation'
+  # is configured for 'create' or 'update'
+  #
+  # returns 'true' if record was appended to the bulk message
+  #         and 'false' otherwise
   def append_record_to_messages(op, meta, header, record, msgs)
     case op
     when UPDATE_OP, UPSERT_OP
@@ -274,18 +286,22 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
         header[UPDATE_OP] = meta
         msgs << @dump_proc.call(header) << BODY_DELIMITER
         msgs << @dump_proc.call(update_body(record, op)) << BODY_DELIMITER
+        return true
       end
     when CREATE_OP
       if meta.has_key?(ID_FIELD)
         header[CREATE_OP] = meta
         msgs << @dump_proc.call(header) << BODY_DELIMITER
         msgs << @dump_proc.call(record) << BODY_DELIMITER
+        return true
       end
     when INDEX_OP
       header[INDEX_OP] = meta
       msgs << @dump_proc.call(header) << BODY_DELIMITER
       msgs << @dump_proc.call(record) << BODY_DELIMITER
+      return true
     end
+    return false
   end
 
   def update_body(record, op)
@@ -333,8 +349,15 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
     chunk.msgpack_each do |time, record|
       next unless record.is_a? Hash
       begin
-        process_message(tag, meta, header, time, record, bulk_message)
-        bulk_message_count += 1
+        if process_message(tag, meta, header, time, record, bulk_message)
+          bulk_message_count += 1
+        else
+          if @emit_error_for_missing_id
+            raise MissingIdFieldError, "Missing '_id' field. Write operation is #{@write_operation}"
+          else
+           log.on_debug { log.debug("Dropping record because its missing an '_id' field and write_operation is #{@write_operation}: #{record}") }
+          end
+        end
       rescue=>e
         router.emit_error_event(tag, time, record, e)
       end
