@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 1.17.0
+- Fix #434 bulk count (#437)
+
 ### 1.16.2
 - add trace logging to send_bulk (#435)
 
