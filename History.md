@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 1.16.2
+- add trace logging to send_bulk (#435)
+
 ### 1.16.1
 - allow configure of retry_tag so messages can be routed through a different pipeline (#419)
 - fix #417. emit_error_event using an exception (#418)
