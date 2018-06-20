@@ -26,6 +26,7 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
       if record.has_key?('raise') && record['raise']
         raise Exception('process_message')
       end
+      return true
     end
   end
 
@@ -54,7 +55,7 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
   end
 
   def test_dlq_400_responses
-    records = [{time: 123, record: {"foo" => "bar"}}]
+    records = [{time: 123, record: {"foo" => "bar", '_id' => 'abc'}}]
     response = parse_response(%({
       "took" : 0,
       "errors" : true,

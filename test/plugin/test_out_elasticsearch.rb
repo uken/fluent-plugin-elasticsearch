@@ -41,8 +41,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
     Fluent::Plugin::ElasticsearchOutput::DEFAULT_TYPE_NAME
   end
 
-  def sample_record
-    {'age' => 26, 'request_id' => '42', 'parent_id' => 'parent', 'routing_id' => 'routing'}
+  def sample_record(content={})
+    {'age' => 26, 'request_id' => '42', 'parent_id' => 'parent', 'routing_id' => 'routing'}.merge(content)
   end
 
   def nested_sample_record
@@ -178,9 +178,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_request(:post, url).to_return(lambda { |req| bodystr = make_response_body(req, 0, 500, error); body = JSON.parse(bodystr); body['items'][0]['unknown'] = body['items'][0].delete('create'); { :status => 200, :body => body.to_json, :headers => { 'Content-Type' => 'json' } } })
   end
 
-  def assert_logs_include(logs, msg)
+  def assert_logs_include(logs, msg, exp_matches=1)
     matches = logs.grep /#{msg}/
-    assert_equal(1, matches.length, "Logs do not contain '#{msg}' '#{logs}'")
+    assert_equal(exp_matches, matches.length, "Logs do not contain '#{msg}' '#{logs}'")
   end
 
   def test_configure
@@ -1797,6 +1797,106 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
 
     assert_equal [['retry', 1, sample_record]], driver.events
+  end
+
+  def test_create_should_write_records_with_ids_and_skip_those_without
+    driver.configure("write_operation create\nid_key my_id\n@log_level debug")
+    stub_elastic_ping
+    stub_request(:post, 'http://localhost:9200/_bulk')
+        .to_return(lambda do |req|
+      { :status => 200,
+        :headers => { 'Content-Type' => 'json' },
+        :body => %({
+          "took" : 1,
+          "errors" : true,
+          "items" : [
+            {
+              "create" : {
+                "_index" : "foo",
+                "_type"  : "bar",
+                "_id" : "abc"
+              }
+            },
+            {
+              "create" : {
+                "_index" : "foo",
+                "_type"  : "bar",
+                "_id" : "xyz",
+                "status" : 500,
+                "error" : {
+                  "type" : "some unrecognized type",
+                  "reason":"some error to cause version mismatch"
+                }
+              }
+            }
+           ]
+        })
+     }
+    end)
+    sample_record1 = sample_record('my_id' => 'abc')
+    sample_record4 = sample_record('my_id' => 'xyz')
+
+    driver.run(default_tag: 'test') do
+      driver.feed(1, sample_record1)
+      driver.feed(2, sample_record)
+      driver.feed(3, sample_record)
+      driver.feed(4, sample_record4)
+    end
+
+    logs = driver.logs
+    # one record succeeded while the other should be 'retried'
+    assert_equal [['test', 4, sample_record4]], driver.events
+    assert_logs_include(logs, /(Dropping record)/, 2)
+  end
+
+  def test_create_should_write_records_with_ids_and_emit_those_without
+    driver.configure("write_operation create\nid_key my_id\nemit_error_for_missing_id true\n@log_level debug")
+    stub_elastic_ping
+    stub_request(:post, 'http://localhost:9200/_bulk')
+        .to_return(lambda do |req|
+      { :status => 200,
+        :headers => { 'Content-Type' => 'json' },
+        :body => %({
+          "took" : 1,
+          "errors" : true,
+          "items" : [
+            {
+              "create" : {
+                "_index" : "foo",
+                "_type"  : "bar",
+                "_id" : "abc"
+              }
+            },
+            {
+              "create" : {
+                "_index" : "foo",
+                "_type"  : "bar",
+                "_id" : "xyz",
+                "status" : 500,
+                "error" : {
+                  "type" : "some unrecognized type",
+                  "reason":"some error to cause version mismatch"
+                }
+              }
+            }
+           ]
+        })
+     }
+    end)
+    sample_record1 = sample_record('my_id' => 'abc')
+    sample_record4 = sample_record('my_id' => 'xyz')
+
+    driver.run(default_tag: 'test') do
+      driver.feed(1, sample_record1)
+      driver.feed(2, sample_record)
+      driver.feed(3, sample_record)
+      driver.feed(4, sample_record4)
+    end
+
+    error_log = driver.error_events.map {|e| e.last.message }
+    # one record succeeded while the other should be 'retried'
+    assert_equal [['test', 4, sample_record4]], driver.events
+    assert_logs_include(error_log, /(Missing '_id' field)/, 2)
   end
 
   def test_bulk_error
