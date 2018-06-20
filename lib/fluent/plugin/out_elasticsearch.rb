@@ -512,7 +512,11 @@ EOC
     def send_bulk(data, tag, chunk, bulk_message_count, extracted_values)
       retries = 0
       begin
+
+        log.on_trace { log.trace "bulk request: #{data}" }
         response = client.bulk body: data
+        log.on_trace { log.trace "bulk response: #{response}" }
+
         if response['errors']
           error = Fluent::Plugin::ElasticsearchErrorHandler.new(self)
           error.handle_error(response, tag, chunk, bulk_message_count, extracted_values)
