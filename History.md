@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 2.10.5
+- Uplift Merge pull request #435 from jcantrill/add_trace_logging (#436)
+
 ### 2.10.4
 - Use Fluent::UnrecoverableError as unrecoverable error class ancestors (#433)
 - Add parameter validation for retrying template installation (#429)
