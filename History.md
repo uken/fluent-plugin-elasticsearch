@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 2.11.0
+- Uplift Merge pull request #437 from jcantrill/fix_bulk_count (#438)
+
 ### 2.10.5
 - Uplift Merge pull request #435 from jcantrill/add_trace_logging (#436)
 
