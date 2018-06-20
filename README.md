@@ -17,6 +17,7 @@ Current maintainers: @cosmo0920
 * [Usage](#usage)
   + [Index templates](#index-templates)
 * [Configuration](#configuration)
+  + [emit_error_for_missing_id](#emit_error_for_missing_id)
   + [hosts](#hosts)
   + [user, password, path, scheme, ssl_verify](#user-password-path-scheme-ssl_verify)
   + [logstash_format](#logstash_format)
@@ -103,6 +104,15 @@ In your Fluentd configuration, use `@type elasticsearch`. Additional configurati
 This plugin creates Elasticsearch indices by merely writing to them. Consider using [Index Templates](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html) to gain control of what get indexed and how. See [this example](https://github.com/uken/fluent-plugin-elasticsearch/issues/33#issuecomment-38693282) for a good starting point.
 
 ## Configuration
+
+### emit_error_for_missing_id
+
+```
+emit_error_for_missing_id true
+```
+When  `write_operation` is configured to anything other then `index`, setting this value to `true` will
+cause the plugin to `emit_error_event` of any records which do not include an `_id` field.  The default (`false`)
+behavior is to silently drop the records.
 
 ### hosts
 
