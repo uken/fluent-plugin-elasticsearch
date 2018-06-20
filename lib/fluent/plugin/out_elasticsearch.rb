@@ -423,10 +423,14 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   def send_bulk(data, tag, chunk, bulk_message_count)
     retries = 0
     begin
+
+      log.on_trace { log.trace "bulk request: #{data}" }
       response = client.bulk body: data
+      log.on_trace { log.trace "bulk response: #{response}" }
+
       if response['errors']
         error = Fluent::ElasticsearchErrorHandler.new(self)
-        error.handle_error(response, tag, chunk, bulk_message_count) 
+        error.handle_error(response, tag, chunk, bulk_message_count)
       end
     rescue RetryStreamError => e
       emit_tag = @retry_tag ? @retry_tag : tag
