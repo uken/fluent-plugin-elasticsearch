@@ -243,6 +243,26 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal '_doc', instance.type_name
   end
 
+  test 'Detected Elasticsearch 6 and insecure security' do
+    config = %{
+      ssl_version TLSv1_1
+      @log_level warn
+    }
+    instance = driver(config, 6).instance
+    logs = driver.logs
+    assert_logs_include(logs, /Detected ES 6.x or above and enabled insecure security/, 1)
+  end
+
+  test 'Detected Elasticsearch 7 and secure security' do
+    config = %{
+      ssl_version TLSv1_2
+      @log_level warn
+    }
+    instance = driver(config, 7).instance
+    logs = driver.logs
+    assert_logs_include(logs, /Detected ES 6.x or above and enabled insecure security/, 0)
+  end
+
   test 'lack of tag in chunk_keys' do
     assert_raise_message(/'tag' in chunk_keys is required./) do
       driver(Fluent::Config::Element.new(
