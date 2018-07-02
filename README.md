@@ -633,6 +633,8 @@ If you want to configure SSL/TLS version, you can specify ssl\_version parameter
 ssl_version TLSv1_2 # or [SSLv23, TLSv1, TLSv1_1]
 ```
 
+:warning: If SSL/TLS enabled, it might have to be required to set ssl\_version.
+
 ### Proxy Support
 
 Starting with version 0.8.0, this gem uses excon, which supports proxy with environment variables - https://github.com/excon/excon#proxy-support
