@@ -192,6 +192,14 @@ EOC
         log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
         @type_name = '_doc'.freeze
       end
+
+      if @last_seen_major_version >= 6
+        case @ssl_version
+        when :SSLv23, :TLSv1, :TLSv1_1
+          log.warn "Detected ES 6.x or above and enabled insecure security:
+                    You might have to specify `ssl_version TLSv1_2` in configuration."
+        end
+      end
     end
 
     def detect_es_major_version
