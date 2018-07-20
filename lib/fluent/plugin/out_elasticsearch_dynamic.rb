@@ -84,7 +84,7 @@ module Fluent::Plugin
             {
               host:   host_str.split(':')[0],
               port:   (host_str.split(':')[1] || @port).to_i,
-              scheme: @scheme
+              scheme: @scheme.to_s
             }
           else
             # New hosts format expects URLs such as http://logs.foo.com,https://john:pass@logs2.foo.com/elastic
@@ -96,7 +96,7 @@ module Fluent::Plugin
           end
         end.compact
       else
-        [{host: @host, port: @port.to_i, scheme: @scheme}]
+        [{host: @host, port: @port.to_i, scheme: @scheme.to_s}]
       end.each do |host|
         host.merge!(user: @user, password: @password) if !host[:user] && @user
         host.merge!(path: @path) if !host[:path] && @path

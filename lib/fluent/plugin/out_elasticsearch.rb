@@ -48,7 +48,7 @@ module Fluent::Plugin
     config_param :user, :string, :default => nil
     config_param :password, :string, :default => nil, :secret => true
     config_param :path, :string, :default => nil
-    config_param :scheme, :string, :default => 'http'
+    config_param :scheme, :enum, :list => [:https, :http], :default => :http
     config_param :hosts, :string, :default => nil
     config_param :target_index_key, :string, :default => nil
     config_param :target_type_key, :string, :default => nil,
@@ -196,8 +196,10 @@ EOC
       if @last_seen_major_version >= 6
         case @ssl_version
         when :SSLv23, :TLSv1, :TLSv1_1
-          log.warn "Detected ES 6.x or above and enabled insecure security:
-                    You might have to specify `ssl_version TLSv1_2` in configuration."
+          if @scheme == :https
+            log.warn "Detected ES 6.x or above and enabled insecure security:
+                      You might have to specify `ssl_version TLSv1_2` in configuration."
+          end
         end
       end
     end
@@ -306,7 +308,7 @@ EOC
             {
               host:   host_str.split(':')[0],
               port:   (host_str.split(':')[1] || @port).to_i,
-              scheme: @scheme
+              scheme: @scheme.to_s
             }
           else
             # New hosts format expects URLs such as http://logs.foo.com,https://john:pass@logs2.foo.com/elastic
@@ -318,7 +320,7 @@ EOC
           end
         end.compact
       else
-        [{host: @host, port: @port, scheme: @scheme}]
+        [{host: @host, port: @port, scheme: @scheme.to_s}]
       end.each do |host|
         host.merge!(user: @user, password: @password) if !host[:user] && @user
         host.merge!(path: @path) if !host[:path] && @path

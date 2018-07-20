@@ -196,7 +196,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     assert_equal 'logs.google.com', instance.host
     assert_equal 777, instance.port
-    assert_equal 'https', instance.scheme
+    assert_equal :https, instance.scheme
     assert_equal '/es/', instance.path
     assert_equal 'john', instance.user
     assert_equal 'doe', instance.password
@@ -247,6 +247,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     config = %{
       ssl_version TLSv1_1
       @log_level warn
+      scheme https
     }
     instance = driver(config, 6).instance
     logs = driver.logs
@@ -257,6 +258,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     config = %{
       ssl_version TLSv1_2
       @log_level warn
+      scheme https
     }
     instance = driver(config, 7).instance
     logs = driver.logs
