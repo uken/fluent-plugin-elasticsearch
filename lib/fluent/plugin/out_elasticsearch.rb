@@ -48,7 +48,7 @@ module Fluent::Plugin
     config_param :user, :string, :default => nil
     config_param :password, :string, :default => nil, :secret => true
     config_param :path, :string, :default => nil
-    config_param :scheme, :string, :default => 'http'
+    config_param :scheme, :enum, :list => [:https, :http], :default => :http
     config_param :hosts, :string, :default => nil
     config_param :target_index_key, :string, :default => nil
     config_param :target_type_key, :string, :default => nil,

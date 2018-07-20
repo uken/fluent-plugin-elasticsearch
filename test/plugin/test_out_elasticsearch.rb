@@ -196,7 +196,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     assert_equal 'logs.google.com', instance.host
     assert_equal 777, instance.port
-    assert_equal 'https', instance.scheme
+    assert_equal :https, instance.scheme
     assert_equal '/es/', instance.path
     assert_equal 'john', instance.user
     assert_equal 'doe', instance.password
@@ -247,6 +247,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     config = %{
       ssl_version TLSv1_1
       @log_level warn
+      scheme https
     }
     instance = driver(config, 6).instance
     logs = driver.logs
@@ -257,6 +258,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     config = %{
       ssl_version TLSv1_2
       @log_level warn
+      scheme https
     }
     instance = driver(config, 7).instance
     logs = driver.logs
@@ -594,11 +596,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     assert_equal 'host1', host1[:host]
     assert_equal 50, host1[:port]
-    assert_equal 'https', host1[:scheme]
+    assert_equal :https, host1[:scheme]
     assert_equal '/es/', host2[:path]
     assert_equal 'host3', host3[:host]
     assert_equal 123, host3[:port]
-    assert_equal 'https', host3[:scheme]
+    assert_equal :https, host3[:scheme]
     assert_equal '/es/', host3[:path]
   end
 
@@ -667,7 +669,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     assert_equal 'logs.google.com', host1[:host]
     assert_equal 9200, host1[:port]
-    assert_equal 'http', host1[:scheme]
+    assert_equal :http, host1[:scheme]
     assert_equal 'john', host1[:user]
     assert_equal 'doe', host1[:password]
     assert_equal nil, host1[:path]
@@ -686,7 +688,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     assert_equal 'logs.google.com', host1[:host]
     assert_equal 9200, host1[:port]
-    assert_equal 'http', host1[:scheme]
+    assert_equal :http, host1[:scheme]
     assert_equal 'j%2Bhn', host1[:user]
     assert_equal 'd%40e', host1[:password]
     assert_equal nil, host1[:path]
