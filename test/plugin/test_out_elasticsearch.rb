@@ -176,7 +176,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     assert_equal 'logs.google.com', instance.host
     assert_equal 777, instance.port
-    assert_equal 'https', instance.scheme
+    assert_equal :https, instance.scheme
     assert_equal '/es/', instance.path
     assert_equal 'john', instance.user
     assert_equal 'doe', instance.password

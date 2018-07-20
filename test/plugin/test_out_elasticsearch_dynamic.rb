@@ -68,6 +68,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     conf = instance.dynamic_config
     assert_equal 'logs.google.com', conf['host']
     assert_equal "777", conf['port']
+    assert_equal :https, instance.scheme
     assert_equal 'john', instance.user
     assert_equal 'doe', instance.password
     assert_equal '/es/', instance.path
