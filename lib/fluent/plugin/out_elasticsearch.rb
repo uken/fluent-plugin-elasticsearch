@@ -39,7 +39,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   config_param :user, :string, :default => nil
   config_param :password, :string, :default => nil, :secret => true
   config_param :path, :string, :default => nil
-  config_param :scheme, :string, :default => 'http'
+  config_param :scheme, :enum, :list => [:https, :http], :default => :http
   config_param :hosts, :string, :default => nil
   config_param :target_index_key, :string, :default => nil
   config_param :target_type_key, :string, :default => nil
@@ -241,7 +241,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
           {
             host:   host_str.split(':')[0],
             port:   (host_str.split(':')[1] || @port).to_i,
-            scheme: @scheme
+            scheme: @scheme.to_s
           }
         else
           # New hosts format expects URLs such as http://logs.foo.com,https://john:pass@logs2.foo.com/elastic
@@ -253,7 +253,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
         end
       end.compact
     else
-      [{host: @host, port: @port, scheme: @scheme}]
+      [{host: @host, port: @port, scheme: @scheme.to_s}]
     end.each do |host|
       host.merge!(user: @user, password: @password) if !host[:user] && @user
       host.merge!(path: @path) if !host[:path] && @path
