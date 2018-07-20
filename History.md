@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 1.17.1
+- backport strictness-scheme (#447)
+
 ### 1.17.0
 - Fix #434 bulk count (#437)
 
