@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 2.11.2
+- Strictness scheme (#445)
+
 ### 2.11.0
 - Uplift Merge pull request #437 from jcantrill/fix_bulk_count (#438)
 
