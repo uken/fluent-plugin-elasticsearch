@@ -106,6 +106,7 @@ EOC
 elasticsearch gem v6.0.2 starts to use correct Content-Type. Please upgrade elasticserach gem and stop to use this option.
 see: https://github.com/elastic/elasticsearch-ruby/pull/514
 EOC
+    config_param :include_index_in_url, :bool, :default => false
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE
@@ -422,8 +423,8 @@ EOC
     end
 
     def write(chunk)
-      bulk_message_count = 0
-      bulk_message = ''
+      bulk_message_count = Hash.new { |h,k| h[k] = 0 }
+      bulk_message = Hash.new { |h,k| h[k] = '' }
       header = {}
       meta = {}
 
@@ -434,8 +435,15 @@ EOC
       chunk.msgpack_each do |time, record|
         next unless record.is_a? Hash
         begin
-          if process_message(tag, meta, header, time, record, bulk_message, extracted_values)
-            bulk_message_count += 1
+          meta, header, record = process_message(tag, meta, header, time, record, extracted_values)
+          info = if @include_index_in_url
+                   RequestInfo.new(nil, meta.delete("_index".freeze))
+                 else
+                   RequestInfo.new(nil, nil)
+                 end
+
+          if append_record_to_messages(@write_operation, meta, header, record, bulk_message[info])
+            bulk_message_count[info] += 1;
           else
             if @emit_error_for_missing_id
               raise MissingIdFieldError, "Missing '_id' field. Write operation is #{@write_operation}"
@@ -448,11 +456,14 @@ EOC
         end
       end
 
-      send_bulk(bulk_message, tag, chunk, bulk_message_count, extracted_values) unless bulk_message.empty?
-      bulk_message.clear
+
+      bulk_message.each do |info, msgs|
+        send_bulk(msgs, tag, chunk, bulk_message_count[info], extracted_values, info.index) unless msgs.empty?
+        msgs.clear
+      end
     end
 
-    def process_message(tag, meta, header, time, record, bulk_message, extracted_values)
+    def process_message(tag, meta, header, time, record, extracted_values)
       logstash_prefix, index_name, type_name = extracted_values
 
       if @flatten_hashes
@@ -532,7 +543,7 @@ EOC
         @remove_keys.each { |key| record.delete(key) }
       end
 
-      append_record_to_messages(@write_operation, meta, header, record, bulk_message)
+      return [meta, header, record]
     end
 
     # returns [parent, child_key] of child described by path array in record's tree
@@ -544,12 +555,12 @@ EOC
 
     # send_bulk given a specific bulk request, the original tag,
     # chunk, and bulk_message_count
-    def send_bulk(data, tag, chunk, bulk_message_count, extracted_values)
+    def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, index)
       retries = 0
       begin
 
         log.on_trace { log.trace "bulk request: #{data}" }
-        response = client.bulk body: data
+        response = client.bulk body: data, index: index
         log.on_trace { log.trace "bulk response: #{response}" }
 
         if response['errors']
