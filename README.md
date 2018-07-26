@@ -55,6 +55,7 @@ Current maintainers: @cosmo0920
   + [reconnect_on_error](#reconnect_on_error)
   + [with_transporter_log](#with_transporter_log)
   + [content_type](#content_type)
+  + [include_index_in_url](#include_index_in_url)
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Proxy Support](#proxy-support)
   + [Buffer options](#buffer-options)
@@ -612,6 +613,17 @@ If you will not use template, it recommends to set `content_type application/x-n
 
 ```
 content_type application/x-ndjson
+```
+
+### include_index_in_url
+
+With this option set to true, Fluentd manifests the index name in the request URL (rather than in the request body).
+You can use this option to enforce an URL-based access control.
+
+This option is currently available only for `elasticsearch_dynamic`.
+
+```
+include_index_in_url true
 ```
 
 ### Client/host certificate options
