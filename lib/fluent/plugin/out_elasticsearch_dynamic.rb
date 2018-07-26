@@ -9,9 +9,12 @@ module Fluent::Plugin
     helpers :event_emitter
 
     config_param :delimiter, :string, :default => "."
+    config_param :include_index_in_url, :bool, :default => false
 
     DYNAMIC_PARAM_NAMES = %W[hosts host port include_timestamp logstash_format logstash_prefix logstash_dateformat time_key utc_index index_name tag_key type_name id_key parent_key routing_key write_operation]
     DYNAMIC_PARAM_SYMBOLS = DYNAMIC_PARAM_NAMES.map { |n| "@#{n}".to_sym }
+
+    RequestInfo = Struct.new(:host, :index)
 
     attr_reader :dynamic_config
 
@@ -186,7 +189,19 @@ module Fluent::Plugin
           record.merge!(dynamic_conf['tag_key'] => tag)
         end
 
-        meta = {"_index" => target_index, "_type" => dynamic_conf['type_name']}
+        if dynamic_conf['hosts']
+          host = dynamic_conf['hosts']
+        else
+          host = "#{dynamic_conf['host']}:#{dynamic_conf['port']}"
+        end
+
+        if @include_index_in_url
+          key = RequestInfo.new(host, target_index)
+          meta = {"_type" => dynamic_conf['type_name']}
+        else
+          key = RequestInfo.new(host, nil)
+          meta = {"_index" => target_index, "_type" => dynamic_conf['type_name']}
+        end
 
         @meta_config_map.each_pair do |config_name, meta_key|
           if dynamic_conf[config_name] && accessor = record_accessor_create(dynamic_conf[config_name])
@@ -196,30 +211,24 @@ module Fluent::Plugin
           end
         end
 
-        if dynamic_conf['hosts']
-          host = dynamic_conf['hosts']
-        else
-          host = "#{dynamic_conf['host']}:#{dynamic_conf['port']}"
-        end
-
         if @remove_keys
           @remove_keys.each { |key| record.delete(key) }
         end
 
         write_op = dynamic_conf["write_operation"]
-        append_record_to_messages(write_op, meta, headers[write_op], record, bulk_message[host])
+        append_record_to_messages(write_op, meta, headers[write_op], record, bulk_message[key])
       end
 
-      bulk_message.each do |hKey, msgs|
-        send_bulk(msgs, hKey) unless msgs.empty?
+      bulk_message.each do |info, msgs|
+        send_bulk(msgs, info.host, info.index) unless msgs.empty?
         msgs.clear
       end
     end
 
-    def send_bulk(data, host)
+    def send_bulk(data, host, index)
       retries = 0
       begin
-        response = client(host).bulk body: data
+        response = client(host).bulk body: data, index: index
         if response['errors']
           log.error "Could not push log to Elasticsearch: #{response}"
         end

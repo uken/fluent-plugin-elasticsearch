@@ -34,6 +34,8 @@ module Fluent::Plugin
       end
     end
 
+    RequestInfo = Struct.new(:host, :index)
+
     helpers :event_emitter, :compat_parameters, :record_accessor
 
     Fluent::Plugin.register_output('elasticsearch', self)
