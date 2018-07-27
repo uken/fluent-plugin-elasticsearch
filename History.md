@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 2.11.3
+- Implement the `include_index_in_url` option for out_elasticsearch (#451)
+- Add an option `include_index_in_url` to allow URL-based conrtrols (#450)
+
 ### 2.11.2
 - Strictness scheme (#445)
 
