@@ -32,7 +32,8 @@ class Fluent::Plugin::ElasticsearchErrorHandler
       begin
         # we need a deep copy for process_message to alter
         processrecord = Marshal.load(Marshal.dump(rawrecord))
-        next unless @plugin.process_message(tag, meta, header, time, processrecord, bulk_message, extracted_values)
+        meta, header, record = @plugin.process_message(tag, meta, header, time, processrecord, extracted_values)
+        next unless @plugin.append_record_to_messages(@plugin.write_operation, meta, header, record, bulk_message)
       rescue => e
         stats[:bad_chunk_record] += 1
         next

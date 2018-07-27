@@ -620,8 +620,6 @@ content_type application/x-ndjson
 With this option set to true, Fluentd manifests the index name in the request URL (rather than in the request body).
 You can use this option to enforce an URL-based access control.
 
-This option is currently available only for `elasticsearch_dynamic`.
-
 ```
 include_index_in_url true
 ```
