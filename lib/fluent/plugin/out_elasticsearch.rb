@@ -107,6 +107,7 @@ elasticsearch gem v6.0.2 starts to use correct Content-Type. Please upgrade elas
 see: https://github.com/elastic/elasticsearch-ruby/pull/514
 EOC
     config_param :include_index_in_url, :bool, :default => false
+    config_param :persistent_excon_connection, :bool, :default => false
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE
@@ -257,7 +258,7 @@ EOC
 
     def client
       @_es ||= begin
-        excon_options = { client_key: @client_key, client_cert: @client_cert, client_key_pass: @client_key_pass }
+        excon_options = { client_key: @client_key, client_cert: @client_cert, client_key_pass: @client_key_pass, persistent: @persistent_excon_connection }
         adapter_conf = lambda {|f| f.adapter :excon, excon_options }
         transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(get_connection_options.merge(
                                                                             options: {
