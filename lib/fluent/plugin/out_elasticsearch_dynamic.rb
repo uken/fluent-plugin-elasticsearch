@@ -44,7 +44,7 @@ module Fluent::Plugin
 
       @_es ||= begin
         @current_config = connection_options[:hosts].clone
-        excon_options = { client_key: @client_key, client_cert: @client_cert, client_key_pass: @client_key_pass }
+        excon_options = { client_key: @client_key, client_cert: @client_cert, client_key_pass: @client_key_pass, persistent: @persistent_excon_connection }
         adapter_conf = lambda {|f| f.adapter :excon, excon_options }
         transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(connection_options.merge(
                                                                             options: {
