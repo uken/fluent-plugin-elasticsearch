@@ -207,6 +207,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_false instance.with_transporter_log
     assert_equal :"application/json", instance.content_type
     assert_equal "fluentd", default_type_name
+    assert_equal :excon, instance.http_backend
   end
 
   test 'configure Content-Type' do

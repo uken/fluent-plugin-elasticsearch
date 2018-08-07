@@ -44,8 +44,14 @@ module Fluent::Plugin
 
       @_es ||= begin
         @current_config = connection_options[:hosts].clone
-        excon_options = { client_key: @client_key, client_cert: @client_cert, client_key_pass: @client_key_pass }
-        adapter_conf = lambda {|f| f.adapter :excon, excon_options }
+        backend_options =
+          case @http_backend
+          when :excon
+            { client_key: @client_key, client_cert: @client_cert, client_key_pass: @client_key_pass }
+          when :typhoeus
+            { sslkey: @client_key, sslcert: @client_cert, keypasswd: @client_key_pass }
+          end
+        adapter_conf = lambda {|f| f.adapter @http_backend, backend_options }
         transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(connection_options.merge(
                                                                             options: {
                                                                               reload_connections: @reload_connections,
