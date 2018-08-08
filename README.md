@@ -56,6 +56,7 @@ Current maintainers: @cosmo0920
   + [with_transporter_log](#with_transporter_log)
   + [content_type](#content_type)
   + [include_index_in_url](#include_index_in_url)
+  + [http_backend](#http_backend)
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Proxy Support](#proxy-support)
   + [Buffer options](#buffer-options)
@@ -622,6 +623,17 @@ You can use this option to enforce an URL-based access control.
 
 ```
 include_index_in_url true
+```
+
+### http_backend
+
+With `http_backend typhoeus`, elasticsearch plugin uses typhoeus faraday http backend.
+Typhoeus can handle HTTP keepalive.
+
+Default value is `excon` which is default http_backend of elasticsearch plugin.
+
+```
+http_backend typhoeus
 ```
 
 ### Client/host certificate options
