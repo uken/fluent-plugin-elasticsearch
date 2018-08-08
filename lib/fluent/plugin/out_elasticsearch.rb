@@ -8,10 +8,6 @@ begin
   require 'strptime'
 rescue LoadError
 end
-begin
-  require 'typhoeus'
-rescue LoadError
-end
 
 require 'fluent/plugin/output'
 require 'fluent/event'
@@ -133,6 +129,7 @@ EOC
       raise Fluent::ConfigError, "'tag' in chunk_keys is required." if not @chunk_key_tag
 
       @time_parser = create_time_parser
+      @backend_options = backend_options
 
       if @remove_keys
         @remove_keys = @remove_keys.split(/\s*,\s*/)
@@ -212,6 +209,18 @@ EOC
       end
     end
 
+    def backend_options
+      case @http_backend
+      when :excon
+        { client_key: @client_key, client_cert: @client_cert, client_key_pass: @client_key_pass }
+      when :typhoeus
+        require 'typhoeus'
+        { sslkey: @client_key, sslcert: @client_cert, keypasswd: @client_key_pass }
+      end
+    rescue LoadError
+      raise Fluent::ConfigError, "You must install #{@http_backend} gem."
+    end
+
     def detect_es_major_version
       @_es_info ||= client.info
       @_es_info["version"]["number"].to_i
@@ -262,14 +271,7 @@ EOC
 
     def client
       @_es ||= begin
-        backend_options =
-          case @http_backend
-          when :excon
-            { client_key: @client_key, client_cert: @client_cert, client_key_pass: @client_key_pass }
-          when :typhoeus
-            { sslkey: @client_key, sslcert: @client_cert, keypasswd: @client_key_pass }
-          end
-        adapter_conf = lambda {|f| f.adapter @http_backend, backend_options }
+        adapter_conf = lambda {|f| f.adapter @http_backend, @backend_options }
         transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(get_connection_options.merge(
                                                                             options: {
                                                                               reload_connections: @reload_connections,
