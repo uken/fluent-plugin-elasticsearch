@@ -98,6 +98,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_nil instance.client_key_pass
     assert_false instance.with_transporter_log
     assert_equal :"application/json", instance.content_type
+    assert_equal :excon, instance.http_backend
   end
 
   test 'configure Content-Type' do
