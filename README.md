@@ -56,6 +56,8 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [Buffered output options](#buffered-output-options)
   + [Hash flattening](#hash-flattening)
   + [Generate Hash ID](#generate-hash-id)
+  + [sniffer_class_name](#sniffer_class_name)
+  + [reload_after](#reload_after)
   + [Not seeing a config you need?](#not-seeing-a-config-you-need)
   + [Dynamic configuration](#dynamic-configuration)
 * [Contact](#contact)
@@ -575,6 +577,29 @@ Here is a sample config:
   # other settings are ommitted.
 </match>
 ```
+
+### Sniffer Class Name
+
+The default Sniffer used by the `Elasticsearch::Transport` class works well when Fluentd has a direct connection
+to all of the Elasticsearch servers and can make effective use of the `_nodes` API.  This doesn't work well
+when Fluentd must connect through a load balancer or proxy.  The parameter `sniffer_class_name` gives you the
+ability to provide your own Sniffer class to implement whatever connection reload logic you require.  In addition,
+there is a new `Fluent::ElasticsearchSimpleSniffer` class which reuses the hosts given in the configuration, which
+is typically the hostname of the load balancer or proxy.  For example, a configuration like this would cause
+connections to `logging-es` to reload every 100 operations:
+
+```
+host logging-es
+port 9200
+reload_connections true
+sniffer_class_name Fluent::ElasticsearchSimpleSniffer
+reload_after 100
+```
+
+### Reload After
+
+When `reload_connections true`, this is the integer number of operations after which the plugin will
+reload the connections.  The default value is 10000.
 
 ### Not seeing a config you need?
 
