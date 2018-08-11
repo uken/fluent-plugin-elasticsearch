@@ -44,6 +44,7 @@ module Fluent::Plugin
     DEFAULT_ELASTICSEARCH_VERSION = 5 # For compatibility.
     DEFAULT_TYPE_NAME_ES_7x = "_doc".freeze
     DEFAULT_TYPE_NAME = "fluentd".freeze
+    DEFAULT_RELOAD_AFTER = -1
 
     config_param :host, :string,  :default => 'localhost'
     config_param :port, :integer, :default => 9200
@@ -101,6 +102,8 @@ EOC
     config_param :pipeline, :string, :default => nil
     config_param :with_transporter_log, :bool, :default => false
     config_param :emit_error_for_missing_id, :bool, :default => false
+    config_param :sniffer_class_name, :string, :default => nil
+    config_param :reload_after, :integer, :default => DEFAULT_RELOAD_AFTER
     config_param :content_type, :enum, list: [:"application/json", :"application/x-ndjson"], :default => :"application/json",
                  :deprecated => <<EOC
 elasticsearch gem v6.0.2 starts to use correct Content-Type. Please upgrade elasticserach gem and stop to use this option.
@@ -207,6 +210,12 @@ EOC
           end
         end
       end
+      @sniffer_class = nil
+      begin
+        @sniffer_class = Object.const_get(@sniffer_class_name) if @sniffer_class_name
+      rescue Exception => ex
+        raise Fluent::ConfigError, "Could not load sniffer class #{@sniffer_class_name}: #{ex}"
+      end
     end
 
     def backend_options
@@ -272,9 +281,13 @@ EOC
     def client
       @_es ||= begin
         adapter_conf = lambda {|f| f.adapter @http_backend, @backend_options }
+        local_reload_connections = @reload_connections
+        if local_reload_connections && @reload_after > DEFAULT_RELOAD_AFTER
+          local_reload_connections = @reload_after
+        end
         transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(get_connection_options.merge(
                                                                             options: {
-                                                                              reload_connections: @reload_connections,
+                                                                              reload_connections: local_reload_connections,
                                                                               reload_on_failure: @reload_on_failure,
                                                                               resurrect_after: @resurrect_after,
                                                                               retry_on_failure: 5,
@@ -287,7 +300,8 @@ EOC
                                                                               http: {
                                                                                 user: @user,
                                                                                 password: @password
-                                                                              }
+                                                                              },
+                                                                              sniffer_class: @sniffer_class,
                                                                             }), &adapter_conf)
         es = Elasticsearch::Client.new transport: transport
 

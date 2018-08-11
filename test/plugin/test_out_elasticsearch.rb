@@ -2189,4 +2189,21 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(index_cmds.first['index']['_index'], nil)
   end
 
+  def test_use_simple_sniffer
+    require 'fluent/plugin/elasticsearch_simple_sniffer'
+    driver.configure("sniffer_class_name Fluent::Plugin::ElasticsearchSimpleSniffer
+                      log_level debug
+                      with_transporter_log true
+                      reload_connections true
+                      reload_after 1")
+    stub_elastic_ping
+    stub_elastic
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+    log = driver.logs
+    # 2 - one for the ping, one for the _bulk
+    assert_logs_include(log, /In Fluent::Plugin::ElasticsearchSimpleSniffer hosts/, 2)
+  end
+
 end
