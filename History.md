@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 1.17.2
+- add simple sniffer for simple proxy/lb cases (#459)
+
 ### 1.17.1
 - backport strictness-scheme (#447)
 
