@@ -1716,4 +1716,20 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert(index_cmds[0].has_key?("create"))
   end
 
+  def test_use_simple_sniffer
+    require 'fluent/plugin/elasticsearch_simple_sniffer'
+    driver.configure("sniffer_class_name Fluent::ElasticsearchSimpleSniffer
+                      log_level debug
+                      with_transporter_log true
+                      reload_connections true
+                      reload_after 1")
+    stub_elastic_ping
+    stub_elastic
+    driver.emit(sample_record)
+    driver.run
+    log = driver.instance.router.emit_error_handler.log
+    # 2 - one for the ping, one for the _bulk
+    assert_logs_include(log.out.logs, /In Fluent::ElasticsearchSimpleSniffer hosts/, 2)
+  end
+
 end

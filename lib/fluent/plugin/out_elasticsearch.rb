@@ -34,6 +34,8 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
 
   Fluent::Plugin.register_output('elasticsearch', self)
 
+  DEFAULT_RELOAD_AFTER = -1
+
   config_param :host, :string,  :default => 'localhost'
   config_param :port, :integer, :default => 9200
   config_param :user, :string, :default => nil
@@ -86,6 +88,8 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   config_param :pipeline, :string, :default => nil
   config_param :with_transporter_log, :bool, :default => false
   config_param :emit_error_for_missing_id, :bool, :default => false
+  config_param :sniffer_class_name, :string, :default => nil
+  config_param :reload_after, :integer, :default => DEFAULT_RELOAD_AFTER
 
   include Fluent::ElasticsearchIndexTemplate
   include Fluent::ElasticsearchConstants
@@ -147,6 +151,13 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
       log.warn "Consider to specify log_level with @log_level." unless log_level
     end
 
+    @sniffer_class = nil
+    begin
+      @sniffer_class = Object.const_get(@sniffer_class_name) if @sniffer_class_name
+    rescue Exception => ex
+      raise Fluent::ConfigError, "Could not load sniffer class #{@sniffer_class_name}: #{ex}"
+    end
+
   end
 
   def create_meta_config_map
@@ -189,9 +200,13 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
     @_es ||= begin
       excon_options = { client_key: @client_key, client_cert: @client_cert, client_key_pass: @client_key_pass }
       adapter_conf = lambda {|f| f.adapter :excon, excon_options }
+      local_reload_connections = @reload_connections
+      if local_reload_connections && @reload_after > DEFAULT_RELOAD_AFTER
+        local_reload_connections = @reload_after
+      end
       transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(get_connection_options.merge(
                                                                           options: {
-                                                                            reload_connections: @reload_connections,
+                                                                            reload_connections: local_reload_connections,
                                                                             reload_on_failure: @reload_on_failure,
                                                                             resurrect_after: @resurrect_after,
                                                                             retry_on_failure: 5,
@@ -204,7 +219,8 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
                                                                             http: {
                                                                               user: @user,
                                                                               password: @password
-                                                                            }
+                                                                            },
+                                                                            sniffer_class: @sniffer_class,
                                                                           }), &adapter_conf)
       es = Elasticsearch::Client.new transport: transport
 
