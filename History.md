@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 2.11.5
+- Uplift Merge pull request #459 from richm/v0.12-simple-sniffer (#461)
+
 ### 2.11.4
 - Persistent backend (#456)
 
