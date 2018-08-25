@@ -370,7 +370,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E").
       to_return(:status => 200, :body => "", :headers => {})
     # check if alias exists
-    stub_request(:head, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E/_alias/myapp-current").
+    stub_request(:head, "https://john:doe@logs.google.com:777/es//_alias/myapp-current").
       to_return(:status => 404, :body => "", :headers => {})
     # put the alias for the index
     stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E/_alias/myapp-current").
@@ -443,7 +443,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E").
       to_return(:status => 200, :body => "", :headers => {})
     # check if alias exists
-    stub_request(:head, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E/_alias/myapp-current").
+    stub_request(:head, "https://john:doe@logs.google.com:777/es//_alias/myapp-current").
       to_return(:status => 404, :body => "", :headers => {})
     # put the alias for the index
     stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E/_alias/myapp-current").
