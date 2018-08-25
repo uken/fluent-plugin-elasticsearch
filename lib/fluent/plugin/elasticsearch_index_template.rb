@@ -48,6 +48,12 @@ module Fluent::ElasticsearchIndexTemplate
     client.indices.put_template(:name => name, :body => template)
   end
 
+  def indexcreation(index_name)
+    client.indices.create(:index => index_name)
+    rescue Elasticsearch::Transport::Transport::Error => e
+      log.error("Error while index creation - #{index_name}: #{e.inspect}")
+  end
+
   def template_install(name, template_file, overwrite)
     if overwrite
       template_put(name, get_template(template_file))

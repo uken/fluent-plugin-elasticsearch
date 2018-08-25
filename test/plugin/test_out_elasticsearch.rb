@@ -366,6 +366,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
     # creation
     stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
       to_return(:status => 200, :body => "", :headers => {})
+    # creation of index which can rollover
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//<mylogs-myapp-{now/d}-000001>").
+      to_return(:status => 200, :body => "", :headers => {})
     # check if alias exists
     stub_request(:head, "https://john:doe@logs.google.com:777/es//_alias/myapp-current").
       to_return(:status => 404, :body => "", :headers => {})
@@ -435,6 +438,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
       to_return(:status => 200, :body => "", :headers => {})
     # creation
     stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
+      to_return(:status => 200, :body => "", :headers => {})
+    # creation of index which can rollover
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//<mylogs-myapp-{now/d}-000001>").
       to_return(:status => 200, :body => "", :headers => {})
     # check if alias exists
     stub_request(:head, "https://john:doe@logs.google.com:777/es//_alias/myapp-current").
