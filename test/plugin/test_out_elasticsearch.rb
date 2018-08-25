@@ -366,7 +366,13 @@ class ElasticsearchOutput < Test::Unit::TestCase
     # creation
     stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
       to_return(:status => 200, :body => "", :headers => {})
-
+    # check if alias exists
+    stub_request(:head, "https://john:doe@logs.google.com:777/es//_alias/myapp-current").
+      to_return(:status => 404, :body => "", :headers => {})
+    # put the alias for the index
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//_alias/myapp-current").
+      to_return(:status => 200, :body => "", :headers => {})
+    
     driver(config)
 
     assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template", times: 1)
@@ -430,7 +436,13 @@ class ElasticsearchOutput < Test::Unit::TestCase
     # creation
     stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
       to_return(:status => 200, :body => "", :headers => {})
-
+    # check if alias exists
+    stub_request(:head, "https://john:doe@logs.google.com:777/es//_alias/myapp-current").
+      to_return(:status => 404, :body => "", :headers => {})
+    # put the alias for the index
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//_alias/myapp-current").
+      to_return(:status => 200, :body => "", :headers => {})
+  
     driver(config)
 
     assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template", times: 1)
