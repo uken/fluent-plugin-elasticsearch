@@ -1,0 +1,9 @@
+{
+  "order": 5,
+  "template": "--index_prefix-----appid---*",
+  "settings": {},
+  "mappings": {},
+  "aliases": {
+    "--appid---alias": {}
+  }
+}

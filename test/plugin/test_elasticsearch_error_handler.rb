@@ -22,10 +22,15 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
        @error_events << {:tag => tag, :time=>time, :record=>record, :error=>e}
     end
 
-    def process_message(tag, meta, header, time, record, bulk_message, extracted_values)
+    def process_message(tag, meta, header, time, record, extracted_values)
+      return [meta, header, record]
+    end
+
+    def append_record_to_messages(op, meta, header, record, msgs)
       if record.has_key?('raise') && record['raise']
         raise Exception('process_message')
       end
+      return true
     end
   end
 
@@ -54,7 +59,7 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
   end
 
   def test_dlq_400_responses
-    records = [{time: 123, record: {"foo" => "bar"}}]
+    records = [{time: 123, record: {"foo" => "bar", '_id' => 'abc'}}]
     response = parse_response(%({
       "took" : 0,
       "errors" : true,

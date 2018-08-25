@@ -17,6 +17,7 @@ Current maintainers: @cosmo0920
 * [Usage](#usage)
   + [Index templates](#index-templates)
 * [Configuration](#configuration)
+  + [emit_error_for_missing_id](#emit_error_for_missing_id)
   + [hosts](#hosts)
   + [user, password, path, scheme, ssl_verify](#user-password-path-scheme-ssl_verify)
   + [logstash_format](#logstash_format)
@@ -56,11 +57,15 @@ Current maintainers: @cosmo0920
   + [reconnect_on_error](#reconnect_on_error)
   + [with_transporter_log](#with_transporter_log)
   + [content_type](#content_type)
+  + [include_index_in_url](#include_index_in_url)
+  + [http_backend](#http_backend)
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Proxy Support](#proxy-support)
   + [Buffer options](#buffer-options)
   + [Hash flattening](#hash-flattening)
   + [Generate Hash ID](#generate-hash-id)
+  + [sniffer_class_name](#sniffer_class_name)
+  + [reload_after](#reload_after)
   + [Not seeing a config you need?](#not-seeing-a-config-you-need)
   + [Dynamic configuration](#dynamic-configuration)
   + [Placeholders](#placeholders)
@@ -106,6 +111,15 @@ This plugin creates Elasticsearch indices by merely writing to them. Consider us
 
 ## Configuration
 
+### emit_error_for_missing_id
+
+```
+emit_error_for_missing_id true
+```
+When  `write_operation` is configured to anything other then `index`, setting this value to `true` will
+cause the plugin to `emit_error_event` of any records which do not include an `_id` field.  The default (`false`)
+behavior is to silently drop the records.
+
 ### hosts
 
 ```
@@ -115,12 +129,13 @@ hosts host1:port1,host2:port2,host3:port3
 You can specify multiple Elasticsearch hosts with separator ",".
 
 If you specify multiple hosts, this plugin will load balance updates to Elasticsearch. This is an [elasticsearch-ruby](https://github.com/elasticsearch/elasticsearch-ruby) feature, the default strategy is round-robin.
+**Note:** If you will use scheme https, do not include "https://" in your hosts ie. host "https://domain", this will cause ES cluster to be unreachable and you will recieve an error "Can not reach Elasticsearch cluster"
 
 **Note:** Up until v2.8.5, it was allowed to embed the username/password in the URL. However, this syntax is deprecated as of v2.8.6 because it was found to cause serious connection problems (See #394). Please migrate your settings to use the `user` and `password` field (described below) instead.
 
 ### user, password, path, scheme, ssl_verify
 
-If you specify this option, host and port options are ignored.
+If you specify this option, port options are ignored.
 
 ```
 user demo
@@ -625,6 +640,26 @@ If you will not use template, it recommends to set `content_type application/x-n
 content_type application/x-ndjson
 ```
 
+### include_index_in_url
+
+With this option set to true, Fluentd manifests the index name in the request URL (rather than in the request body).
+You can use this option to enforce an URL-based access control.
+
+```
+include_index_in_url true
+```
+
+### http_backend
+
+With `http_backend typhoeus`, elasticsearch plugin uses typhoeus faraday http backend.
+Typhoeus can handle HTTP keepalive.
+
+Default value is `excon` which is default http_backend of elasticsearch plugin.
+
+```
+http_backend typhoeus
+```
+
 ### Client/host certificate options
 
 Need to verify Elasticsearch's certificate?  You can use the following parameter to specify a CA instead of using an environment variable.
@@ -643,6 +678,8 @@ If you want to configure SSL/TLS version, you can specify ssl\_version parameter
 ```
 ssl_version TLSv1_2 # or [SSLv23, TLSv1, TLSv1_1]
 ```
+
+:warning: If SSL/TLS enabled, it might have to be required to set ssl\_version.
 
 ### Proxy Support
 
@@ -702,6 +739,29 @@ Here is a sample config:
   # other settings are ommitted.
 </match>
 ```
+
+### Sniffer Class Name
+
+The default Sniffer used by the `Elasticsearch::Transport` class works well when Fluentd has a direct connection
+to all of the Elasticsearch servers and can make effective use of the `_nodes` API.  This doesn't work well
+when Fluentd must connect through a load balancer or proxy.  The parameter `sniffer_class_name` gives you the
+ability to provide your own Sniffer class to implement whatever connection reload logic you require.  In addition,
+there is a new `Fluent::Plugin::ElasticsearchSimpleSniffer` class which reuses the hosts given in the configuration, which
+is typically the hostname of the load balancer or proxy.  For example, a configuration like this would cause
+connections to `logging-es` to reload every 100 operations:
+
+```
+host logging-es
+port 9200
+reload_connections true
+sniffer_class_name Fluent::Plugin::ElasticsearchSimpleSniffer
+reload_after 100
+```
+
+### Reload After
+
+When `reload_connections true`, this is the integer number of operations after which the plugin will
+reload the connections.  The default value is 10000.
 
 ### Not seeing a config you need?
 

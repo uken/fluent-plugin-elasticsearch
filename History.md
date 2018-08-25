@@ -2,6 +2,29 @@
 
 ### [Unreleased]
 
+### 2.11.5
+- Uplift Merge pull request #459 from richm/v0.12-simple-sniffer (#461)
+
+### 2.11.4
+- Persistent backend (#456)
+
+### 2.11.3
+- Implement the `include_index_in_url` option for out_elasticsearch (#451)
+- Add an option `include_index_in_url` to allow URL-based conrtrols (#450)
+
+### 2.11.2
+- Strictness scheme (#445)
+
+### 2.11.0
+- Uplift Merge pull request #437 from jcantrill/fix_bulk_count (#438)
+
+### 2.10.5
+- Uplift Merge pull request #435 from jcantrill/add_trace_logging (#436)
+
+### 2.10.4
+- Use Fluent::UnrecoverableError as unrecoverable error class ancestors (#433)
+- Add parameter validation for retrying template installation (#429)
+
 ### 2.10.3
 - Add retry mechanism for template installation (#428)
 
