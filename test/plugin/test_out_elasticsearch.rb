@@ -351,7 +351,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       path            /es/
       user            john
       password        doe
-      template_name   logstash
+      template_name   myapp
       template_file   #{template_file}
       customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
       index_prefix    mylogs
@@ -361,15 +361,15 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_request(:head, "https://john:doe@logs.google.com:777/es//").
       to_return(:status => 200, :body => "", :headers => {})
     # check if template exists
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash").
+    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
       to_return(:status => 404, :body => "", :headers => {})
     # creation
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash").
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
 
-    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash", times: 1)
+    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
 
   def test_template_overwrite
@@ -414,7 +414,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       path            /es/
       user            john
       password        doe
-      template_name   logstash
+      template_name   myapp
       template_file   #{template_file}
       template_overwrite true
       customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
@@ -425,15 +425,15 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_request(:head, "https://john:doe@logs.google.com:777/es//").
       to_return(:status => 200, :body => "", :headers => {})
     # check if template exists
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash").
+    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
       to_return(:status => 200, :body => "", :headers => {})
     # creation
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash").
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
 
-    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash", times: 1)
+    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
 
   def test_template_create_invalid_filename
