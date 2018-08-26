@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 2.11.6
+- 355 customize template (#431)
+
 ### 2.11.5
 - Uplift Merge pull request #459 from richm/v0.12-simple-sniffer (#461)
 
