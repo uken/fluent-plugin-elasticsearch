@@ -93,6 +93,8 @@ EOC
     config_param :template_name, :string, :default => nil
     config_param :template_file, :string, :default => nil
     config_param :template_overwrite, :bool, :default => false
+    config_param :customize_template, :hash, :default => nil
+    config_param :index_prefix, :string, :default => "logstash"
     config_param :templates, :hash, :default => nil
     config_param :max_retry_putting_template, :integer, :default => 10
     config_param :include_tag_key, :bool, :default => false
@@ -153,7 +155,11 @@ EOC
       raise Fluent::ConfigError, "'max_retry_putting_template' must be positive number." if @max_retry_putting_template < 0
       if @template_name && @template_file
         retry_install(@max_retry_putting_template) do
-          template_install(@template_name, @template_file, @template_overwrite)
+          if @customize_template
+            template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @index_prefix)
+          else
+            template_install(@template_name, @template_file, @template_overwrite)
+          end
         end
       elsif @templates
         retry_install(@max_retry_putting_template) do

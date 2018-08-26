@@ -8,6 +8,17 @@ module Fluent::ElasticsearchIndexTemplate
     JSON.parse(file_contents)
   end
 
+  def get_custom_template(template_file, customize_template)
+    if !File.exists?(template_file)
+      raise "If you specify a template_name you must specify a valid template file (checked '#{template_file}')!"
+    end
+    file_contents = IO.read(template_file).gsub(/\n/,'')
+    customize_template.each do |key, value|
+      file_contents = file_contents.gsub(key,value.downcase)
+    end
+    JSON.parse(file_contents)
+  end
+
   def template_exists?(name)
     client.indices.get_template(:name => name)
     return true
@@ -37,6 +48,12 @@ module Fluent::ElasticsearchIndexTemplate
     client.indices.put_template(:name => name, :body => template)
   end
 
+  def indexcreation(index_name)
+    client.indices.create(:index => index_name)
+    rescue Elasticsearch::Transport::Transport::Error => e
+      log.error("Error while index creation - #{index_name}: #{e.inspect}")
+  end
+
   def template_install(name, template_file, overwrite)
     if overwrite
       template_put(name, get_template(template_file))
@@ -48,6 +65,31 @@ module Fluent::ElasticsearchIndexTemplate
       log.info("Template configured, but no template installed. Installed '#{name}' from #{template_file}.")
     else
       log.info("Template configured and already installed.")
+    end
+  end
+
+  def template_custom_install(name, template_file, overwrite, customize_template, index_prefix)
+    template_custom_name=name.downcase+'_alias_template'
+    alias_name=name.downcase+'-current'
+    if overwrite
+      template_put(template_custom_name, get_custom_template(template_file, customize_template))
+      log.info("Template '#{template_custom_name}' overwritten with #{template_file}.")
+      return
+    end
+    if !template_exists?(template_custom_name)
+      template_put(template_custom_name, get_custom_template(template_file, customize_template))
+      log.info("Template configured, but no template installed. Installed '#{template_custom_name}' from #{template_file}.")
+    else
+      log.info("Template configured and already installed.")
+    end
+    
+    if !client.indices.exists_alias(:name => alias_name)
+      index_name='<'+index_prefix.downcase+'-'+name.downcase+'-{now/d}-000001>'
+      indexcreation(index_name)
+      client.indices.put_alias(:index => index_name, :name => alias_name)
+      log.info("The alias '#{alias_name}' is created for the index '#{index_name}'")
+    else
+      log.info("The alias '#{alias_name}' is already present")
     end
   end
 
