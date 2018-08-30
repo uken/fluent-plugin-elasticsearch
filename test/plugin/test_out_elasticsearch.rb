@@ -19,12 +19,16 @@ class ElasticsearchOutput < Test::Unit::TestCase
     log.out.logs.slice!(0, log.out.logs.length)
   end
 
-  def driver(conf='', es_version=5)
+  def driver(conf='', es_version=5, client_version="\"5.0\"")
     # For request stub to detect compatibility.
     @es_version ||= es_version
+    @client_version ||= client_version
     Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
       def detect_es_major_version
         #{@es_version}
+      end
+      def client_library_version
+        #{@client_version}
       end
     CODE
     @driver ||= Fluent::Test::Driver::Output.new(Fluent::Plugin::ElasticsearchOutput) {
@@ -264,6 +268,26 @@ class ElasticsearchOutput < Test::Unit::TestCase
     instance = driver(config, 7).instance
     logs = driver.logs
     assert_logs_include(logs, /Detected ES 6.x or above and enabled insecure security/, 0)
+  end
+
+  test 'Pass Elasticsearch and client library are same' do
+    config = %{
+      @log_level warn
+      validate_client_version true
+    }
+    assert_nothing_raised do
+      driver(config, 6, "\"6.1.0\"").instance
+    end
+  end
+
+  test 'Detected Elasticsearch and client library mismatch' do
+    config = %{
+      @log_level warn
+      validate_client_version true
+    }
+    assert_raise_message(/Detected ES 7 but you use ES client 5.0/) do
+      driver(config, 7, "\"5.0.5\"").instance
+    end
   end
 
   test 'lack of tag in chunk_keys' do

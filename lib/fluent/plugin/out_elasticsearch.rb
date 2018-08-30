@@ -113,6 +113,7 @@ see: https://github.com/elastic/elasticsearch-ruby/pull/514
 EOC
     config_param :include_index_in_url, :bool, :default => false
     config_param :http_backend, :enum, list: [:excon, :typhoeus], :default => :excon
+    config_param :validate_client_version, :bool, :default => false
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE
@@ -207,6 +208,15 @@ EOC
         @type_name = '_doc'.freeze
       end
 
+      if @validate_client_version
+        if @last_seen_major_version != client_library_version.to_i
+          raise Fluent::ConfigError, <<-EOC
+            Detected ES #{@last_seen_major_version} but you use ES client #{client_library_version}.
+            Please consider to use #{@last_seen_major_version}.x series ES client.
+          EOC
+        end
+      end
+
       if @last_seen_major_version >= 6
         case @ssl_version
         when :SSLv23, :TLSv1, :TLSv1_1
@@ -239,6 +249,10 @@ EOC
     def detect_es_major_version
       @_es_info ||= client.info
       @_es_info["version"]["number"].to_i
+    end
+
+    def client_library_version
+      Elasticsearch::VERSION
     end
 
     def convert_compat_id_key(key)
