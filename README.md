@@ -66,6 +66,7 @@ Current maintainers: @cosmo0920
   + [Generate Hash ID](#generate-hash-id)
   + [sniffer_class_name](#sniffer_class_name)
   + [reload_after](#reload_after)
+  + [validate_client_version](#validate-client-version)
   + [Not seeing a config you need?](#not-seeing-a-config-you-need)
   + [Dynamic configuration](#dynamic-configuration)
   + [Placeholders](#placeholders)
@@ -762,6 +763,14 @@ reload_after 100
 
 When `reload_connections true`, this is the integer number of operations after which the plugin will
 reload the connections.  The default value is 10000.
+
+### Validate Client Version
+
+When you use mismatched Elasticsearch server and client libraries, fluent-plugin-elasticsearch cannot send data into Elasticsearch. The default value is `false`.
+
+```
+validate_client_version true
+```
 
 ### Not seeing a config you need?
 
