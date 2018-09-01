@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 2.11.7
+- Add mechanism to detect ES and its client version mismatch (#463)
+
 ### 2.11.6
 - 355 customize template (#431)
 
