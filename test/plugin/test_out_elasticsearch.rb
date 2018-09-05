@@ -212,6 +212,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal :"application/json", instance.content_type
     assert_equal "fluentd", default_type_name
     assert_equal :excon, instance.http_backend
+    assert_false instance.prefer_oj_serializer
   end
 
   test 'configure Content-Type' do
