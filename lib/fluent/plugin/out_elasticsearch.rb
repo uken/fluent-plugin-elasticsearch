@@ -15,6 +15,10 @@ require 'fluent/error'
 require_relative 'elasticsearch_constants'
 require_relative 'elasticsearch_error_handler'
 require_relative 'elasticsearch_index_template'
+begin
+  require_relative 'oj_serializer'
+rescue LoadError
+end
 
 module Fluent::Plugin
   class ElasticsearchOutput < Output
@@ -114,6 +118,7 @@ EOC
     config_param :include_index_in_url, :bool, :default => false
     config_param :http_backend, :enum, list: [:excon, :typhoeus], :default => :excon
     config_param :validate_client_version, :bool, :default => false
+    config_param :prefer_oj_serializer, :bool, :default => false
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE
@@ -175,9 +180,14 @@ EOC
 
       @meta_config_map = create_meta_config_map
 
+      @serializer_class = nil
       begin
         require 'oj'
         @dump_proc = Oj.method(:dump)
+        if @prefer_oj_serializer
+          @serializer_class = Fluent::Plugin::Serializer::Oj
+          Elasticsearch::API.settings[:serializer] = Fluent::Plugin::Serializer::Oj
+        end
       rescue LoadError
         @dump_proc = Yajl.method(:dump)
       end
@@ -322,6 +332,7 @@ EOC
                                                                                 password: @password
                                                                               },
                                                                               sniffer_class: @sniffer_class,
+                                                                              serializer_class: @serializer_class,
                                                                             }), &adapter_conf)
         es = Elasticsearch::Client.new transport: transport
 

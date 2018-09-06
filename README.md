@@ -59,6 +59,7 @@ Current maintainers: @cosmo0920
   + [content_type](#content_type)
   + [include_index_in_url](#include_index_in_url)
   + [http_backend](#http_backend)
+  + [prefer_oj_serializer](#prefer_oj_serializer)
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Proxy Support](#proxy-support)
   + [Buffer options](#buffer-options)
@@ -659,6 +660,18 @@ Default value is `excon` which is default http_backend of elasticsearch plugin.
 
 ```
 http_backend typhoeus
+```
+
+### prefer_oj_serializer
+
+With default beavior, Elasticsearch client uses `Yajl` as JSON encoder/decoder.
+`Oj` is the alternative high performance JSON encoder/decoder.
+When this parameter sets as `true`, Elasticsearch client uses `Oj` as JSON encoder/decoder.
+
+Default value is `false`.
+
+```
+prefer_oj_serializer true
 ```
 
 ### Client/host certificate options
