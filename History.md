@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 2.11.8
+- Serialize requests with Oj (#464)
+
 ### 2.11.7
 - Add mechanism to detect ES and its client version mismatch (#463)
 
