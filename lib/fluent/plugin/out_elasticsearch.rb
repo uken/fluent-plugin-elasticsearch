@@ -209,7 +209,13 @@ EOC
         log.warn "Consider to specify log_level with @log_level." unless log_level
       end
 
-      @last_seen_major_version = detect_es_major_version rescue DEFAULT_ELASTICSEARCH_VERSION
+      @last_seen_major_version =
+        begin
+          detect_es_major_version
+        rescue ConnectionFailure
+          log.warn "Could not connect Elasticsearch. Assuming Elasticsearch 5."
+          DEFAULT_ELASTICSEARCH_VERSION
+        end
       if @last_seen_major_version == 6 && @type_name != DEFAULT_TYPE_NAME_ES_7x
         log.info "Detected ES 6.x: ES 7.x will only accept `_doc` in type_name."
       end
