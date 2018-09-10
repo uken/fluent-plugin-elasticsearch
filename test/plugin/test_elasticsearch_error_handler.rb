@@ -81,6 +81,60 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
     assert_true(@plugin.error_events[0][:error].respond_to?(:backtrace))
   end
 
+  def test_out_of_memory_responses
+    records = [{time: 123, record: {"foo" => "bar", '_id' => 'abc'}}]
+    response = parse_response(%({
+      "took" : 0,
+      "errors" : true,
+      "items" : [
+        {
+          "create" : {
+            "_index" : "foo",
+            "status" : 500,
+            "_type"  : "bar",
+            "error" : {
+              "type" : "out_of_memory_error",
+              "reason":"Java heap space"
+            }
+          }
+        }
+      ]
+     }))
+
+      chunk = MockChunk.new(records)
+      dummy_extracted_values = []
+    assert_raise(Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchRequestAbortError) do
+      @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values)
+    end
+  end
+
+  def test_es_rejected_execution_exception_responses
+    records = [{time: 123, record: {"foo" => "bar", '_id' => 'abc'}}]
+    response = parse_response(%({
+      "took" : 0,
+      "errors" : true,
+      "items" : [
+        {
+          "create" : {
+            "_index" : "foo",
+            "status" : 429,
+            "_type"  : "bar",
+            "error" : {
+              "type" : "es_rejected_execution_exception",
+              "reason":"rejected execution of org.elasticsearch.transport.TransportService"
+            }
+          }
+        }
+      ]
+     }))
+
+      chunk = MockChunk.new(records)
+      dummy_extracted_values = []
+    assert_raise(Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchRequestAbortError) do
+      @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values)
+    end
+  end
+
   def test_retry_error
     records = []
     error_records = Hash.new(false)
@@ -138,10 +192,10 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
             "_index" : "foo",
             "_type"  : "bar",
             "_id" : "6",
-            "status" : 429,
+            "status" : 400,
             "error" : {
-              "type" : "es_rejected_execution_exception",
-              "reason":"unable to fulfill request at this time, try again later"
+              "type" : "mapper_parsing_exception",
+              "reason":"failed to parse"
             }
           }
         },
@@ -176,19 +230,18 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
       failed = false
       dummy_extracted_values = []
       @handler.handle_error(response, 'atag', chunk, response['items'].length, dummy_extracted_values)
-    rescue Fluent::Plugin::ElasticsearchOutput::RetryStreamError=>e
+    rescue Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchRequestAbortError, Fluent::Plugin::ElasticsearchOutput::RetryStreamError=>e
       failed = true
       records = [].tap do |records|
+        next unless e.respond_to?(:retry_stream)
         e.retry_stream.each {|time, record| records << record}
       end
-      assert_equal 3, records.length
+      assert_equal 2, records.length
       assert_equal 2, records[0]['_id']
-      assert_equal 6, records[1]['_id']
-      assert_equal 8, records[2]['_id']
+      assert_equal 8, records[1]['_id']
       error_ids = @plugin.error_events.collect {|h| h[:record]['_id']}
-      assert_equal 2, error_ids.length
-      assert_equal 5, error_ids[0]
-      assert_equal 7, error_ids[1]
+      assert_equal 3, error_ids.length
+      assert_equal [5, 6, 7], error_ids
       @plugin.error_events.collect {|h| h[:error]}.each do |e|
         assert_true e.respond_to?(:backtrace)
       end

@@ -22,7 +22,8 @@ end
 
 module Fluent::Plugin
   class ElasticsearchOutput < Output
-    class ConnectionFailure < Fluent::UnrecoverableError; end
+    class ConnectionFailure < StandardError; end
+    class ConnectionRetryFailure < Fluent::UnrecoverableError; end
 
     # MissingIdFieldError is raised for records that do not
     # include the field for the unique record identifier

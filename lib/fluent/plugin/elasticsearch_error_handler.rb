@@ -8,10 +8,19 @@ class Fluent::Plugin::ElasticsearchErrorHandler
   attr_accessor :bulk_message_count
   class ElasticsearchVersionMismatch < Fluent::UnrecoverableError; end
   class ElasticsearchSubmitMismatch < Fluent::UnrecoverableError; end
+  class ElasticsearchRequestAbortError < Fluent::UnrecoverableError; end
   class ElasticsearchError < StandardError; end
 
   def initialize(plugin)
     @plugin = plugin
+  end
+
+  def unrecoverable_error_types
+    ["out_of_memory_error", "es_rejected_execution_exception"]
+  end
+
+  def unrecoverable_error?(type)
+    unrecoverable_error_types.include?(type)
   end
 
   def handle_error(response, tag, chunk, bulk_message_count, extracted_values)
@@ -70,6 +79,9 @@ class Fluent::Plugin::ElasticsearchErrorHandler
           type = item[write_operation]['error']['type']
           stats[type] += 1
           retry_stream.add(time, rawrecord)
+          if unrecoverable_error?(type)
+            raise ElasticsearchRequestAbortError, "Rejected Elasticsearch due to #{type}"
+          end
         else
           # When we don't have a type field, something changed in the API
           # expected return values (ES 2.x)
