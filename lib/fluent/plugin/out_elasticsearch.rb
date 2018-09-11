@@ -199,9 +199,6 @@ EOC
         @password = URI.encode_www_form_component(m["password"])
       end
 
-      if @hash_config
-        raise Fluent::ConfigError, "@hash_config.hash_id_key and id_key must be equal." unless @hash_config.hash_id_key == @id_key
-      end
       @transport_logger = nil
       if @with_transporter_log
         @transport_logger = log
@@ -526,10 +523,6 @@ EOC
 
       if @flatten_hashes
         record = flatten_record(record)
-      end
-
-      if @hash_config
-        record = generate_hash_id_key(record)
       end
 
       dt = nil
