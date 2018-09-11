@@ -250,4 +250,113 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
 
   end
 
+  def test_unrecoverable_error_included_in_responses
+    records = []
+    error_records = Hash.new(false)
+    error_records.merge!({0=>true, 4=>true, 9=>true})
+    10.times do |i|
+      records << {time: 12345, record: {"message"=>"record #{i}","_id"=>i,"raise"=>error_records[i]}}
+    end
+    chunk = MockChunk.new(records)
+
+    response = parse_response(%({
+      "took" : 1,
+      "errors" : true,
+      "items" : [
+        {
+          "create" : {
+            "_index" : "foo",
+            "_type"  : "bar",
+            "_id" : "1",
+            "status" : 201
+          }
+        },
+        {
+          "create" : {
+            "_index" : "foo",
+            "_type"  : "bar",
+            "_id" : "2",
+            "status" : 500,
+            "error" : {
+              "type" : "some unrecognized type",
+              "reason":"unrecognized error"
+            }
+          }
+        },
+        {
+          "create" : {
+            "_index" : "foo",
+            "_type"  : "bar",
+            "_id" : "3",
+            "status" : 409
+          }
+        },
+        {
+          "create" : {
+            "_index" : "foo",
+            "_type"  : "bar",
+            "_id" : "5",
+            "status" : 500,
+            "error" : {
+              "reason":"unrecognized error - no type field"
+            }
+          }
+        },
+        {
+          "create" : {
+            "_index" : "foo",
+            "_type"  : "bar",
+            "_id" : "6",
+            "status" : 500,
+            "_type"  : "bar",
+            "error" : {
+              "type" : "out_of_memory_error",
+              "reason":"Java heap space"
+            }
+          }
+        },
+        {
+          "create" : {
+            "_index" : "foo",
+            "_type"  : "bar",
+            "_id" : "7",
+            "status" : 400,
+            "error" : {
+              "type" : "some unrecognized type",
+              "reason":"unrecognized error"
+            }
+          }
+        },
+        {
+          "create" : {
+            "_index" : "foo",
+            "_type"  : "bar",
+            "_id" : "8",
+            "status" : 500,
+            "error" : {
+              "type" : "some unrecognized type",
+              "reason":"unrecognized error"
+            }
+          }
+        }
+      ]
+    }))
+
+    begin
+      failed = false
+      dummy_extracted_values = []
+      @handler.handle_error(response, 'atag', chunk, response['items'].length, dummy_extracted_values)
+    rescue Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchRequestAbortError, Fluent::Plugin::ElasticsearchOutput::RetryStreamError=>e
+      failed = true
+      records = [].tap do |records|
+        next unless e.respond_to?(:retry_stream)
+        e.retry_stream.each {|time, record| records << record}
+      end
+      # should drop entire chunk when unrecoverable error response is replied
+      assert_equal 0, records.length
+    end
+    assert_true failed
+
+  end
+
 end
