@@ -136,10 +136,6 @@ module Fluent::Plugin
       chunk.msgpack_each do |time, record|
         next unless record.is_a? Hash
 
-        if @hash_config
-          record = generate_hash_id_key(record)
-        end
-
         begin
           # evaluate all configurations here
           DYNAMIC_PARAM_SYMBOLS.each_with_index { |var, i|
