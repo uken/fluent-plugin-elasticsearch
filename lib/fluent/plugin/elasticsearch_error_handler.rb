@@ -73,7 +73,16 @@ class Fluent::Plugin::ElasticsearchErrorHandler
         stats[:duplicates] += 1
       when 400 == status
         stats[:bad_argument] += 1
-        @plugin.router.emit_error_event(tag, time, rawrecord, ElasticsearchError.new('400 - Rejected by Elasticsearch'))
+        reason = ""
+        @plugin.log.on_debug do
+          if item[write_operation].has_key?('error') && item[write_operation]['error'].has_key?('type')
+            reason = " [error type]: #{item[write_operation]['error']['type']}"
+          end
+          if item[write_operation].has_key?('error') && item[write_operation]['error'].has_key?('reason')
+            reason += " [reason]: \'#{item[write_operation]['error']['reason']}\'"
+          end
+        end
+        @plugin.router.emit_error_event(tag, time, rawrecord, ElasticsearchError.new("400 - Rejected by Elasticsearch#{reason}"))
       else
         if item[write_operation].has_key?('error') && item[write_operation]['error'].has_key?('type')
           type = item[write_operation]['error']['type']
