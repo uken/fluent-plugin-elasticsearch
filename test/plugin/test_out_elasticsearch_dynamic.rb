@@ -62,6 +62,10 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     stub_request(:post, url).to_return(:status => [503, "Service Unavailable"])
   end
 
+  def stub_elastic_timeout(url="http://localhost:9200/_bulk")
+    stub_request(:post, url).to_timeout
+  end
+
   def stub_elastic_with_store_index_command_counts(url="http://localhost:9200/_bulk")
     if @index_command_counts == nil
        @index_command_counts = {}
@@ -841,6 +845,24 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
         driver.feed(sample_record)
       end
     }
+  end
+
+  def test_request_forever
+    stub_elastic_ping
+    stub_elastic
+    driver.configure(Fluent::Config::Element.new(
+               'ROOT', '', {
+                 '@type' => 'elasticsearch',
+               }, [
+                 Fluent::Config::Element.new('buffer', '', {
+                                               'retry_forever' => true
+                                             }, [])
+               ]
+             ))
+    stub_elastic_timeout
+    driver.run(default_tag: 'test', timeout: 10) do
+      driver.feed(sample_record)
+    end
   end
 
   def test_tag_parts_index_error_event

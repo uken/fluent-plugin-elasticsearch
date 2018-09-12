@@ -22,7 +22,8 @@ end
 
 module Fluent::Plugin
   class ElasticsearchOutput < Output
-    class ConnectionFailure < Fluent::UnrecoverableError; end
+    class ConnectionFailure < StandardError; end
+    class ConnectionRetryFailure < Fluent::UnrecoverableError; end
 
     # MissingIdFieldError is raised for records that do not
     # include the field for the unique record identifier
@@ -206,7 +207,13 @@ EOC
         log.warn "Consider to specify log_level with @log_level." unless log_level
       end
 
-      @last_seen_major_version = detect_es_major_version rescue DEFAULT_ELASTICSEARCH_VERSION
+      @last_seen_major_version =
+        begin
+          detect_es_major_version
+        rescue ConnectionFailure
+          log.warn "Could not connect Elasticsearch. Assuming Elasticsearch 5."
+          DEFAULT_ELASTICSEARCH_VERSION
+        end
       if @last_seen_major_version == 6 && @type_name != DEFAULT_TYPE_NAME_ES_7x
         log.info "Detected ES 6.x: ES 7.x will only accept `_doc` in type_name."
       end
