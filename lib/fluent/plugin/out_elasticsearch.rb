@@ -637,7 +637,7 @@ EOC
           sleep 2**retries
           retry
         end
-        raise ConnectionFailure, "Could not push logs to Elasticsearch after #{retries} retries. #{e.message}"
+        raise ConnectionRetryFailure, "Could not push logs to Elasticsearch after #{retries} retries. #{e.message}"
       rescue Exception
         @_es = nil if @reconnect_on_error
         @_es_info = nil if @reconnect_on_error
