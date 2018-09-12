@@ -2,6 +2,11 @@
 
 ### [Unreleased]
 
+### 2.11.9
+- Use ConnectionRetryFailure in plugin specific retrying for consistency (#468)
+- Remove outdated generating hash_id_key code (#466)
+- Tweak behavior for UnrecoverableError and #detect_es_major_version (#465)
+
 ### 2.11.8
 - Serialize requests with Oj (#464)
 
