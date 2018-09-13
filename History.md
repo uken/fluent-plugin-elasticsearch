@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 2.11.10
+- Verbose error reason output (#469)
+
 ### 2.11.9
 - Use ConnectionRetryFailure in plugin specific retrying for consistency (#468)
 - Remove outdated generating hash_id_key code (#466)
