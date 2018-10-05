@@ -210,8 +210,8 @@ EOC
       @last_seen_major_version =
         begin
           detect_es_major_version
-        rescue ConnectionFailure
-          log.warn "Could not connect Elasticsearch. Assuming Elasticsearch 5."
+        rescue
+          log.warn "Could not connect Elasticsearch or obtain version. Assuming Elasticsearch 5."
           DEFAULT_ELASTICSEARCH_VERSION
         end
       if @last_seen_major_version == 6 && @type_name != DEFAULT_TYPE_NAME_ES_7x
