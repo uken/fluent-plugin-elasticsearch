@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 2.11.11
+- Handle error not to acquire version information (#479)
+
 ### 2.11.10
 - Verbose error reason output (#469)
 
