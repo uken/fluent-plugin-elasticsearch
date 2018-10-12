@@ -4,7 +4,7 @@ module Fluent::ElasticsearchIndexTemplate
     if !File.exists?(template_file)
       raise "If you specify a template_name you must specify a valid template file (checked '#{template_file}')!"
     end
-    file_contents = IO.read(template_file).gsub(/\n/,'').gsub(/##alias_name##/,name)
+    file_contents = IO.read(template_file).gsub(/\n/,'')
     JSON.parse(file_contents)
   end
 
@@ -46,6 +46,12 @@ module Fluent::ElasticsearchIndexTemplate
 
   def template_put(name, template)
     client.indices.put_template(:name => name, :body => template)
+  end
+
+  def indexcreation(index_name)
+    client.indices.create(:index => index_name)
+    rescue Elasticsearch::Transport::Transport::Error => e
+      log.error("Error while index creation - #{index_name}: #{e.inspect}")
   end
 
   def template_install(name, template_file, overwrite)

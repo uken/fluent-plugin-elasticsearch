@@ -11,13 +11,23 @@ end
 
 require 'fluent/plugin/output'
 require 'fluent/event'
+require 'fluent/error'
 require_relative 'elasticsearch_constants'
 require_relative 'elasticsearch_error_handler'
 require_relative 'elasticsearch_index_template'
+begin
+  require_relative 'oj_serializer'
+rescue LoadError
+end
 
 module Fluent::Plugin
   class ElasticsearchOutput < Output
     class ConnectionFailure < StandardError; end
+    class ConnectionRetryFailure < Fluent::UnrecoverableError; end
+
+    # MissingIdFieldError is raised for records that do not
+    # include the field for the unique record identifier
+    class MissingIdFieldError < StandardError; end
 
     # RetryStreamError privides a stream to be
     # put back in the pipeline for cases where a bulk request
@@ -29,6 +39,8 @@ module Fluent::Plugin
       end
     end
 
+    RequestInfo = Struct.new(:host, :index)
+
     helpers :event_emitter, :compat_parameters, :record_accessor
 
     Fluent::Plugin.register_output('elasticsearch', self)
@@ -37,13 +49,14 @@ module Fluent::Plugin
     DEFAULT_ELASTICSEARCH_VERSION = 5 # For compatibility.
     DEFAULT_TYPE_NAME_ES_7x = "_doc".freeze
     DEFAULT_TYPE_NAME = "fluentd".freeze
+    DEFAULT_RELOAD_AFTER = -1
 
     config_param :host, :string,  :default => 'localhost'
     config_param :port, :integer, :default => 9200
     config_param :user, :string, :default => nil
     config_param :password, :string, :default => nil, :secret => true
     config_param :path, :string, :default => nil
-    config_param :scheme, :string, :default => 'http'
+    config_param :scheme, :enum, :list => [:https, :http], :default => :http
     config_param :hosts, :string, :default => nil
     config_param :target_index_key, :string, :default => nil
     config_param :target_type_key, :string, :default => nil,
@@ -95,11 +108,18 @@ EOC
     config_param :reconnect_on_error, :bool, :default => false
     config_param :pipeline, :string, :default => nil
     config_param :with_transporter_log, :bool, :default => false
+    config_param :emit_error_for_missing_id, :bool, :default => false
+    config_param :sniffer_class_name, :string, :default => nil
+    config_param :reload_after, :integer, :default => DEFAULT_RELOAD_AFTER
     config_param :content_type, :enum, list: [:"application/json", :"application/x-ndjson"], :default => :"application/json",
                  :deprecated => <<EOC
 elasticsearch gem v6.0.2 starts to use correct Content-Type. Please upgrade elasticserach gem and stop to use this option.
 see: https://github.com/elastic/elasticsearch-ruby/pull/514
 EOC
+    config_param :include_index_in_url, :bool, :default => false
+    config_param :http_backend, :enum, list: [:excon, :typhoeus], :default => :excon
+    config_param :validate_client_version, :bool, :default => false
+    config_param :prefer_oj_serializer, :bool, :default => false
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE
@@ -121,6 +141,7 @@ EOC
       raise Fluent::ConfigError, "'tag' in chunk_keys is required." if not @chunk_key_tag
 
       @time_parser = create_time_parser
+      @backend_options = backend_options
 
       if @remove_keys
         @remove_keys = @remove_keys.split(/\s*,\s*/)
@@ -160,9 +181,14 @@ EOC
 
       @meta_config_map = create_meta_config_map
 
+      @serializer_class = nil
       begin
         require 'oj'
         @dump_proc = Oj.method(:dump)
+        if @prefer_oj_serializer
+          @serializer_class = Fluent::Plugin::Serializer::Oj
+          Elasticsearch::API.settings[:serializer] = Fluent::Plugin::Serializer::Oj
+        end
       rescue LoadError
         @dump_proc = Yajl.method(:dump)
       end
@@ -174,9 +200,6 @@ EOC
         @password = URI.encode_www_form_component(m["password"])
       end
 
-      if @hash_config
-        raise Fluent::ConfigError, "@hash_config.hash_id_key and id_key must be equal." unless @hash_config.hash_id_key == @id_key
-      end
       @transport_logger = nil
       if @with_transporter_log
         @transport_logger = log
@@ -184,7 +207,13 @@ EOC
         log.warn "Consider to specify log_level with @log_level." unless log_level
       end
 
-      @last_seen_major_version = detect_es_major_version rescue DEFAULT_ELASTICSEARCH_VERSION
+      @last_seen_major_version =
+        begin
+          detect_es_major_version
+        rescue
+          log.warn "Could not connect Elasticsearch or obtain version. Assuming Elasticsearch 5."
+          DEFAULT_ELASTICSEARCH_VERSION
+        end
       if @last_seen_major_version == 6 && @type_name != DEFAULT_TYPE_NAME_ES_7x
         log.info "Detected ES 6.x: ES 7.x will only accept `_doc` in type_name."
       end
@@ -192,11 +221,52 @@ EOC
         log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
         @type_name = '_doc'.freeze
       end
+
+      if @validate_client_version
+        if @last_seen_major_version != client_library_version.to_i
+          raise Fluent::ConfigError, <<-EOC
+            Detected ES #{@last_seen_major_version} but you use ES client #{client_library_version}.
+            Please consider to use #{@last_seen_major_version}.x series ES client.
+          EOC
+        end
+      end
+
+      if @last_seen_major_version >= 6
+        case @ssl_version
+        when :SSLv23, :TLSv1, :TLSv1_1
+          if @scheme == :https
+            log.warn "Detected ES 6.x or above and enabled insecure security:
+                      You might have to specify `ssl_version TLSv1_2` in configuration."
+          end
+        end
+      end
+      @sniffer_class = nil
+      begin
+        @sniffer_class = Object.const_get(@sniffer_class_name) if @sniffer_class_name
+      rescue Exception => ex
+        raise Fluent::ConfigError, "Could not load sniffer class #{@sniffer_class_name}: #{ex}"
+      end
+    end
+
+    def backend_options
+      case @http_backend
+      when :excon
+        { client_key: @client_key, client_cert: @client_cert, client_key_pass: @client_key_pass }
+      when :typhoeus
+        require 'typhoeus'
+        { sslkey: @client_key, sslcert: @client_cert, keypasswd: @client_key_pass }
+      end
+    rescue LoadError
+      raise Fluent::ConfigError, "You must install #{@http_backend} gem."
     end
 
     def detect_es_major_version
       @_es_info ||= client.info
       @_es_info["version"]["number"].to_i
+    end
+
+    def client_library_version
+      Elasticsearch::VERSION
     end
 
     def convert_compat_id_key(key)
@@ -244,11 +314,14 @@ EOC
 
     def client
       @_es ||= begin
-        excon_options = { client_key: @client_key, client_cert: @client_cert, client_key_pass: @client_key_pass }
-        adapter_conf = lambda {|f| f.adapter :excon, excon_options }
+        adapter_conf = lambda {|f| f.adapter @http_backend, @backend_options }
+        local_reload_connections = @reload_connections
+        if local_reload_connections && @reload_after > DEFAULT_RELOAD_AFTER
+          local_reload_connections = @reload_after
+        end
         transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(get_connection_options.merge(
                                                                             options: {
-                                                                              reload_connections: @reload_connections,
+                                                                              reload_connections: local_reload_connections,
                                                                               reload_on_failure: @reload_on_failure,
                                                                               resurrect_after: @resurrect_after,
                                                                               retry_on_failure: 5,
@@ -261,7 +334,9 @@ EOC
                                                                               http: {
                                                                                 user: @user,
                                                                                 password: @password
-                                                                              }
+                                                                              },
+                                                                              sniffer_class: @sniffer_class,
+                                                                              serializer_class: @serializer_class,
                                                                             }), &adapter_conf)
         es = Elasticsearch::Client.new transport: transport
 
@@ -298,7 +373,7 @@ EOC
             {
               host:   host_str.split(':')[0],
               port:   (host_str.split(':')[1] || @port).to_i,
-              scheme: @scheme
+              scheme: @scheme.to_s
             }
           else
             # New hosts format expects URLs such as http://logs.foo.com,https://john:pass@logs2.foo.com/elastic
@@ -310,7 +385,7 @@ EOC
           end
         end.compact
       else
-        [{host: @host, port: @port, scheme: @scheme}]
+        [{host: @host, port: @port, scheme: @scheme.to_s}]
       end.each do |host|
         host.merge!(user: @user, password: @password) if !host[:user] && @user
         host.merge!(path: @path) if !host[:path] && @path
@@ -329,6 +404,13 @@ EOC
       end.join(', ')
     end
 
+    # append_record_to_messages adds a record to the bulk message
+    # payload to be submitted to Elasticsearch.  Records that do
+    # not include '_id' field are skipped when 'write_operation'
+    # is configured for 'create' or 'update'
+    #
+    # returns 'true' if record was appended to the bulk message
+    #         and 'false' otherwise
     def append_record_to_messages(op, meta, header, record, msgs)
       case op
       when UPDATE_OP, UPSERT_OP
@@ -336,18 +418,22 @@ EOC
           header[UPDATE_OP] = meta
           msgs << @dump_proc.call(header) << BODY_DELIMITER
           msgs << @dump_proc.call(update_body(record, op)) << BODY_DELIMITER
+          return true
         end
       when CREATE_OP
         if meta.has_key?(ID_FIELD)
           header[CREATE_OP] = meta
           msgs << @dump_proc.call(header) << BODY_DELIMITER
           msgs << @dump_proc.call(record) << BODY_DELIMITER
+          return true
         end
       when INDEX_OP
         header[INDEX_OP] = meta
         msgs << @dump_proc.call(header) << BODY_DELIMITER
         msgs << @dump_proc.call(record) << BODY_DELIMITER
+        return true
       end
+      return false
     end
 
     def update_body(record, op)
@@ -399,8 +485,8 @@ EOC
     end
 
     def write(chunk)
-      bulk_message_count = 0
-      bulk_message = ''
+      bulk_message_count = Hash.new { |h,k| h[k] = 0 }
+      bulk_message = Hash.new { |h,k| h[k] = '' }
       header = {}
       meta = {}
 
@@ -411,26 +497,39 @@ EOC
       chunk.msgpack_each do |time, record|
         next unless record.is_a? Hash
         begin
-          process_message(tag, meta, header, time, record, bulk_message, extracted_values)
-          bulk_message_count += 1
+          meta, header, record = process_message(tag, meta, header, time, record, extracted_values)
+          info = if @include_index_in_url
+                   RequestInfo.new(nil, meta.delete("_index".freeze))
+                 else
+                   RequestInfo.new(nil, nil)
+                 end
+
+          if append_record_to_messages(@write_operation, meta, header, record, bulk_message[info])
+            bulk_message_count[info] += 1;
+          else
+            if @emit_error_for_missing_id
+              raise MissingIdFieldError, "Missing '_id' field. Write operation is #{@write_operation}"
+            else
+              log.on_debug { log.debug("Dropping record because its missing an '_id' field and write_operation is #{@write_operation}: #{record}") }
+            end
+          end
         rescue => e
           router.emit_error_event(tag, time, record, e)
         end
       end
 
-      send_bulk(bulk_message, tag, chunk, bulk_message_count, extracted_values) unless bulk_message.empty?
-      bulk_message.clear
+
+      bulk_message.each do |info, msgs|
+        send_bulk(msgs, tag, chunk, bulk_message_count[info], extracted_values, info.index) unless msgs.empty?
+        msgs.clear
+      end
     end
 
-    def process_message(tag, meta, header, time, record, bulk_message, extracted_values)
+    def process_message(tag, meta, header, time, record, extracted_values)
       logstash_prefix, index_name, type_name = extracted_values
 
       if @flatten_hashes
         record = flatten_record(record)
-      end
-
-      if @hash_config
-        record = generate_hash_id_key(record)
       end
 
       dt = nil
@@ -502,7 +601,7 @@ EOC
         @remove_keys.each { |key| record.delete(key) }
       end
 
-      append_record_to_messages(@write_operation, meta, header, record, bulk_message)
+      return [meta, header, record]
     end
 
     # returns [parent, child_key] of child described by path array in record's tree
@@ -514,10 +613,14 @@ EOC
 
     # send_bulk given a specific bulk request, the original tag,
     # chunk, and bulk_message_count
-    def send_bulk(data, tag, chunk, bulk_message_count, extracted_values)
+    def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, index)
       retries = 0
       begin
-        response = client.bulk body: data
+
+        log.on_trace { log.trace "bulk request: #{data}" }
+        response = client.bulk body: data, index: index
+        log.on_trace { log.trace "bulk response: #{response}" }
+
         if response['errors']
           error = Fluent::Plugin::ElasticsearchErrorHandler.new(self)
           error.handle_error(response, tag, chunk, bulk_message_count, extracted_values)
@@ -534,7 +637,7 @@ EOC
           sleep 2**retries
           retry
         end
-        raise ConnectionFailure, "Could not push logs to Elasticsearch after #{retries} retries. #{e.message}"
+        raise ConnectionRetryFailure, "Could not push logs to Elasticsearch after #{retries} retries. #{e.message}"
       rescue Exception
         @_es = nil if @reconnect_on_error
         @_es_info = nil if @reconnect_on_error

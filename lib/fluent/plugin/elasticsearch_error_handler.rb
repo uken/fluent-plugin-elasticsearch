@@ -1,15 +1,26 @@
 require 'fluent/event'
+require 'fluent/error'
 require_relative 'elasticsearch_constants'
 
 class Fluent::Plugin::ElasticsearchErrorHandler
   include Fluent::Plugin::ElasticsearchConstants
 
   attr_accessor :bulk_message_count
-  class ElasticsearchVersionMismatch < StandardError; end
+  class ElasticsearchVersionMismatch < Fluent::UnrecoverableError; end
+  class ElasticsearchSubmitMismatch < Fluent::UnrecoverableError; end
+  class ElasticsearchRequestAbortError < Fluent::UnrecoverableError; end
   class ElasticsearchError < StandardError; end
 
   def initialize(plugin)
     @plugin = plugin
+  end
+
+  def unrecoverable_error_types
+    ["out_of_memory_error", "es_rejected_execution_exception"]
+  end
+
+  def unrecoverable_error?(type)
+    unrecoverable_error_types.include?(type)
   end
 
   def handle_error(response, tag, chunk, bulk_message_count, extracted_values)
@@ -18,7 +29,7 @@ class Fluent::Plugin::ElasticsearchErrorHandler
       raise ElasticsearchVersionMismatch, "The response format was unrecognized: #{response}"
     end
     if bulk_message_count != items.length
-        raise ElasticsearchError, "The number of records submitted #{bulk_message_count} do not match the number returned #{items.length}. Unable to process bulk response."
+      raise ElasticsearchSubmitMismatch, "The number of records submitted #{bulk_message_count} do not match the number returned #{items.length}. Unable to process bulk response."
     end
     retry_stream = Fluent::MultiEventStream.new
     stats = Hash.new(0)
@@ -30,7 +41,8 @@ class Fluent::Plugin::ElasticsearchErrorHandler
       begin
         # we need a deep copy for process_message to alter
         processrecord = Marshal.load(Marshal.dump(rawrecord))
-        @plugin.process_message(tag, meta, header, time, processrecord, bulk_message, extracted_values)
+        meta, header, record = @plugin.process_message(tag, meta, header, time, processrecord, extracted_values)
+        next unless @plugin.append_record_to_messages(@plugin.write_operation, meta, header, record, bulk_message)
       rescue => e
         stats[:bad_chunk_record] += 1
         next
@@ -61,12 +73,24 @@ class Fluent::Plugin::ElasticsearchErrorHandler
         stats[:duplicates] += 1
       when 400 == status
         stats[:bad_argument] += 1
-        @plugin.router.emit_error_event(tag, time, rawrecord, ElasticsearchError.new('400 - Rejected by Elasticsearch'))
+        reason = ""
+        @plugin.log.on_debug do
+          if item[write_operation].has_key?('error') && item[write_operation]['error'].has_key?('type')
+            reason = " [error type]: #{item[write_operation]['error']['type']}"
+          end
+          if item[write_operation].has_key?('error') && item[write_operation]['error'].has_key?('reason')
+            reason += " [reason]: \'#{item[write_operation]['error']['reason']}\'"
+          end
+        end
+        @plugin.router.emit_error_event(tag, time, rawrecord, ElasticsearchError.new("400 - Rejected by Elasticsearch#{reason}"))
       else
         if item[write_operation].has_key?('error') && item[write_operation]['error'].has_key?('type')
           type = item[write_operation]['error']['type']
           stats[type] += 1
           retry_stream.add(time, rawrecord)
+          if unrecoverable_error?(type)
+            raise ElasticsearchRequestAbortError, "Rejected Elasticsearch due to #{type}"
+          end
         else
           # When we don't have a type field, something changed in the API
           # expected return values (ES 2.x)

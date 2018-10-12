@@ -62,6 +62,10 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     stub_request(:post, url).to_return(:status => [503, "Service Unavailable"])
   end
 
+  def stub_elastic_timeout(url="http://localhost:9200/_bulk")
+    stub_request(:post, url).to_timeout
+  end
+
   def stub_elastic_with_store_index_command_counts(url="http://localhost:9200/_bulk")
     if @index_command_counts == nil
        @index_command_counts = {}
@@ -88,6 +92,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     conf = instance.dynamic_config
     assert_equal 'logs.google.com', conf['host']
     assert_equal "777", conf['port']
+    assert_equal :https, instance.scheme
     assert_equal 'john', instance.user
     assert_equal 'doe', instance.password
     assert_equal '/es/', instance.path
@@ -97,6 +102,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_nil instance.client_key_pass
     assert_false instance.with_transporter_log
     assert_equal :"application/json", instance.content_type
+    assert_equal :excon, instance.http_backend
   end
 
   test 'configure Content-Type' do
@@ -841,6 +847,24 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     }
   end
 
+  def test_request_forever
+    stub_elastic_ping
+    stub_elastic
+    driver.configure(Fluent::Config::Element.new(
+               'ROOT', '', {
+                 '@type' => 'elasticsearch',
+               }, [
+                 Fluent::Config::Element.new('buffer', '', {
+                                               'retry_forever' => true
+                                             }, [])
+               ]
+             ))
+    stub_elastic_timeout
+    driver.run(default_tag: 'test', timeout: 10) do
+      driver.feed(sample_record)
+    end
+  end
+
   def test_tag_parts_index_error_event
     stub_elastic_ping
     stub_elastic
@@ -988,5 +1012,19 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.feed(sample_record)
     end
     assert(index_cmds[0].has_key?("create"))
+  end
+
+  def test_include_index_in_url
+    stub_elastic_ping
+    stub_elastic('http://localhost:9200/logstash-2018.01.01/_bulk')
+
+    driver.configure("index_name logstash-2018.01.01
+                      include_index_in_url true")
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+
+    assert_equal(index_cmds.length, 2)
+    assert_equal(index_cmds.first['index']['_index'], nil)
   end
 end

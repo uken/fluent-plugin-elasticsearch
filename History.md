@@ -2,6 +2,49 @@
 
 ### [Unreleased]
 
+### 2.11.11
+- Handle error not to acquire version information (#479)
+
+### 2.11.10
+- Verbose error reason output (#469)
+
+### 2.11.9
+- Use ConnectionRetryFailure in plugin specific retrying for consistency (#468)
+- Remove outdated generating hash_id_key code (#466)
+- Tweak behavior for UnrecoverableError and #detect_es_major_version (#465)
+
+### 2.11.8
+- Serialize requests with Oj (#464)
+
+### 2.11.7
+- Add mechanism to detect ES and its client version mismatch (#463)
+
+### 2.11.6
+- 355 customize template (#431)
+
+### 2.11.5
+- Uplift Merge pull request #459 from richm/v0.12-simple-sniffer (#461)
+
+### 2.11.4
+- Persistent backend (#456)
+
+### 2.11.3
+- Implement the `include_index_in_url` option for out_elasticsearch (#451)
+- Add an option `include_index_in_url` to allow URL-based conrtrols (#450)
+
+### 2.11.2
+- Strictness scheme (#445)
+
+### 2.11.0
+- Uplift Merge pull request #437 from jcantrill/fix_bulk_count (#438)
+
+### 2.10.5
+- Uplift Merge pull request #435 from jcantrill/add_trace_logging (#436)
+
+### 2.10.4
+- Use Fluent::UnrecoverableError as unrecoverable error class ancestors (#433)
+- Add parameter validation for retrying template installation (#429)
+
 ### 2.10.3
 - Add retry mechanism for template installation (#428)
 

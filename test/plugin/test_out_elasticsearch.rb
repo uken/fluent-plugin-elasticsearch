@@ -19,12 +19,16 @@ class ElasticsearchOutput < Test::Unit::TestCase
     log.out.logs.slice!(0, log.out.logs.length)
   end
 
-  def driver(conf='', es_version=5)
+  def driver(conf='', es_version=5, client_version="\"5.0\"")
     # For request stub to detect compatibility.
     @es_version ||= es_version
+    @client_version ||= client_version
     Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
       def detect_es_major_version
         #{@es_version}
+      end
+      def client_library_version
+        #{@client_version}
       end
     CODE
     @driver ||= Fluent::Test::Driver::Output.new(Fluent::Plugin::ElasticsearchOutput) {
@@ -41,8 +45,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
     Fluent::Plugin::ElasticsearchOutput::DEFAULT_TYPE_NAME
   end
 
-  def sample_record
-    {'age' => 26, 'request_id' => '42', 'parent_id' => 'parent', 'routing_id' => 'routing'}
+  def sample_record(content={})
+    {'age' => 26, 'request_id' => '42', 'parent_id' => 'parent', 'routing_id' => 'routing'}.merge(content)
   end
 
   def nested_sample_record
@@ -63,6 +67,10 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def stub_elastic_unavailable(url="http://localhost:9200/_bulk")
     stub_request(:post, url).to_return(:status => [503, "Service Unavailable"])
+  end
+
+  def stub_elastic_timeout(url="http://localhost:9200/_bulk")
+    stub_request(:post, url).to_timeout
   end
 
   def stub_elastic_with_store_index_command_counts(url="http://localhost:9200/_bulk")
@@ -178,9 +186,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_request(:post, url).to_return(lambda { |req| bodystr = make_response_body(req, 0, 500, error); body = JSON.parse(bodystr); body['items'][0]['unknown'] = body['items'][0].delete('create'); { :status => 200, :body => body.to_json, :headers => { 'Content-Type' => 'json' } } })
   end
 
-  def assert_logs_include(logs, msg)
+  def assert_logs_include(logs, msg, exp_matches=1)
     matches = logs.grep /#{msg}/
-    assert_equal(1, matches.length, "Logs do not contain '#{msg}' '#{logs}'")
+    assert_equal(exp_matches, matches.length, "Logs do not contain '#{msg}' '#{logs}'")
   end
 
   def test_configure
@@ -196,7 +204,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     assert_equal 'logs.google.com', instance.host
     assert_equal 777, instance.port
-    assert_equal 'https', instance.scheme
+    assert_equal :https, instance.scheme
     assert_equal '/es/', instance.path
     assert_equal 'john', instance.user
     assert_equal 'doe', instance.password
@@ -207,6 +215,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_false instance.with_transporter_log
     assert_equal :"application/json", instance.content_type
     assert_equal "fluentd", default_type_name
+    assert_equal :excon, instance.http_backend
+    assert_false instance.prefer_oj_serializer
   end
 
   test 'configure Content-Type' do
@@ -241,6 +251,48 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
     instance = driver(config, 7).instance
     assert_equal '_doc', instance.type_name
+  end
+
+  test 'Detected Elasticsearch 6 and insecure security' do
+    config = %{
+      ssl_version TLSv1_1
+      @log_level warn
+      scheme https
+    }
+    instance = driver(config, 6).instance
+    logs = driver.logs
+    assert_logs_include(logs, /Detected ES 6.x or above and enabled insecure security/, 1)
+  end
+
+  test 'Detected Elasticsearch 7 and secure security' do
+    config = %{
+      ssl_version TLSv1_2
+      @log_level warn
+      scheme https
+    }
+    instance = driver(config, 7).instance
+    logs = driver.logs
+    assert_logs_include(logs, /Detected ES 6.x or above and enabled insecure security/, 0)
+  end
+
+  test 'Pass Elasticsearch and client library are same' do
+    config = %{
+      @log_level warn
+      validate_client_version true
+    }
+    assert_nothing_raised do
+      driver(config, 6, "\"6.1.0\"").instance
+    end
+  end
+
+  test 'Detected Elasticsearch and client library mismatch' do
+    config = %{
+      @log_level warn
+      validate_client_version true
+    }
+    assert_raise_message(/Detected ES 7 but you use ES client 5.0/) do
+      driver(config, 7, "\"5.0.5\"").instance
+    end
   end
 
   test 'lack of tag in chunk_keys' do
@@ -317,6 +369,47 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash", times: 1)
   end
 
+  def test_custom_template_create
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_alias_template.json')
+
+    config = %{
+      host            logs.google.com
+      port            777
+      scheme          https
+      path            /es/
+      user            john
+      password        doe
+      template_name   myapp
+      template_file   #{template_file}
+      customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
+      index_prefix    mylogs
+    }
+
+    # connection start
+    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+      to_return(:status => 200, :body => "", :headers => {})
+    # check if template exists
+    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
+      to_return(:status => 404, :body => "", :headers => {})
+    # creation
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
+      to_return(:status => 200, :body => "", :headers => {})
+    # creation of index which can rollover
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E").
+      to_return(:status => 200, :body => "", :headers => {})
+    # check if alias exists
+    stub_request(:head, "https://john:doe@logs.google.com:777/es//_alias/myapp-current").
+      to_return(:status => 404, :body => "", :headers => {})
+    # put the alias for the index
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E/_alias/myapp-current").
+      to_return(:status => 200, :body => "", :headers => {})
+    
+    driver(config)
+
+    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template", times: 1)
+  end
+
   def test_template_overwrite
     cwd = File.dirname(__FILE__)
     template_file = File.join(cwd, 'test_template.json')
@@ -348,6 +441,47 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash", times: 1)
   end
 
+  def test_custom_template_overwrite
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_template.json')
+
+    config = %{
+      host            logs.google.com
+      port            777
+      scheme          https
+      path            /es/
+      user            john
+      password        doe
+      template_name   myapp
+      template_file   #{template_file}
+      template_overwrite true
+      customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
+      index_prefix    mylogs
+    }
+
+    # connection start
+    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+      to_return(:status => 200, :body => "", :headers => {})
+    # check if template exists
+    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
+      to_return(:status => 200, :body => "", :headers => {})
+    # creation
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
+      to_return(:status => 200, :body => "", :headers => {})
+    # creation of index which can rollover
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E").
+      to_return(:status => 200, :body => "", :headers => {})
+    # check if alias exists
+    stub_request(:head, "https://john:doe@logs.google.com:777/es//_alias/myapp-current").
+      to_return(:status => 404, :body => "", :headers => {})
+    # put the alias for the index
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E/_alias/myapp-current").
+      to_return(:status => 200, :body => "", :headers => {})
+  
+    driver(config)
+
+    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template", times: 1)
+  end
 
   def test_template_create_invalid_filename
     config = %{
@@ -1691,6 +1825,24 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
   end
 
+  def test_request_forever
+    stub_elastic_ping
+    stub_elastic
+    driver.configure(Fluent::Config::Element.new(
+               'ROOT', '', {
+                 '@type' => 'elasticsearch',
+               }, [
+                 Fluent::Config::Element.new('buffer', '', {
+                                               'retry_forever' => true
+                                             }, [])
+               ]
+             ))
+    stub_elastic_timeout
+    driver.run(default_tag: 'test', timeout: 10) do
+      driver.feed(sample_record)
+    end
+  end
+
   def test_connection_failed_retry
     connection_resets = 0
 
@@ -1797,6 +1949,106 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
 
     assert_equal [['retry', 1, sample_record]], driver.events
+  end
+
+  def test_create_should_write_records_with_ids_and_skip_those_without
+    driver.configure("write_operation create\nid_key my_id\n@log_level debug")
+    stub_elastic_ping
+    stub_request(:post, 'http://localhost:9200/_bulk')
+        .to_return(lambda do |req|
+      { :status => 200,
+        :headers => { 'Content-Type' => 'json' },
+        :body => %({
+          "took" : 1,
+          "errors" : true,
+          "items" : [
+            {
+              "create" : {
+                "_index" : "foo",
+                "_type"  : "bar",
+                "_id" : "abc"
+              }
+            },
+            {
+              "create" : {
+                "_index" : "foo",
+                "_type"  : "bar",
+                "_id" : "xyz",
+                "status" : 500,
+                "error" : {
+                  "type" : "some unrecognized type",
+                  "reason":"some error to cause version mismatch"
+                }
+              }
+            }
+           ]
+        })
+     }
+    end)
+    sample_record1 = sample_record('my_id' => 'abc')
+    sample_record4 = sample_record('my_id' => 'xyz')
+
+    driver.run(default_tag: 'test') do
+      driver.feed(1, sample_record1)
+      driver.feed(2, sample_record)
+      driver.feed(3, sample_record)
+      driver.feed(4, sample_record4)
+    end
+
+    logs = driver.logs
+    # one record succeeded while the other should be 'retried'
+    assert_equal [['test', 4, sample_record4]], driver.events
+    assert_logs_include(logs, /(Dropping record)/, 2)
+  end
+
+  def test_create_should_write_records_with_ids_and_emit_those_without
+    driver.configure("write_operation create\nid_key my_id\nemit_error_for_missing_id true\n@log_level debug")
+    stub_elastic_ping
+    stub_request(:post, 'http://localhost:9200/_bulk')
+        .to_return(lambda do |req|
+      { :status => 200,
+        :headers => { 'Content-Type' => 'json' },
+        :body => %({
+          "took" : 1,
+          "errors" : true,
+          "items" : [
+            {
+              "create" : {
+                "_index" : "foo",
+                "_type"  : "bar",
+                "_id" : "abc"
+              }
+            },
+            {
+              "create" : {
+                "_index" : "foo",
+                "_type"  : "bar",
+                "_id" : "xyz",
+                "status" : 500,
+                "error" : {
+                  "type" : "some unrecognized type",
+                  "reason":"some error to cause version mismatch"
+                }
+              }
+            }
+           ]
+        })
+     }
+    end)
+    sample_record1 = sample_record('my_id' => 'abc')
+    sample_record4 = sample_record('my_id' => 'xyz')
+
+    driver.run(default_tag: 'test') do
+      driver.feed(1, sample_record1)
+      driver.feed(2, sample_record)
+      driver.feed(3, sample_record)
+      driver.feed(4, sample_record4)
+    end
+
+    error_log = driver.error_events.map {|e| e.last.message }
+    # one record succeeded while the other should be 'retried'
+    assert_equal [['test', 4, sample_record4]], driver.events
+    assert_logs_include(error_log, /(Missing '_id' field)/, 2)
   end
 
   def test_bulk_error
@@ -2050,6 +2302,37 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.feed(sample_record)
     end
     assert(index_cmds[0].has_key?("create"))
+  end
+
+  def test_include_index_in_url
+    stub_elastic_ping
+    stub_elastic('http://localhost:9200/logstash-2018.01.01/_bulk')
+
+    driver.configure("index_name logstash-2018.01.01
+                      include_index_in_url true")
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+
+    assert_equal(index_cmds.length, 2)
+    assert_equal(index_cmds.first['index']['_index'], nil)
+  end
+
+  def test_use_simple_sniffer
+    require 'fluent/plugin/elasticsearch_simple_sniffer'
+    driver.configure("sniffer_class_name Fluent::Plugin::ElasticsearchSimpleSniffer
+                      log_level debug
+                      with_transporter_log true
+                      reload_connections true
+                      reload_after 1")
+    stub_elastic_ping
+    stub_elastic
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+    log = driver.logs
+    # 2 - one for the ping, one for the _bulk
+    assert_logs_include(log, /In Fluent::Plugin::ElasticsearchSimpleSniffer hosts/, 2)
   end
 
 end
