@@ -380,7 +380,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       path            /es/
       user            john
       password        doe
-      template_name   myapp
+      template_name   myapp_alias_template
       template_file   #{template_file}
       customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
     }
