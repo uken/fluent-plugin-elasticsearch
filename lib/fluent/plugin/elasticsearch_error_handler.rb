@@ -66,6 +66,9 @@ class Fluent::Plugin::ElasticsearchErrorHandler
         stats[:errors_bad_resp] += 1
         next
       end
+      error = item[write_operation].fetch('error', {})
+      error_type = error['type']
+      error_reason = error['reason']
       case
       when [200, 201].include?(status)
         stats[:successes] += 1
@@ -75,21 +78,20 @@ class Fluent::Plugin::ElasticsearchErrorHandler
         stats[:bad_argument] += 1
         reason = ""
         @plugin.log.on_debug do
-          if item[write_operation].has_key?('error') && item[write_operation]['error'].has_key?('type')
-            reason = " [error type]: #{item[write_operation]['error']['type']}"
+          if error_type
+            reason = " [error type]: #{error_type}"
           end
-          if item[write_operation].has_key?('error') && item[write_operation]['error'].has_key?('reason')
-            reason += " [reason]: \'#{item[write_operation]['error']['reason']}\'"
+          if error_reason
+            reason += " [reason]: \'#{error_reason}\'"
           end
         end
         @plugin.router.emit_error_event(tag, time, rawrecord, ElasticsearchError.new("400 - Rejected by Elasticsearch#{reason}"))
       else
-        if item[write_operation].has_key?('error') && item[write_operation]['error'].has_key?('type')
-          type = item[write_operation]['error']['type']
-          stats[type] += 1
+        if error_type
+          stats[error_type] += 1
           retry_stream.add(time, rawrecord)
-          if unrecoverable_error?(type)
-            raise ElasticsearchRequestAbortError, "Rejected Elasticsearch due to #{type}"
+          if unrecoverable_error?(error_type)
+            raise ElasticsearchRequestAbortError, "Rejected Elasticsearch due to #{error_type}"
           end
         else
           # When we don't have a type field, something changed in the API
@@ -98,7 +100,7 @@ class Fluent::Plugin::ElasticsearchErrorHandler
           @plugin.router.emit_error_event(tag, time, rawrecord, ElasticsearchError.new("#{status} - No error type provided in the response"))
           next
         end
-        stats[type] += 1
+        stats[error_type] += 1
       end
     end
     @plugin.log.on_debug do
