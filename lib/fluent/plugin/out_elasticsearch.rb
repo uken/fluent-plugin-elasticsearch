@@ -177,7 +177,7 @@ EOC
         end
       elsif @templates
         retry_install(@max_retry_putting_template) do
-          templates_hash_install(@templates, @template_overwrite, @rollover_index, @deflector_alias, @application_name)
+          templates_hash_install(@templates, @template_overwrite)
         end
       end
 
