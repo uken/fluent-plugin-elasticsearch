@@ -96,6 +96,9 @@ EOC
     config_param :flatten_hashes, :bool, :default => false
     config_param :flatten_hashes_separator, :string, :default => "_"
     config_param :template_name, :string, :default => nil
+    config_param :application_name, :string, :default => "default"
+    config_param :rollover_index, :string, :default => false
+    config_param :deflector_alias, :string, :default => nil
     config_param :template_file, :string, :default => nil
     config_param :template_overwrite, :bool, :default => false
     config_param :customize_template, :hash, :default => nil
@@ -160,17 +163,21 @@ EOC
       end
 
       raise Fluent::ConfigError, "'max_retry_putting_template' must be positive number." if @max_retry_putting_template < 0
+      
       if @template_name && @template_file
         retry_install(@max_retry_putting_template) do
           if @customize_template
-            template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @index_prefix)
+            if @rollover_index
+              raise Fluent::ConfigError, "'deflector_alias' must be provided if 'rollover_index' is set true ." if not @deflector_alias
+            end
+            template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @index_prefix, @rollover_index, @deflector_alias, @application_name)
           else
             template_install(@template_name, @template_file, @template_overwrite)
           end
         end
       elsif @templates
         retry_install(@max_retry_putting_template) do
-          templates_hash_install(@templates, @template_overwrite)
+          templates_hash_install(@templates, @template_overwrite, @rollover_index, @deflector_alias, @application_name)
         end
       end
 
