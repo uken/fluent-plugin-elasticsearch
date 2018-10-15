@@ -341,13 +341,14 @@ If `template_file` and `template_name` are set, then this parameter will be igno
 
 ### customize_template
 
-Specify the string and its value to be replaced in form of hash. Can contain multiple templates.
+Specify the string and its value to be replaced in form of hash. Can contain multiple key value pair that would be replaced in the specified template_file.
+This setting only creates template and to add rollover index please check the [rollover_index](#rollover_index) configuration.
 
 ```
 customize_template {"string_1": "subs_value_1", "string_2": "subs_value_2"}
 ```
 
-If `template_file` and `template_name` are set, then this parameter will be in effect otherwise ignored.
+If [template_file](#template_file) and [template_name](#template_name) are set, then this parameter will be in effect otherwise ignored.
 
 ### rollover_index
 
@@ -358,7 +359,7 @@ Specify this as true when an index with rollover capability needs to be created.
 rollover_index true # defaults to false
 ```
 
-If `customize_template` is set, then this parameter will be in effect otherwise ignored.
+If [customize_template](#customize_template) is set, then this parameter will be in effect otherwise ignored.
 
 ### deflector_alias
 
@@ -367,7 +368,7 @@ Specify the deflector alias which would be assigned to the rollover index create
 deflector_alias test-current
 ```
 
-If `rollover_index` is set, then this parameter will be in effect otherwise ignored.
+If [rollover_index](#rollover_index) is set, then this parameter will be in effect otherwise ignored.
 
 ### index_prefix
 
@@ -376,7 +377,7 @@ Specify the index prefix for the rollover index to be created.
 index_prefix mylogs # defaults to "logstash"
 ```
 
-If `rollover_index` is set, then this parameter will be in effect otherwise ignored.
+If [rollover_index](#rollover_index) is set, then this parameter will be in effect otherwise ignored.
 
 ### application_name
 
@@ -385,7 +386,7 @@ Specify the application name for the rollover index to be created.
 application_name default # defaults to "default"
 ```
 
-If `rollover_index` is set, then this parameter will be in effect otherwise ignored.
+If [rollover_index](#rollover_index) is set, then this parameter will be in effect otherwise ignored.
 
 ### template_overwrite
 
