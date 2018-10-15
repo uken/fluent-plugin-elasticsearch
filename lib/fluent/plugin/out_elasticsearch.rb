@@ -96,13 +96,13 @@ EOC
     config_param :flatten_hashes, :bool, :default => false
     config_param :flatten_hashes_separator, :string, :default => "_"
     config_param :template_name, :string, :default => nil
-    config_param :application_name, :string, :default => "default"
-    config_param :rollover_index, :string, :default => false
-    config_param :deflector_alias, :string, :default => nil
     config_param :template_file, :string, :default => nil
     config_param :template_overwrite, :bool, :default => false
     config_param :customize_template, :hash, :default => nil
+    config_param :rollover_index, :string, :default => false
+    config_param :deflector_alias, :string, :default => nil
     config_param :index_prefix, :string, :default => "logstash"
+    config_param :application_name, :string, :default => "default"
     config_param :templates, :hash, :default => nil
     config_param :max_retry_putting_template, :integer, :default => 10
     config_param :include_tag_key, :bool, :default => false
