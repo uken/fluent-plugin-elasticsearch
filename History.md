@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 1.18.0
+- Avoid NoMethodError on unknown Elasticsearch error responses (#487)
+
 ### 1.17.2
 - add simple sniffer for simple proxy/lb cases (#459)
 
