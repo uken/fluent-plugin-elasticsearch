@@ -195,4 +195,26 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
 
   end
 
+  def test_old_es_1_X_responses
+    records = [{time: 123, record: {"foo" => "bar", '_id' => 'abc'}}]
+    response = parse_response(%({
+      "took" : 0,
+      "errors" : true,
+      "items" : [
+        {
+          "create" : {
+            "_index" : "foo",
+            "status" : 429,
+            "_type"  : "bar",
+            "error" : "some unrecognized error"
+          }
+        }
+      ]
+     }))
+    chunk = MockChunk.new(records)
+    @handler.handle_error(response, 'atag', chunk, records.length)
+    assert_equal(1, @plugin.error_events.size)
+    assert_true(@plugin.error_events[0][:error].respond_to?(:backtrace))
+  end
+
 end
