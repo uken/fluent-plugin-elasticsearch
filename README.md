@@ -37,6 +37,9 @@ Current maintainers: @cosmo0920
   + [template_file](#template_file)
   + [template_overwrite](#template_overwrite)
   + [customize_template](#customize_template)
+  + [rollover_index](#rollover_index)
+  + [deflector_alias](#deflector_alias)
+  + [application_name](#application_name)
   + [index_prefix](#index_prefix)
   + [templates](#templates)
   + [max_retry_putting_template](#max_retry_putting_template)
@@ -338,22 +341,52 @@ If `template_file` and `template_name` are set, then this parameter will be igno
 
 ### customize_template
 
-Specify the string and its value to be replaced in form of hash. Can contain multiple templates.
+Specify the string and its value to be replaced in form of hash. Can contain multiple key value pair that would be replaced in the specified template_file.
+This setting only creates template and to add rollover index please check the [rollover_index](#rollover_index) configuration.
 
 ```
 customize_template {"string_1": "subs_value_1", "string_2": "subs_value_2"}
 ```
 
-If `template_file` and `template_name` are set, then this parameter will be in effect otherwise ignored.
+If [template_file](#template_file) and [template_name](#template_name) are set, then this parameter will be in effect otherwise ignored.
+
+### rollover_index
+
+Specify this as true when an index with rollover capability needs to be created. It creates an index with the format <logstash-default-{now/d}-000001> where logstash denotes the index_prefix and default denotes the application_name which can be set.
+'deflector_alias' is a required field for rollover_index set to true.
+'index_prefix' and 'application_name' are optional and defaults to logstash and default respectively.
+```
+rollover_index true # defaults to false
+```
+
+If [customize_template](#customize_template) is set, then this parameter will be in effect otherwise ignored.
+
+### deflector_alias
+
+Specify the deflector alias which would be assigned to the rollover index created. This is useful in case of using the Elasticsearch rollover API 
+```
+deflector_alias test-current
+```
+
+If [rollover_index](#rollover_index) is set, then this parameter will be in effect otherwise ignored.
 
 ### index_prefix
 
+Specify the index prefix for the rollover index to be created.
 ```
 index_prefix mylogs # defaults to "logstash"
 ```
 
-If `customize_template` is set, then this parameter will be in effect otherwise ignored.
+If [rollover_index](#rollover_index) is set, then this parameter will be in effect otherwise ignored.
 
+### application_name
+
+Specify the application name for the rollover index to be created.
+```
+application_name default # defaults to "default"
+```
+
+If [rollover_index](#rollover_index) is set, then this parameter will be in effect otherwise ignored.
 
 ### template_overwrite
 

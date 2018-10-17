@@ -380,10 +380,44 @@ class ElasticsearchOutput < Test::Unit::TestCase
       path            /es/
       user            john
       password        doe
-      template_name   myapp
+      template_name   myapp_alias_template
       template_file   #{template_file}
       customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
+    }
+
+    # connection start
+    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+      to_return(:status => 200, :body => "", :headers => {})
+    # check if template exists
+    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
+      to_return(:status => 404, :body => "", :headers => {})
+    # creation
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
+      to_return(:status => 200, :body => "", :headers => {})
+    
+    driver(config)
+
+    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template", times: 1)
+  end
+
+  def test_custom_template_with_rollover_index_create
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_alias_template.json')
+
+    config = %{
+      host            logs.google.com
+      port            777
+      scheme          https
+      path            /es/
+      user            john
+      password        doe
+      template_name   myapp_alias_template
+      template_file   #{template_file}
+      customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
+      rollover_index  true
+      deflector_alias myapp_deflector
       index_prefix    mylogs
+      application_name myapp
     }
 
     # connection start
@@ -399,16 +433,17 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E").
       to_return(:status => 200, :body => "", :headers => {})
     # check if alias exists
-    stub_request(:head, "https://john:doe@logs.google.com:777/es//_alias/myapp-current").
+    stub_request(:head, "https://john:doe@logs.google.com:777/es//_alias/myapp_deflector").
       to_return(:status => 404, :body => "", :headers => {})
     # put the alias for the index
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E/_alias/myapp-current").
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E/_alias/myapp_deflector").
       to_return(:status => 200, :body => "", :headers => {})
     
     driver(config)
 
     assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
+
 
   def test_template_overwrite
     cwd = File.dirname(__FILE__)
@@ -452,11 +487,45 @@ class ElasticsearchOutput < Test::Unit::TestCase
       path            /es/
       user            john
       password        doe
-      template_name   myapp
+      template_name   myapp_alias_template
       template_file   #{template_file}
       template_overwrite true
       customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
+    }
+
+    # connection start
+    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+      to_return(:status => 200, :body => "", :headers => {})
+    # check if template exists
+    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
+      to_return(:status => 200, :body => "", :headers => {})
+    # creation
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
+      to_return(:status => 200, :body => "", :headers => {})
+    
+    driver(config)
+
+    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template", times: 1)
+  end
+
+  def test_custom_template_with_rollover_index_overwrite
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_template.json')
+
+    config = %{
+      host            logs.google.com
+      port            777
+      scheme          https
+      path            /es/
+      user            john
+      password        doe
+      template_name   myapp_alias_template
+      template_file   #{template_file}
+      template_overwrite true
+      customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
+      deflector_alias myapp_deflector
       index_prefix    mylogs
+      application_name myapp
     }
 
     # connection start
@@ -472,10 +541,10 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E").
       to_return(:status => 200, :body => "", :headers => {})
     # check if alias exists
-    stub_request(:head, "https://john:doe@logs.google.com:777/es//_alias/myapp-current").
+    stub_request(:head, "https://john:doe@logs.google.com:777/es//_alias/myapp_deflector").
       to_return(:status => 404, :body => "", :headers => {})
     # put the alias for the index
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E/_alias/myapp-current").
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E/_alias/myapp_deflector").
       to_return(:status => 200, :body => "", :headers => {})
   
     driver(config)
