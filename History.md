@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 2.12.0
+- Decoupling the custom template and rollover index creation #485 (#486)
+
 ### 2.11.11
 - Handle error not to acquire version information (#479)
 
