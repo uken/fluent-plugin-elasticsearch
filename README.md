@@ -4,8 +4,6 @@
 [![Build Status](https://travis-ci.org/uken/fluent-plugin-elasticsearch.png?branch=master)](https://travis-ci.org/uken/fluent-plugin-elasticsearch)
 [![Coverage Status](https://coveralls.io/repos/uken/fluent-plugin-elasticsearch/badge.png)](https://coveralls.io/r/uken/fluent-plugin-elasticsearch)
 [![Code Climate](https://codeclimate.com/github/uken/fluent-plugin-elasticsearch.png)](https://codeclimate.com/github/uken/fluent-plugin-elasticsearch)
-[![Issue Stats](http://issuestats.com/github/uken/fluent-plugin-elasticsearch/badge/pr)](http://issuestats.com/github/uken/fluent-plugin-elasticsearch)
-[![Issue Stats](http://issuestats.com/github/uken/fluent-plugin-elasticsearch/badge/issue)](http://issuestats.com/github/uken/fluent-plugin-elasticsearch)
 
 Send your logs to Elasticsearch (and search them with Kibana maybe?)
 
