@@ -73,6 +73,9 @@ Current maintainers: @cosmo0920
   + [Dynamic configuration](#dynamic-configuration)
   + [Placeholders](#placeholders)
   + [Multi workers](#multi-workers)
+* [Troubleshooting](#troubleshooting)
+  + [Cannot send events to elasticsearch](#cannot-send-events-to-elasticsearch)
+  + [Cannot see detailed failure log](#cannot-see-detailed-failure-log)
 * [Contact](#contact)
 * [Contributing](#contributing)
 * [Running tests](#running-tests)
@@ -918,6 +921,62 @@ Since Fluentd v0.14, multi workers feature had been implemented to increase thro
 <system>
   workers N # where N is a natural number (N >= 1).
 </system>
+```
+
+## Troubleshooting
+
+### Cannot send events to Elasticsearch
+
+A common cause of failure is that you are trying to connect to an Elasticsearch instance with an incompatible version.
+
+For example, td-agent currently bundles the 6.x series of the [elasticsearch-ruby](https://github.com/elastic/elasticsearch-ruby) library. This means that your Elasticsearch server also needs to be 6.x. You can check the actual version of the client library installed on your system by executing the following command.
+
+```
+# For td-agent users
+$ /usr/sbin/td-agent-gem list elasticsearch
+# For standalone Fluentd users
+$ fluent-gem list elasticsearch
+```
+Or, fluent-plugin-elasticsearch v2.11.7 or later, users can inspect version incompatibility with the `validate_client_version` option:
+
+```
+validate_client_version true
+```
+
+If you get the following error message, please consider to install compatibile elasticsearch client gems:
+
+```
+Detected ES 5 but you use ES client 6.1.0.
+Please consider to use 5.x series ES client.
+```
+
+For further details of the version compatibility issue, please read [the official manual](https://github.com/elastic/elasticsearch-ruby#compatibility).
+
+### Cannot see detailed failure log
+
+A common cause of failure is that you are trying to connect to an Elasticsearch instance with an incompatible ssl protocol version.
+
+For example, `out_elasticsearch` set up ssl_version to TLSv1 due to historical reason.
+Modern Elasticsearch ecosystem requests to communicate with TLS v1.2 or later.
+But, in this case, `out_elasticsearch` conceals transporter part failure log by default.
+If you want to aquire transporter log, please consider to set the following configuration:
+
+```
+with_transporter_log true
+@log_level debug
+```
+
+Then, the following log is shown in Fluentd log:
+
+```
+2018-10-24 10:00:00 +0900 [error]: #0 [Faraday::ConnectionFailed] SSL_connect returned=1 errno=0 state=SSLv2/v3 read server hello A: unknown protocol (OpenSSL::SSL::SSLError) {:host=>"elasticsearch-host", :port=>80, :scheme=>"https", :user=>"elastic", :password=>"changeme", :protocol=>"https"}
+```
+
+This indicates that inappropriate TLS protocol version is used.
+If you want to use TLS v1.2, please use `ssl_version` parameter like as:
+
+```
+ssl_version TLSv1_2
 ```
 
 ## Contact
