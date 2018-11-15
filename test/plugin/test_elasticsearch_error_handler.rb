@@ -8,10 +8,12 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
   class TestPlugin
     attr_reader :log
     attr_reader :write_operation, :error_events
+    attr_accessor :unrecoverable_error_types
     def initialize(log)
       @log = log
       @write_operation = 'index'
       @error_events = []
+      @unrecoverable_error_types = ["out_of_memory_error", "es_rejected_execution_exception"]
     end
 
     def router
@@ -174,6 +176,46 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
     assert_raise(Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchRequestAbortError) do
       @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values)
     end
+  end
+
+  def test_es_rejected_execution_exception_responses_as_not_error
+    plugin = TestPlugin.new(@log)
+    plugin.unrecoverable_error_types = ["out_of_memory_error"]
+    handler = Fluent::Plugin::ElasticsearchErrorHandler.new(plugin)
+    records = [{time: 123, record: {"foo" => "bar", '_id' => 'abc'}}]
+    response = parse_response(%({
+      "took" : 0,
+      "errors" : true,
+      "items" : [
+        {
+          "create" : {
+            "_index" : "foo",
+            "status" : 429,
+            "_type"  : "bar",
+            "error" : {
+              "type" : "es_rejected_execution_exception",
+              "reason":"rejected execution of org.elasticsearch.transport.TransportService"
+            }
+          }
+        }
+      ]
+     }))
+
+    begin
+      failed = false
+      chunk = MockChunk.new(records)
+      dummy_extracted_values = []
+      handler.handle_error(response, 'atag', chunk, response['items'].length, dummy_extracted_values)
+    rescue Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchRequestAbortError, Fluent::Plugin::ElasticsearchOutput::RetryStreamError=>e
+      failed = true
+      records = [].tap do |records|
+        next unless e.respond_to?(:retry_stream)
+        e.retry_stream.each {|time, record| records << record}
+      end
+      # should retry chunk when unrecoverable error is not thrown
+      assert_equal 1, records.length
+    end
+    assert_true failed
   end
 
   def test_retry_error
