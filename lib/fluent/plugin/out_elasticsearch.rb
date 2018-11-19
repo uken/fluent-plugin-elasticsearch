@@ -123,6 +123,7 @@ EOC
     config_param :http_backend, :enum, list: [:excon, :typhoeus], :default => :excon
     config_param :validate_client_version, :bool, :default => false
     config_param :prefer_oj_serializer, :bool, :default => false
+    config_param :unrecoverable_error_types, :array, :default => ["out_of_memory_error", "es_rejected_execution_exception"]
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE

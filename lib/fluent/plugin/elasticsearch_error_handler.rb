@@ -16,7 +16,7 @@ class Fluent::Plugin::ElasticsearchErrorHandler
   end
 
   def unrecoverable_error_types
-    ["out_of_memory_error", "es_rejected_execution_exception"]
+    @plugin.unrecoverable_error_types
   end
 
   def unrecoverable_error?(type)
