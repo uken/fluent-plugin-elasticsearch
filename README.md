@@ -69,6 +69,7 @@ Current maintainers: @cosmo0920
   + [sniffer_class_name](#sniffer_class_name)
   + [reload_after](#reload_after)
   + [validate_client_version](#validate-client-version)
+  + [unrecoverable_error_types](#unrecoverable-error-types)
   + [Not seeing a config you need?](#not-seeing-a-config-you-need)
   + [Dynamic configuration](#dynamic-configuration)
   + [Placeholders](#placeholders)
@@ -820,6 +821,27 @@ When you use mismatched Elasticsearch server and client libraries, fluent-plugin
 
 ```
 validate_client_version true
+```
+
+### Unrecoverable Error Types
+
+Default `unrecoverable_error_types` parameter is set up strictly.
+Because `es_rejected_execution_exception` is caused by exceeding Elasticsearch's thread pool capacity.
+Advanced users can increase its capacity, but normal users should follow default behavior.
+
+If you want to increase it and forcibly retrying bulk request, please consider to change `unrecoverable_error_types` parameter from default value.
+
+Change default value of `thread_pool.bulk.queue_size` in elasticsearch.yml:
+e.g.)
+
+```yaml
+thread_pool.bulk.queue_size: 1000
+```
+
+Then, remove `es_rejected_execution_exception` from `unrecoverable_error_types` parameter:
+
+```
+unrecoverable_error_types ["out_of_memory_error"]
 ```
 
 ### Not seeing a config you need?
