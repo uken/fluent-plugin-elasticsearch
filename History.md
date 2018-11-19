@@ -2,6 +2,12 @@
 
 ### [Unreleased]
 
+### 2.12.1
+- Make configurable unrecoverable types (#501)
+- Add FAQ for TLS enabled nginx proxy TLS version incompatibility trouble (#496)
+- Add FAQs (#492)
+- Remove issuestats.com badges (#489)
+
 ### 2.12.0
 - Decoupling the custom template and rollover index creation #485 (#486)
 
