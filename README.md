@@ -78,6 +78,7 @@ Current maintainers: @cosmo0920
   + [Cannot send events to elasticsearch](#cannot-send-events-to-elasticsearch)
   + [Cannot see detailed failure log](#cannot-see-detailed-failure-log)
   + [Cannot connect TLS enabled reverse Proxy](#cannot-connect-tls-enabled-reverse-proxy)
+  + [Declined logs are resubmitted forever, why?](#declined-logs-are-resubmitted-forever-why)
 * [Contact](#contact)
 * [Contributing](#contributing)
 * [Running tests](#running-tests)
@@ -1091,6 +1092,94 @@ If you want to use TLS v1.2, please use `ssl_version` parameter like as:
 
 ```
 ssl_version TLSv1_2
+```
+
+### Declined logs are resubmitted forever, why?
+
+Sometimes users write Fluentd configuration like this:
+
+```aconf
+<match **>
+  @type elasticsearch
+  host localhost
+  port 9200
+  type_name fluentd
+  logstash_format true
+  time_key @timestamp
+  include_timestamp true
+  reconnect_on_error true
+  reload_on_failure true
+  reload_connections false
+  request_timeout 120s
+</match>
+```
+
+The above configuration does not use [`@label` feature](https://docs.fluentd.org/v1.0/articles/config-file#(5)-group-filter-and-output:-the-%E2%80%9Clabel%E2%80%9D-directive) and use glob(**) pattern.
+It is usually problematic configuration.
+
+In error scenario, error events will be emitted with `@ERROR` label, and `fluent.*` tag.
+The black hole glob pattern resubmits a problematic event into pushing Elasticsearch pipeline.
+
+This situation causes flood of declined log:
+
+```log
+2018-11-13 11:16:27 +0000 [warn]: #0 dump an error event: error_class=Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchError error="400 - Rejected by Elasticsearch" location=nil tag="app.fluentcat" time=2018-11-13 11:16:17.492985640 +0000 record={"message"=>"\xFF\xAD"}
+2018-11-13 11:16:38 +0000 [warn]: #0 dump an error event: error_class=Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchError error="400 - Rejected by Elasticsearch" location=nil tag="fluent.warn" time=2018-11-13 11:16:27.978851140 +0000 record={"error"=>"#<Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchError: 400 - Rejected by Elasticsearch>", "location"=>nil, "tag"=>"app.fluentcat", "time"=>2018-11-13 11:16:17.492985640 +0000, "record"=>{"message"=>"\xFF\xAD"}, "message"=>"dump an error event: error_class=Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchError error=\"400 - Rejected by Elasticsearch\" location=nil tag=\"app.fluentcat\" time=2018-11-13 11:16:17.492985640 +0000 record={\"message\"=>\"\\xFF\\xAD\"}"}
+```
+
+Then, user should use more concrete tag route or use `@label`.
+The following sections show two examples how to solve flood of declined log.
+One is using concrete tag routing, the other is using label routing.
+
+#### Using concrete tag routing
+
+The following configuration uses concrete tag route:
+
+```aconf
+<match out.elasticsearch.**>
+  @type elasticsearch
+  host localhost
+  port 9200
+  type_name fluentd
+  logstash_format true
+  time_key @timestamp
+  include_timestamp true
+  reconnect_on_error true
+  reload_on_failure true
+  reload_connections false
+  request_timeout 120s
+</match>
+```
+
+#### Using label feature
+
+The following configuration uses label:
+
+```aconf
+<source>
+  @type forward
+  @label @ES
+</source>
+<label @ES>
+  <match out.elasticsearch.**>
+    @type elasticsearch
+    host localhost
+    port 9200
+    type_name fluentd
+    logstash_format true
+    time_key @timestamp
+    include_timestamp true
+    reconnect_on_error true
+    reload_on_failure true
+    reload_connections false
+    request_timeout 120s
+  </match>
+</label>
+<label @ERROR>
+  <match **>
+    @type stdout
+  </match>
+</label>
 ```
 
 ## Contact
