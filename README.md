@@ -70,6 +70,8 @@ Current maintainers: @cosmo0920
   + [reload_after](#reload_after)
   + [validate_client_version](#validate-client-version)
   + [unrecoverable_error_types](#unrecoverable-error-types)
+  + [verify_es version at startup](#verify_es_version_at_startup)
+  + [default_elasticsearch_version](#default_elasticsearch_version)
   + [Not seeing a config you need?](#not-seeing-a-config-you-need)
   + [Dynamic configuration](#dynamic-configuration)
   + [Placeholders](#placeholders)
@@ -844,6 +846,27 @@ Then, remove `es_rejected_execution_exception` from `unrecoverable_error_types` 
 ```
 unrecoverable_error_types ["out_of_memory_error"]
 ```
+
+### verify_es_version_at_startup
+
+Because Elasticsearch plugin should change behavior each of Elasticsearch major versions.
+
+For example, Elasticsearch 6 starts to prohibit multiple type_names in one index, and Elasticsearch 7 will handle only `_doc` type_name in index.
+
+If you want to disable to verify Elasticsearch version at start up, set it as `false`.
+
+When using the following configuration, ES plugin intends to communicate into Elasticsearch 6.
+
+```
+verify_es_version_at_startup false
+default_elasticsearch_version 6
+```
+
+The default value is `true`.
+
+### default_elasticsearch_version
+
+This parameter changes that ES plugin assumes default Elasticsearch version. The default value is `5`.
 
 ### Not seeing a config you need?
 
