@@ -124,6 +124,8 @@ EOC
     config_param :validate_client_version, :bool, :default => false
     config_param :prefer_oj_serializer, :bool, :default => false
     config_param :unrecoverable_error_types, :array, :default => ["out_of_memory_error", "es_rejected_execution_exception"]
+    config_param :verify_es_version_at_startup, :bool, :default => true
+    config_param :default_elasticsearch_version, :integer, :default => DEFAULT_ELASTICSEARCH_VERSION
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE
@@ -216,11 +218,15 @@ EOC
       end
 
       @last_seen_major_version =
-        begin
-          detect_es_major_version
-        rescue
-          log.warn "Could not connect Elasticsearch or obtain version. Assuming Elasticsearch 5."
-          DEFAULT_ELASTICSEARCH_VERSION
+        if @verify_es_version_at_startup
+          begin
+            detect_es_major_version
+          rescue
+            log.warn "Could not connect Elasticsearch or obtain version. Assuming Elasticsearch #{@default_elasticsearch_version}."
+            @default_elasticsearch_version
+          end
+        else
+          @default_elasticsearch_version
         end
       if @last_seen_major_version == 6 && @type_name != DEFAULT_TYPE_NAME_ES_7x
         log.info "Detected ES 6.x: ES 7.x will only accept `_doc` in type_name."
@@ -500,7 +506,7 @@ EOC
 
       tag = chunk.metadata.tag
       extracted_values = expand_placeholders(chunk.metadata)
-      @last_seen_major_version = detect_es_major_version rescue DEFAULT_ELASTICSEARCH_VERSION
+      @last_seen_major_version = detect_es_major_version rescue @default_elasticsearch_version
 
       chunk.msgpack_each do |time, record|
         next unless record.is_a? Hash

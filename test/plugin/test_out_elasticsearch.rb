@@ -217,6 +217,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal "fluentd", default_type_name
     assert_equal :excon, instance.http_backend
     assert_false instance.prefer_oj_serializer
+    assert_equal ["out_of_memory_error", "es_rejected_execution_exception"], instance.unrecoverable_error_types
+    assert_true instance.verify_es_version_at_startup
+    assert_equal Fluent::Plugin::ElasticsearchOutput::DEFAULT_ELASTICSEARCH_VERSION, instance.default_elasticsearch_version
   end
 
   test 'configure Content-Type' do
