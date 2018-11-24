@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 2.12.2
+- Verify connection at startup (#504)
+- Add faq for glob pattern tag routing (#502)
+
 ### 2.12.1
 - Make configurable unrecoverable types (#501)
 - Add FAQ for TLS enabled nginx proxy TLS version incompatibility trouble (#496)
