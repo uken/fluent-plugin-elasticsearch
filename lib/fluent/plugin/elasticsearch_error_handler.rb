@@ -23,6 +23,14 @@ class Fluent::Plugin::ElasticsearchErrorHandler
     unrecoverable_error_types.include?(type)
   end
 
+  def log_es_400_reason(&block)
+    if @plugin.log_es_400_reason
+      block.call
+    else
+      @plugin.log.on_debug &block
+    end
+  end
+
   def handle_error(response, tag, chunk, bulk_message_count, extracted_values)
     items = response['items']
     if items.nil? || !items.is_a?(Array)
@@ -74,7 +82,7 @@ class Fluent::Plugin::ElasticsearchErrorHandler
       when 400 == status
         stats[:bad_argument] += 1
         reason = ""
-        @plugin.log.on_debug do
+        log_es_400_reason do
           if item[write_operation].has_key?('error') && item[write_operation]['error'].has_key?('type')
             reason = " [error type]: #{item[write_operation]['error']['type']}"
           end

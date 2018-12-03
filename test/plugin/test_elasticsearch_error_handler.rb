@@ -9,11 +9,13 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
     attr_reader :log
     attr_reader :write_operation, :error_events
     attr_accessor :unrecoverable_error_types
-    def initialize(log)
+    attr_accessor :log_es_400_reason
+    def initialize(log, log_es_400_reason = false)
       @log = log
       @write_operation = 'index'
       @error_events = []
       @unrecoverable_error_types = ["out_of_memory_error", "es_rejected_execution_exception"]
+      @log_es_400_reason = log_es_400_reason
     end
 
     def router
@@ -65,6 +67,47 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
       Fluent::Test.setup
       @log_device = Fluent::Test::DummyLogDevice.new
       dl_opts = {:log_level => ServerEngine::DaemonLogger::DEBUG}
+      logger = ServerEngine::DaemonLogger.new(@log_device, dl_opts)
+      @log = Fluent::Log.new(logger)
+      @plugin = TestPlugin.new(@log)
+      @handler = Fluent::Plugin::ElasticsearchErrorHandler.new(@plugin)
+    end
+
+    def test_400_responses_reason_log
+      records = [{time: 123, record: {"foo" => "bar", '_id' => 'abc'}}]
+      response = parse_response(%({
+      "took" : 0,
+      "errors" : true,
+      "items" : [
+        {
+          "create" : {
+            "_index" : "foo",
+            "status" : 400,
+            "error" : {
+              "type"  : "mapper_parsing_exception",
+              "reason" : "failed to parse"
+            }
+          }
+        }
+      ]
+     }))
+      chunk = MockChunk.new(records)
+      dummy_extracted_values = []
+      @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values)
+      assert_equal(1, @plugin.error_events.size)
+      expected_log = "failed to parse"
+      exception_message = @plugin.error_events.first[:error].message
+      assert_true(exception_message.include?(expected_log),
+                  "Exception do not contain '#{exception_message}' '#{expected_log}'")
+      assert_true(@plugin.error_events[0][:error].respond_to?(:backtrace))
+    end
+  end
+
+  class TEST400ResponseReasonNoDebug < self
+    def setup
+      Fluent::Test.setup
+      @log_device = Fluent::Test::DummyLogDevice.new
+      dl_opts = {:log_level => ServerEngine::DaemonLogger::INFO}
       logger = ServerEngine::DaemonLogger.new(@log_device, dl_opts)
       @log = Fluent::Log.new(logger)
       @plugin = TestPlugin.new(@log)

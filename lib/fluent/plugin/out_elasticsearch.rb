@@ -126,6 +126,7 @@ EOC
     config_param :unrecoverable_error_types, :array, :default => ["out_of_memory_error", "es_rejected_execution_exception"]
     config_param :verify_es_version_at_startup, :bool, :default => true
     config_param :default_elasticsearch_version, :integer, :default => DEFAULT_ELASTICSEARCH_VERSION
+    config_param :log_es_400_reason, :bool, :default => false
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE
