@@ -36,6 +36,7 @@ Current maintainers: @cosmo0920
   + [template_overwrite](#template_overwrite)
   + [customize_template](#customize_template)
   + [rollover_index](#rollover_index)
+  + [index_date_pattern](#index_date_pattern)
   + [deflector_alias](#deflector_alias)
   + [application_name](#application_name)
   + [index_prefix](#index_prefix)
@@ -363,6 +364,19 @@ Specify this as true when an index with rollover capability needs to be created.
 'index_prefix' and 'application_name' are optional and defaults to logstash and default respectively.
 ```
 rollover_index true # defaults to false
+```
+
+If [customize_template](#customize_template) is set, then this parameter will be in effect otherwise ignored.
+
+### index_date_pattern
+
+Specify this to override the index date pattern for creating a rollover index. The default is to use "now/d",
+for example: <logstash-default-{now/d}-000001>. Overriding this changes the rollover time period. Setting
+"now/w{xxxx.ww}" would create weekly rollover indexes instead of daily.
+
+This setting only takes effect when combined with the [rollover_index](#rollover_index) setting.
+```
+index_date_pattern "now/w{xxxx.ww}" # defaults to "now/d"
 ```
 
 If [customize_template](#customize_template) is set, then this parameter will be in effect otherwise ignored.
