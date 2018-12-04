@@ -68,7 +68,7 @@ module Fluent::ElasticsearchIndexTemplate
     end
   end
 
-  def template_custom_install(template_name, template_file, overwrite, customize_template, index_prefix, rollover_index, deflector_alias_name, app_name)
+  def template_custom_install(template_name, template_file, overwrite, customize_template, index_prefix, rollover_index, deflector_alias_name, app_name, index_date_pattern)
     template_custom_name=template_name.downcase
     if overwrite
       template_put(template_custom_name, get_custom_template(template_file, customize_template))
@@ -83,7 +83,7 @@ module Fluent::ElasticsearchIndexTemplate
     end
     if rollover_index
       if !client.indices.exists_alias(:name => deflector_alias_name)
-        index_name_temp='<'+index_prefix.downcase+'-'+app_name.downcase+'-{now/d}-000001>'
+        index_name_temp='<'+index_prefix.downcase+'-'+app_name.downcase+'-{'+index_date_pattern+'}-000001>'
         indexcreation(index_name_temp)
         client.indices.put_alias(:index => index_name_temp, :name => deflector_alias_name)
         log.info("The alias '#{deflector_alias_name}' is created for the index '#{index_name_temp}'")

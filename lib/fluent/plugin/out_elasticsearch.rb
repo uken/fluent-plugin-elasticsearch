@@ -100,6 +100,7 @@ EOC
     config_param :template_overwrite, :bool, :default => false
     config_param :customize_template, :hash, :default => nil
     config_param :rollover_index, :string, :default => false
+    config_param :index_date_pattern, :string, :default => "now/d"
     config_param :deflector_alias, :string, :default => nil
     config_param :index_prefix, :string, :default => "logstash"
     config_param :application_name, :string, :default => "default"
@@ -166,14 +167,14 @@ EOC
       end
 
       raise Fluent::ConfigError, "'max_retry_putting_template' must be positive number." if @max_retry_putting_template < 0
-      
+
       if @template_name && @template_file
         retry_install(@max_retry_putting_template) do
           if @customize_template
             if @rollover_index
               raise Fluent::ConfigError, "'deflector_alias' must be provided if 'rollover_index' is set true ." if not @deflector_alias
             end
-            template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @index_prefix, @rollover_index, @deflector_alias, @application_name)
+            template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @index_prefix, @rollover_index, @deflector_alias, @application_name, @index_date_pattern)
           else
             template_install(@template_name, @template_file, @template_overwrite)
           end

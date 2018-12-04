@@ -418,6 +418,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       template_file   #{template_file}
       customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
       rollover_index  true
+      index_date_pattern now/w{xxxx.ww}
       deflector_alias myapp_deflector
       index_prefix    mylogs
       application_name myapp
@@ -433,13 +434,13 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
       to_return(:status => 200, :body => "", :headers => {})
     # creation of index which can rollover
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E").
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
       to_return(:status => 200, :body => "", :headers => {})
     # check if alias exists
     stub_request(:head, "https://john:doe@logs.google.com:777/es//_alias/myapp_deflector").
       to_return(:status => 404, :body => "", :headers => {})
     # put the alias for the index
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E/_alias/myapp_deflector").
+    stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/myapp_deflector").
       to_return(:status => 200, :body => "", :headers => {})
     
     driver(config)
