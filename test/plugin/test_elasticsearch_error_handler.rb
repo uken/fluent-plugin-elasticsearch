@@ -112,6 +112,7 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
       @log = Fluent::Log.new(logger)
       @plugin = TestPlugin.new(@log)
       @handler = Fluent::Plugin::ElasticsearchErrorHandler.new(@plugin)
+      @plugin.log_es_400_reason = true
     end
 
     def test_400_responses_reason_log
