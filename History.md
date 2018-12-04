@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 2.12.3
+- Added log_es_400_reason configuration item (#511)
+- Allow a user to specify the rollover index date pattern (#510)
+
 ### 2.12.2
 - Verify connection at startup (#504)
 - Add faq for glob pattern tag routing (#502)
