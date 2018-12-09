@@ -529,6 +529,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       template_overwrite true
       customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
       deflector_alias myapp_deflector
+      rollover_index  true
       index_prefix    mylogs
       application_name myapp
     }
