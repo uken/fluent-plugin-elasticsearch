@@ -73,14 +73,15 @@ module Fluent::ElasticsearchIndexTemplate
     if overwrite
       template_put(template_custom_name, get_custom_template(template_file, customize_template))
       log.info("Template '#{template_custom_name}' overwritten with #{template_file}.")
-      return
-    end
-    if !template_exists?(template_custom_name)
-      template_put(template_custom_name, get_custom_template(template_file, customize_template))
-      log.info("Template configured, but no template installed. Installed '#{template_custom_name}' from #{template_file}.")
     else
-      log.info("Template configured and already installed.")
+      if !template_exists?(template_custom_name)
+        template_put(template_custom_name, get_custom_template(template_file, customize_template))
+        log.info("Template configured, but no template installed. Installed '#{template_custom_name}' from #{template_file}.")
+      else
+        log.info("Template configured and already installed.")
+      end
     end
+
     if rollover_index
       if !client.indices.exists_alias(:name => deflector_alias_name)
         index_name_temp='<'+index_prefix.downcase+'-'+app_name.downcase+'-{'+index_date_pattern+'}-000001>'
