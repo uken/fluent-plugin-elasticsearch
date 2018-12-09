@@ -81,6 +81,7 @@ module Fluent::ElasticsearchIndexTemplate
         log.info("Template configured and already installed.")
       end
     end
+
     if rollover_index
       if !client.indices.exists_alias(:name => deflector_alias_name)
         index_name_temp='<'+index_prefix.downcase+'-'+app_name.downcase+'-{'+index_date_pattern+'}-000001>'
