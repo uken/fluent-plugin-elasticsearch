@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 2.12.4
+- #506 Rollover index will be in effect in case of template overwrite also. (#513)
+
 ### 2.12.3
 - Added log_es_400_reason configuration item (#511)
 - Allow a user to specify the rollover index date pattern (#510)
