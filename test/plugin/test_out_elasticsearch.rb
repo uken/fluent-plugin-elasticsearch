@@ -23,10 +23,14 @@ class ElasticsearchOutput < Test::Unit::TestCase
     # For request stub to detect compatibility.
     @es_version ||= es_version
     @client_version ||= client_version
+    if @es_version
+      Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
+        def detect_es_major_version
+          #{@es_version}
+        end
+      CODE
+    end
     Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
-      def detect_es_major_version
-        #{@es_version}
-      end
       def client_library_version
         #{@client_version}
       end
@@ -57,6 +61,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def stub_elastic_ping(url="http://localhost:9200")
     stub_request(:head, url).to_return(:status => 200, :body => "", :headers => {})
+  end
+
+  def stub_elastic_info(url="http://localhost:9200/", version="6.4.2")
+    body ="{\"version\":{\"number\":\"#{version}\"}}"
+    stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'json' } })
   end
 
   def stub_elastic(url="http://localhost:9200/_bulk")
@@ -189,6 +198,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def assert_logs_include(logs, msg, exp_matches=1)
     matches = logs.grep /#{msg}/
     assert_equal(exp_matches, matches.length, "Logs do not contain '#{msg}' '#{logs}'")
+  end
+
+  def assert_logs_include_compare_size(exp_matches=1, operator="<=", logs="", msg="")
+    matches = logs.grep /#{msg}/
+    assert_compare(exp_matches, operator, matches.length, "Logs do not contain '#{msg}' '#{logs}'")
   end
 
   def test_configure
@@ -2395,19 +2409,24 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_use_simple_sniffer
     require 'fluent/plugin/elasticsearch_simple_sniffer'
-    driver.configure("sniffer_class_name Fluent::Plugin::ElasticsearchSimpleSniffer
-                      log_level debug
-                      with_transporter_log true
-                      reload_connections true
-                      reload_after 1")
     stub_elastic_ping
+    stub_elastic_info
     stub_elastic
+    config = %[
+      sniffer_class_name Fluent::Plugin::ElasticsearchSimpleSniffer
+      log_level debug
+      with_transporter_log true
+      reload_connections true
+      reload_after 1
+    ]
+    driver(config, nil)
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
     log = driver.logs
-    # 2 - one for the ping, one for the _bulk
-    assert_logs_include(log, /In Fluent::Plugin::ElasticsearchSimpleSniffer hosts/, 2)
+    # 2 or 3 - one for the ping, one for the _bulk, (and client.info)
+    assert_logs_include_compare_size(4, ">", log, /In Fluent::Plugin::ElasticsearchSimpleSniffer hosts/)
+    assert_logs_include_compare_size(2, "<=", log, /In Fluent::Plugin::ElasticsearchSimpleSniffer hosts/)
   end
 
 end
