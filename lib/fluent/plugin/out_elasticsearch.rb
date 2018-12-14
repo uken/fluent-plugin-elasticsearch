@@ -218,6 +218,14 @@ EOC
         log_level = conf['@log_level'] || conf['log_level']
         log.warn "Consider to specify log_level with @log_level." unless log_level
       end
+      # Specify @sniffer_class before calling #client.
+      # #detect_es_major_version uses #client.
+      @sniffer_class = nil
+      begin
+        @sniffer_class = Object.const_get(@sniffer_class_name) if @sniffer_class_name
+      rescue Exception => ex
+        raise Fluent::ConfigError, "Could not load sniffer class #{@sniffer_class_name}: #{ex}"
+      end
 
       @last_seen_major_version =
         if @verify_es_version_at_startup
@@ -255,12 +263,6 @@ EOC
                       You might have to specify `ssl_version TLSv1_2` in configuration."
           end
         end
-      end
-      @sniffer_class = nil
-      begin
-        @sniffer_class = Object.const_get(@sniffer_class_name) if @sniffer_class_name
-      rescue Exception => ex
-        raise Fluent::ConfigError, "Could not load sniffer class #{@sniffer_class_name}: #{ex}"
       end
     end
 
