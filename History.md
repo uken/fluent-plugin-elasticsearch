@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 2.12.5
+- Ensure sniffer class constants definition before calling #client (#515)
+
 ### 2.12.4
 - #506 Rollover index will be in effect in case of template overwrite also. (#513)
 
