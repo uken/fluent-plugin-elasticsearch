@@ -23,7 +23,6 @@ end
 module Fluent::Plugin
   class ElasticsearchOutput < Output
     class ConnectionFailure < StandardError; end
-    class ConnectionRetryFailure < Fluent::UnrecoverableError; end
 
     # MissingIdFieldError is raised for records that do not
     # include the field for the unique record identifier
@@ -357,13 +356,6 @@ EOC
                                                                               serializer_class: @serializer_class,
                                                                             }), &adapter_conf)
         es = Elasticsearch::Client.new transport: transport
-
-        begin
-          raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description})!" unless es.ping
-        rescue *es.transport.host_unreachable_exceptions => e
-          raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description})! #{e.message}"
-        end
-
         log.info "Connection opened to Elasticsearch cluster => #{connection_options_description}"
         es
       end
@@ -647,15 +639,7 @@ EOC
         emit_tag = @retry_tag ? @retry_tag : tag
         router.emit_stream(emit_tag, e.retry_stream)
       rescue *client.transport.host_unreachable_exceptions => e
-        if retries < 2
-          retries += 1
-          @_es = nil
-          @_es_info = nil
-          log.warn "Could not push logs to Elasticsearch, resetting connection and trying again. #{e.message}"
-          sleep 2**retries
-          retry
-        end
-        raise ConnectionRetryFailure, "Could not push logs to Elasticsearch after #{retries} retries. #{e.message}"
+          raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description})! #{e.message}"
       rescue Exception
         @_es = nil if @reconnect_on_error
         @_es_info = nil if @reconnect_on_error
