@@ -1987,7 +1987,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal(connection_resets, 3)
+    assert_equal(connection_resets, 1)
   end
 
   def test_reconnect_on_error_enabled
