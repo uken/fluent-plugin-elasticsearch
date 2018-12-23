@@ -333,6 +333,47 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
   end
 
+  sub_test_case 'connection exceptions' do
+    test 'default connection exception' do
+      driver(Fluent::Config::Element.new(
+               'ROOT', '', {
+                 '@type' => 'elasticsearch',
+                 'host' => 'log.google.com',
+                 'port' => 777,
+                 'scheme' => 'https',
+                 'path' => '/es/',
+                 'user' => 'john',
+                 'pasword' => 'doe',
+               }, [
+                 Fluent::Config::Element.new('buffer', 'tag', {
+                                             }, [])
+               ]
+             ))
+      assert_equal Fluent::Plugin::ElasticsearchOutput::ConnectionRetryFailure,
+                   driver.instance.instance_variable_get(:@unreachable_exception)
+    end
+
+    test 'flush_thread_count > 1' do
+      driver(Fluent::Config::Element.new(
+               'ROOT', '', {
+                 '@type' => 'elasticsearch',
+                 'host' => 'log.google.com',
+                 'port' => 777,
+                 'scheme' => 'https',
+                 'path' => '/es/',
+                 'user' => 'john',
+                 'pasword' => 'doe',
+               }, [
+                 Fluent::Config::Element.new('buffer', 'tag', {
+                                               'flush_thread_count' => 4
+                                             }, [])
+               ]
+             ))
+      assert_equal Fluent::Plugin::ElasticsearchOutput::ConnectionFailure,
+                   driver.instance.instance_variable_get(:@unreachable_exception)
+    end
+  end
+
   def test_template_already_present
     config = %{
       host            logs.google.com
@@ -1946,7 +1987,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal(connection_resets, 3)
+    assert_equal(connection_resets, 1)
   end
 
   def test_reconnect_on_error_enabled

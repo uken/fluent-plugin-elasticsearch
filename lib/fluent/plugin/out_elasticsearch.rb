@@ -264,6 +264,20 @@ EOC
           end
         end
       end
+
+      if @buffer_config.flush_thread_count < 2
+        log.warn "To prevent events traffic jam, you should specify 2 or more 'flush_thread_count'."
+      end
+
+      @unreachable_exception = connection_expection
+    end
+
+    def connection_expection
+      if @buffer_config.flush_thread_count > 1
+        ConnectionFailure
+      else
+        ConnectionRetryFailure
+      end
     end
 
     def backend_options
@@ -647,15 +661,7 @@ EOC
         emit_tag = @retry_tag ? @retry_tag : tag
         router.emit_stream(emit_tag, e.retry_stream)
       rescue *client.transport.host_unreachable_exceptions => e
-        if retries < 2
-          retries += 1
-          @_es = nil
-          @_es_info = nil
-          log.warn "Could not push logs to Elasticsearch, resetting connection and trying again. #{e.message}"
-          sleep 2**retries
-          retry
-        end
-        raise ConnectionRetryFailure, "Could not push logs to Elasticsearch after #{retries} retries. #{e.message}"
+        raise @unreachable_exception, "Could not push logs to Elasticsearch after #{retries} retries. #{e.message}"
       rescue Exception
         @_es = nil if @reconnect_on_error
         @_es_info = nil if @reconnect_on_error
