@@ -23,7 +23,6 @@ end
 module Fluent::Plugin
   class ElasticsearchOutput < Output
     class ConnectionFailure < StandardError; end
-    class ConnectionRetryFailure < Fluent::UnrecoverableError; end
 
     # MissingIdFieldError is raised for records that do not
     # include the field for the unique record identifier
@@ -273,11 +272,7 @@ EOC
     end
 
     def connection_expection
-      if @buffer_config.flush_thread_count > 1
-        ConnectionFailure
-      else
-        ConnectionRetryFailure
-      end
+      ConnectionFailure
     end
 
     def backend_options
