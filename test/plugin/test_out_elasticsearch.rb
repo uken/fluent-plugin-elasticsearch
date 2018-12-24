@@ -349,7 +349,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
                                              }, [])
                ]
              ))
-      assert_equal Fluent::Plugin::ElasticsearchOutput::ConnectionRetryFailure,
+      logs = driver.logs
+      assert_logs_include(logs, /you should specify 2 or more 'flush_thread_count'/, 1)
+      assert_equal Fluent::Plugin::ElasticsearchOutput::ConnectionFailure,
                    driver.instance.instance_variable_get(:@unreachable_exception)
     end
 
@@ -1968,9 +1970,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
                ]
              ))
     stub_elastic_timeout
-    driver.run(default_tag: 'test', timeout: 10) do
-      driver.feed(sample_record)
-    end
+    assert_raise(Fluent::Plugin::ElasticsearchOutput::ConnectionFailure) {
+      driver.run(default_tag: 'test', timeout: 10) do
+        driver.feed(sample_record)
+      end
+    }
   end
 
   def test_connection_failed_retry
@@ -1984,9 +1988,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
       raise Faraday::ConnectionFailed, "Test message"
     end
 
-    driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
-    end
+    assert_raise(Fluent::Plugin::ElasticsearchOutput::ConnectionFailure) {
+      driver.run(default_tag: 'test') do
+        driver.feed(sample_record)
+      end
+    }
     assert_equal(connection_resets, 1)
   end
 

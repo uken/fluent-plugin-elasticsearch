@@ -83,6 +83,7 @@ Current maintainers: @cosmo0920
   + [Cannot see detailed failure log](#cannot-see-detailed-failure-log)
   + [Cannot connect TLS enabled reverse Proxy](#cannot-connect-tls-enabled-reverse-proxy)
   + [Declined logs are resubmitted forever, why?](#declined-logs-are-resubmitted-forever-why)
+  + [Suggested to increase flush_thread_count, why?](#suggested-to-increase-flush_thread_count-why)
 * [Contact](#contact)
 * [Contributing](#contributing)
 * [Running tests](#running-tests)
@@ -1224,6 +1225,30 @@ The following configuration uses label:
     @type stdout
   </match>
 </label>
+```
+
+### Suggested to increase flush_thread_count, why?
+
+fluent-plugin-elasticsearch default behavior has a possibility to cause events traffic jam.
+When users use `flush_thread_count` = 1, ES plugin retries to send events if connection errors are disappeared.
+
+To prevent the following warning and sending events blocking, you must specify `flush_thread_count` > 2:
+
+```log
+2018-12-24 14:32:06 +0900 [warn]: #0 To prevent events traffic jam, you should specify 2 or more 'flush_thread_count'.
+```
+
+```aconf
+<match out.elasticsearch.**>
+  @type elasticsearch
+  host localhost
+  port 9200
+  # ...
+  <buffer tag>
+    @type memory # or file
+    flush_thread_count 4
+  </buffer>
+</match>
 ```
 
 ## Contact
