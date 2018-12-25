@@ -1849,6 +1849,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_request_forever
+    omit("retry_forever test is unstable.") if ENV["CI"]
     stub_elastic
     driver.configure(Fluent::Config::Element.new(
                'ROOT', '', {
