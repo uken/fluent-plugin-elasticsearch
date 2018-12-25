@@ -22,7 +22,8 @@ end
 
 module Fluent::Plugin
   class ElasticsearchOutput < Output
-    class ConnectionFailure < StandardError; end
+    class RecoverableRequestFailure < StandardError; end
+    class UnrecoverableRequestFailure < Fluent::UnrecoverableError; end
 
     # MissingIdFieldError is raised for records that do not
     # include the field for the unique record identifier
@@ -267,12 +268,6 @@ EOC
       if @buffer_config.flush_thread_count < 2
         log.warn "To prevent events traffic jam, you should specify 2 or more 'flush_thread_count'."
       end
-
-      @unreachable_exception = connection_expection
-    end
-
-    def connection_expection
-      ConnectionFailure
     end
 
     def backend_options
@@ -351,7 +346,6 @@ EOC
                                                                               reload_connections: local_reload_connections,
                                                                               reload_on_failure: @reload_on_failure,
                                                                               resurrect_after: @resurrect_after,
-                                                                              retry_on_failure: 5,
                                                                               logger: @transport_logger,
                                                                               transport_options: {
                                                                                 headers: { 'Content-Type' => @content_type.to_s },
@@ -365,16 +359,7 @@ EOC
                                                                               sniffer_class: @sniffer_class,
                                                                               serializer_class: @serializer_class,
                                                                             }), &adapter_conf)
-        es = Elasticsearch::Client.new transport: transport
-
-        begin
-          raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description})!" unless es.ping
-        rescue *es.transport.host_unreachable_exceptions => e
-          raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description})! #{e.message}"
-        end
-
-        log.info "Connection opened to Elasticsearch cluster => #{connection_options_description}"
-        es
+        Elasticsearch::Client.new transport: transport
       end
     end
 
@@ -641,7 +626,6 @@ EOC
     # send_bulk given a specific bulk request, the original tag,
     # chunk, and bulk_message_count
     def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, index)
-      retries = 0
       begin
 
         log.on_trace { log.trace "bulk request: #{data}" }
@@ -655,12 +639,11 @@ EOC
       rescue RetryStreamError => e
         emit_tag = @retry_tag ? @retry_tag : tag
         router.emit_stream(emit_tag, e.retry_stream)
-      rescue *client.transport.host_unreachable_exceptions => e
-        raise @unreachable_exception, "Could not push logs to Elasticsearch after #{retries} retries. #{e.message}"
-      rescue Exception
+      rescue => e
         @_es = nil if @reconnect_on_error
         @_es_info = nil if @reconnect_on_error
-        raise
+        # FIXME: identify unrecoverable errors and raise UnrecoverableRequestFailure instead
+        raise RecoverableRequestFailure, "could not push logs to Elasticsearch cluster (#{connection_options_description}): #{e.message}"
       end
     end
   end

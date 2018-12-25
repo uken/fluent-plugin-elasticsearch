@@ -50,7 +50,6 @@ module Fluent::Plugin
                                                                               reload_connections: @reload_connections,
                                                                               reload_on_failure: @reload_on_failure,
                                                                               resurrect_after: @resurrect_after,
-                                                                              retry_on_failure: 5,
                                                                               logger: @transport_logger,
                                                                               transport_options: {
                                                                                 headers: { 'Content-Type' => @content_type.to_s },
@@ -62,16 +61,7 @@ module Fluent::Plugin
                                                                                 password: @password
                                                                               }
                                                                             }), &adapter_conf)
-        es = Elasticsearch::Client.new transport: transport
-
-        begin
-          raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description(host)})!" unless es.ping
-        rescue *es.transport.host_unreachable_exceptions => e
-          raise ConnectionFailure, "Can not reach Elasticsearch cluster (#{connection_options_description(host)})! #{e.message}"
-        end
-
-        log.info "Connection opened to Elasticsearch cluster => #{connection_options_description(host)}"
-        es
+        Elasticsearch::Client.new transport: transport
       end
     end
 
@@ -220,17 +210,15 @@ module Fluent::Plugin
     end
 
     def send_bulk(data, host, index)
-      retries = 0
       begin
         response = client(host).bulk body: data, index: index
         if response['errors']
           log.error "Could not push log to Elasticsearch: #{response}"
         end
-      rescue *client(host).transport.host_unreachable_exceptions => e
-        raise @unreachable_exception, "Could not push logs to Elasticsearch after #{retries} retries. #{e.message}"
-      rescue Exception
+      rescue => e
         @_es = nil if @reconnect_on_error
-        raise
+        # FIXME: identify unrecoverable errors and raise UnrecoverableRequestFailure instead
+        raise RecoverableRequestFailure, "could not push logs to Elasticsearch cluster (#{connection_options_description(host)}): #{e.message}"
       end
     end
 

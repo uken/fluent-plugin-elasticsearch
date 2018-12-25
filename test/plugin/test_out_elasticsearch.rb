@@ -59,10 +59,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
   end
 
-  def stub_elastic_ping(url="http://localhost:9200")
-    stub_request(:head, url).to_return(:status => 200, :body => "", :headers => {})
-  end
-
   def stub_elastic_info(url="http://localhost:9200/", version="6.4.2")
     body ="{\"version\":{\"number\":\"#{version}\"}}"
     stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'json' } })
@@ -351,28 +347,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
              ))
       logs = driver.logs
       assert_logs_include(logs, /you should specify 2 or more 'flush_thread_count'/, 1)
-      assert_equal Fluent::Plugin::ElasticsearchOutput::ConnectionFailure,
-                   driver.instance.instance_variable_get(:@unreachable_exception)
-    end
-
-    test 'flush_thread_count > 1' do
-      driver(Fluent::Config::Element.new(
-               'ROOT', '', {
-                 '@type' => 'elasticsearch',
-                 'host' => 'log.google.com',
-                 'port' => 777,
-                 'scheme' => 'https',
-                 'path' => '/es/',
-                 'user' => 'john',
-                 'pasword' => 'doe',
-               }, [
-                 Fluent::Config::Element.new('buffer', 'tag', {
-                                               'flush_thread_count' => 4
-                                             }, [])
-               ]
-             ))
-      assert_equal Fluent::Plugin::ElasticsearchOutput::ConnectionFailure,
-                   driver.instance.instance_variable_get(:@unreachable_exception)
     end
   end
 
@@ -656,20 +630,13 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
 
     connection_resets = 0
-    # connection start
-    stub_request(:head, "https://john:doe@logs.google.com:778/es//").with do |req|
-      connection_resets += 1
-    end
     # check if template exists
     stub_request(:get, "https://john:doe@logs.google.com:778/es//_template/logstash").with do |req|
-      raise Fluent::Plugin::ElasticsearchOutput::ConnectionFailure, "Test message"
-    end
-    # creation
-    stub_request(:put, "https://john:doe@logs.google.com:778/es//_template/logstash").with do |req|
-      raise Fluent::Plugin::ElasticsearchOutput::ConnectionFailure, "Test message"
+      connection_resets += 1
+      raise Faraday::ConnectionFailed, "Test message"
     end
 
-    assert_raise(Fluent::Plugin::ElasticsearchOutput::ConnectionFailure) do
+    assert_raise(Fluent::ElasticsearchIndexTemplate::TemplateInstallationFailure) do
       driver(config)
     end
 
@@ -956,7 +923,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_write_message_with_bad_chunk
     driver.configure("target_index_key bad_value\n@log_level debug\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed({'bad_value'=>"\255"})
@@ -967,7 +933,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_writes_to_default_index
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -976,7 +941,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_writes_to_default_type
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -986,7 +950,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_writes_to_speficied_index
     driver.configure("index_name myindex\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -997,7 +960,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   class IndexNamePlaceholdersTest < self
     def test_writes_to_speficied_index_with_tag_placeholder
       driver.configure("index_name myindex.${tag}\n")
-      stub_elastic_ping
       stub_elastic
       driver.run(default_tag: 'test') do
         driver.feed(sample_record)
@@ -1017,7 +979,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
                                                        }, [])
                          ]
                        ))
-      stub_elastic_ping
       stub_elastic
       time = Time.parse Date.today.iso8601
       driver.run(default_tag: 'test') do
@@ -1038,7 +999,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
       time = Time.parse Date.today.iso8601
       pipeline_id = "mypipeline"
       logstash_index = "myindex.#{pipeline_id}"
-      stub_elastic_ping
       stub_elastic
       driver.run(default_tag: 'test') do
         driver.feed(time.to_i, sample_record.merge({"pipeline_id" => pipeline_id}))
@@ -1049,7 +1009,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_writes_to_speficied_index_uppercase
     driver.configure("index_name MyIndex\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1061,7 +1020,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_writes_to_target_index_key
     driver.configure("target_index_key @target_index\n")
-    stub_elastic_ping
     stub_elastic
     record = sample_record.clone
     driver.run(default_tag: 'test') do
@@ -1075,7 +1033,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("target_index_key @target_index
                       logstash_format true")
     time = Time.parse Date.today.iso8601
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(time.to_i, sample_record.merge('@target_index' => 'local-override'))
@@ -1087,7 +1044,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("target_index_key @target_index
                       logstash_format true")
     time = Time.parse Date.today.iso8601
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(time.to_i, sample_record.merge('@target_index' => 'local-override'))
@@ -1100,7 +1056,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_writes_to_default_index_with_pipeline
     pipeline = "fluentd"
     driver.configure("pipeline #{pipeline}")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1110,7 +1065,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_writes_to_target_index_key_fallack
     driver.configure("target_index_key @target_index\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1123,7 +1077,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
                       logstash_format true")
     time = Time.parse Date.today.iso8601
     logstash_index = "logstash-#{time.getutc.strftime("%Y.%m.%d")}"
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(time.to_i, sample_record)
@@ -1136,7 +1089,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
       )
   def test_writes_to_speficied_type(data)
     driver('', data["es_version"]).configure("type_name mytype\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1149,7 +1101,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
       )
   def test_writes_to_speficied_type_with_placeholders(data)
     driver('', data["es_version"]).configure("type_name mytype.${tag}\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1164,7 +1115,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
       )
   def test_writes_to_target_type_key(data)
     driver('', data["es_version"]).configure("target_type_key @target_type\n")
-    stub_elastic_ping
     stub_elastic
     record = sample_record.clone
     driver.run(default_tag: 'test') do
@@ -1176,7 +1126,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_writes_to_target_type_key_fallack_to_default
     driver.configure("target_type_key @target_type\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1187,7 +1136,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_writes_to_target_type_key_fallack_to_type_name
     driver.configure("target_type_key @target_type
                       type_name mytype")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1202,7 +1150,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
       )
   def test_writes_to_target_type_key_nested(data)
     driver('', data["es_version"]).configure("target_type_key kubernetes.labels.log_type\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge('kubernetes' => {
@@ -1217,7 +1164,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_writes_to_target_type_key_fallack_to_default_nested
     driver.configure("target_type_key kubernetes.labels.log_type\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge('kubernetes' => {
@@ -1231,7 +1177,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_writes_to_speficied_host
     driver.configure("host 192.168.33.50\n")
-    stub_elastic_ping("http://192.168.33.50:9200")
     elastic_request = stub_elastic("http://192.168.33.50:9200/_bulk")
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1241,7 +1186,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_writes_to_speficied_port
     driver.configure("port 9201\n")
-    stub_elastic_ping("http://localhost:9201")
     elastic_request = stub_elastic("http://localhost:9201/_bulk")
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1257,7 +1201,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     hosts.each do |host_info|
       host, port = host_info
-      stub_elastic_ping("http://#{host}:#{port}")
       stub_elastic_with_store_index_command_counts("http://#{host}:#{port}/_bulk")
     end
 
@@ -1294,7 +1237,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
       {"age" => "30", "height" => "2ft"}
     ]}
 
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(original_hash)
@@ -1308,7 +1250,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     original_hash =  {"foo" => {"bar" => "baz"}}
     expected_output = {"foo" => {"bar" => "baz"}}
 
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(original_hash)
@@ -1317,7 +1258,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_makes_bulk_request
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1327,7 +1267,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_all_records_are_preserved_in_bulk
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1343,7 +1282,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     # This is 1 second past midnight in BST, so the UTC index should be the day before
     dt = DateTime.new(2015, 6, 1, 0, 0, 1, "+01:00")
     logstash_index = "logstash-2015.05.31"
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(dt.to_time.to_i, sample_record)
@@ -1358,7 +1296,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     # ingestion time
     time = Date.today.to_time
     index = "logstash-#{time.strftime("%Y.%m.%d")}"
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(time.to_i, sample_record)
@@ -1371,7 +1308,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
                       logstash_prefix myprefix")
     time = Time.parse Date.today.iso8601
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(time.to_i, sample_record)
@@ -1386,7 +1322,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
                       logstash_prefix myprefix")
     time = Time.parse Date.today.iso8601
     logstash_index = "myprefix#{separator}#{time.getutc.strftime("%Y.%m.%d")}"
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(time.to_i, sample_record)
@@ -1400,7 +1335,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
                       logstash_prefix myprefix-${tag}")
       time = Time.parse Date.today.iso8601
       logstash_index = "myprefix-test-#{time.getutc.strftime("%Y.%m.%d")}"
-      stub_elastic_ping
       stub_elastic
       driver.run(default_tag: 'test') do
         driver.feed(time.to_i, sample_record)
@@ -1423,7 +1357,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
                        ))
       time = Time.parse Date.today.iso8601
       logstash_index = "myprefix-#{time.getutc.strftime("%H")}-#{time.getutc.strftime("%Y.%m.%d")}"
-      stub_elastic_ping
       stub_elastic
       driver.run(default_tag: 'test') do
         driver.feed(time.to_i, sample_record)
@@ -1444,7 +1377,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
       time = Time.parse Date.today.iso8601
       pipeline_id = "mypipeline"
       logstash_index = "myprefix-#{pipeline_id}-#{time.getutc.strftime("%Y.%m.%d")}"
-      stub_elastic_ping
       stub_elastic
       driver.run(default_tag: 'test') do
         driver.feed(time.to_i, sample_record.merge({"pipeline_id" => pipeline_id}))
@@ -1458,7 +1390,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
                       logstash_prefix MyPrefix")
     time = Time.parse Date.today.iso8601
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(time.to_i, sample_record)
@@ -1473,7 +1404,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
                       logstash_dateformat %Y.%m")
     time = Time.parse Date.today.iso8601
     logstash_index = "logstash-#{time.getutc.strftime("%Y.%m")}"
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(time.to_i, sample_record)
@@ -1487,7 +1417,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
                       logstash_dateformat %Y.%m")
     time = Time.parse Date.today.iso8601
     logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m")}"
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(time.to_i, sample_record)
@@ -1514,7 +1443,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_doesnt_add_logstash_timestamp_by_default
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1524,7 +1452,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_adds_timestamp_when_logstash
     driver.configure("logstash_format true\n")
-    stub_elastic_ping
     stub_elastic
     ts = DateTime.now
     time = Fluent::EventTime.from_time(ts.to_time)
@@ -1537,7 +1464,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_adds_timestamp_when_include_timestamp
     driver.configure("include_timestamp true\n")
-    stub_elastic_ping
     stub_elastic
     ts = DateTime.now
     time = Fluent::EventTime.from_time(ts.to_time)
@@ -1550,7 +1476,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_uses_custom_timestamp_when_included_in_record
     driver.configure("logstash_format true\n")
-    stub_elastic_ping
     stub_elastic
     ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
@@ -1562,7 +1487,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_uses_custom_timestamp_when_included_in_record_without_logstash
     driver.configure("include_timestamp true\n")
-    stub_elastic_ping
     stub_elastic
     ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
@@ -1575,7 +1499,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_uses_custom_time_key
     driver.configure("logstash_format true
                       time_key vtm\n")
-    stub_elastic_ping
     stub_elastic
     ts = DateTime.new(2001,2,3).iso8601(9)
     driver.run(default_tag: 'test') do
@@ -1589,7 +1512,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("logstash_format true
                       time_key_format %Y-%m-%d %H:%M:%S.%N%z
                       time_key vtm\n")
-    stub_elastic_ping
     stub_elastic
     ts = "2001-02-03 13:14:01.673+02:00"
     driver.run(default_tag: 'test') do
@@ -1605,7 +1527,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
                       index_name test
                       time_key_format %Y-%m-%d %H:%M:%S.%N%z
                       time_key vtm\n")
-    stub_elastic_ping
     stub_elastic
     ts = "2001-02-03 13:14:01.673+02:00"
     driver.run(default_tag: 'test') do
@@ -1620,7 +1541,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("logstash_format true
                       time_key vtm
                       time_key_exclude_timestamp true\n")
-    stub_elastic_ping
     stub_elastic
     ts = DateTime.new(2001,2,3).iso8601
     driver.run(default_tag: 'test') do
@@ -1632,7 +1552,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_uses_custom_time_key_format
     driver.configure("logstash_format true
                       time_key_format %Y-%m-%dT%H:%M:%S.%N%z\n")
-    stub_elastic_ping
     stub_elastic
     ts = "2001-02-03T13:14:01.673+02:00"
     driver.run(default_tag: 'test') do
@@ -1647,7 +1566,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("include_timestamp true
                       index_name test
                       time_key_format %Y-%m-%dT%H:%M:%S.%N%z\n")
-    stub_elastic_ping
     stub_elastic
     ts = "2001-02-03T13:14:01.673+02:00"
     driver.run(default_tag: 'test') do
@@ -1665,7 +1583,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     tag_for_error = 'Fluent::ElasticsearchOutput::TimeParser.error' if tag_for_error.nil?
     driver.configure("logstash_format true
                       time_key_format %Y-%m-%dT%H:%M:%S.%N%z\n#{tag_config}\n")
-    stub_elastic_ping
     stub_elastic
 
     ts = "2001/02/03 13:14:01,673+02:00"
@@ -1686,7 +1603,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_uses_custom_time_key_format_obscure_format
     driver.configure("logstash_format true
                       time_key_format %a %b %d %H:%M:%S %Z %Y\n")
-    stub_elastic_ping
     stub_elastic
     ts = "Thu Nov 29 14:33:20 GMT 2001"
     driver.run(default_tag: 'test') do
@@ -1699,7 +1615,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_uses_nanosecond_precision_by_default
     driver.configure("logstash_format true\n")
-    stub_elastic_ping
     stub_elastic
     time = Fluent::EventTime.new(Time.now.to_i, 123456789)
     driver.run(default_tag: 'test') do
@@ -1712,7 +1627,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_uses_subsecond_precision_when_configured
     driver.configure("logstash_format true
                       time_precision 3\n")
-    stub_elastic_ping
     stub_elastic
     time = Fluent::EventTime.new(Time.now.to_i, 123456789)
     driver.run(default_tag: 'test') do
@@ -1723,7 +1637,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_doesnt_add_tag_key_by_default
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1733,7 +1646,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_adds_tag_key_when_configured
     driver.configure("include_tag_key true\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'mytag') do
       driver.feed(sample_record)
@@ -1744,7 +1656,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_adds_id_key_when_configured
     driver.configure("id_key request_id\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1755,7 +1666,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   class NestedIdKeyTest < self
     def test_adds_nested_id_key_with_dot
       driver.configure("id_key nested.request_id\n")
-      stub_elastic_ping
       stub_elastic
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
@@ -1765,7 +1675,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     def test_adds_nested_id_key_with_dollar_dot
       driver.configure("id_key $.nested.request_id\n")
-      stub_elastic_ping
       stub_elastic
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
@@ -1775,7 +1684,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     def test_adds_nested_id_key_with_bracket
       driver.configure("id_key $['nested']['request_id']\n")
-      stub_elastic_ping
       stub_elastic
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
@@ -1786,7 +1694,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_doesnt_add_id_key_if_missing_when_configured
     driver.configure("id_key another_request_id\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1795,7 +1702,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_adds_id_key_when_not_configured
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1805,7 +1711,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_adds_parent_key_when_configured
     driver.configure("parent_key parent_id\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1816,7 +1721,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   class NestedParentKeyTest < self
     def test_adds_nested_parent_key_with_dot
       driver.configure("parent_key nested.parent_id\n")
-      stub_elastic_ping
       stub_elastic
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
@@ -1826,7 +1730,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     def test_adds_nested_parent_key_with_dollar_dot
       driver.configure("parent_key $.nested.parent_id\n")
-      stub_elastic_ping
       stub_elastic
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
@@ -1836,7 +1739,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     def test_adds_nested_parent_key_with_bracket
       driver.configure("parent_key $['nested']['parent_id']\n")
-      stub_elastic_ping
       stub_elastic
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
@@ -1847,7 +1749,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_doesnt_add_parent_key_if_missing_when_configured
     driver.configure("parent_key another_parent_id\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1856,7 +1757,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_adds_parent_key_when_not_configured
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1866,7 +1766,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_adds_routing_key_when_configured
     driver.configure("routing_key routing_id\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1877,7 +1776,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   class NestedRoutingKeyTest < self
     def test_adds_nested_routing_key_with_dot
       driver.configure("routing_key nested.routing_id\n")
-      stub_elastic_ping
       stub_elastic
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
@@ -1887,7 +1785,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     def test_adds_nested_routing_key_with_dollar_dot
       driver.configure("routing_key $.nested.routing_id\n")
-      stub_elastic_ping
       stub_elastic
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
@@ -1897,7 +1794,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     def test_adds_nested_routing_key_with_bracket
       driver.configure("routing_key $['nested']['routing_id']\n")
-      stub_elastic_ping
       stub_elastic
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
@@ -1908,7 +1804,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_doesnt_add_routing_key_if_missing_when_configured
     driver.configure("routing_key another_routing_id\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1917,7 +1812,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_adds_routing_key_when_not_configured
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -1927,7 +1821,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_remove_one_key
     driver.configure("remove_keys key1\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge('key1' => 'v1', 'key2' => 'v2'))
@@ -1938,7 +1831,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_remove_multi_keys
     driver.configure("remove_keys key1, key2\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge('key1' => 'v1', 'key2' => 'v2'))
@@ -1948,17 +1840,16 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_request_error
-    stub_elastic_ping
     stub_elastic_unavailable
-    assert_raise(Elasticsearch::Transport::Transport::Errors::ServiceUnavailable) {
-      driver.run(default_tag: 'test') do
+    assert_raise(Fluent::Plugin::ElasticsearchOutput::RecoverableRequestFailure) {
+      driver.run(default_tag: 'test', shutdown: false) do
         driver.feed(sample_record)
       end
     }
   end
 
   def test_request_forever
-    stub_elastic_ping
+    omit("retry_forever test is unstable.") if ENV["CI"]
     stub_elastic
     driver.configure(Fluent::Config::Element.new(
                'ROOT', '', {
@@ -1970,26 +1861,23 @@ class ElasticsearchOutput < Test::Unit::TestCase
                ]
              ))
     stub_elastic_timeout
-    assert_raise(Fluent::Plugin::ElasticsearchOutput::ConnectionFailure) {
-      driver.run(default_tag: 'test', timeout: 10) do
+    assert_raise(Timeout::Error) {
+      driver.run(default_tag: 'test', timeout: 10, force_flush_retry: true) do
         driver.feed(sample_record)
       end
     }
   end
 
-  def test_connection_failed_retry
+  def test_connection_failed
     connection_resets = 0
 
-    stub_elastic_ping(url="http://localhost:9200").with do |req|
-      connection_resets += 1
-    end
-
     stub_request(:post, "http://localhost:9200/_bulk").with do |req|
+      connection_resets += 1
       raise Faraday::ConnectionFailed, "Test message"
     end
 
-    assert_raise(Fluent::Plugin::ElasticsearchOutput::ConnectionFailure) {
-      driver.run(default_tag: 'test') do
+    assert_raise(Fluent::Plugin::ElasticsearchOutput::RecoverableRequestFailure) {
+      driver.run(default_tag: 'test', shutdown: false) do
         driver.feed(sample_record)
       end
     }
@@ -1999,17 +1887,14 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_reconnect_on_error_enabled
     connection_resets = 0
 
-    stub_elastic_ping(url="http://localhost:9200").with do |req|
-      connection_resets += 1
-    end
-
     stub_request(:post, "http://localhost:9200/_bulk").with do |req|
+      connection_resets += 1
       raise ZeroDivisionError, "any not host_unreachable_exceptions exception"
     end
 
     driver.configure("reconnect_on_error true\n")
 
-    assert_raise(ZeroDivisionError) {
+    assert_raise(Fluent::Plugin::ElasticsearchOutput::RecoverableRequestFailure) {
       driver.run(default_tag: 'test', shutdown: false) do
         driver.feed(sample_record)
       end
@@ -2028,17 +1913,14 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_reconnect_on_error_disabled
     connection_resets = 0
 
-    stub_elastic_ping(url="http://localhost:9200").with do |req|
-      connection_resets += 1
-    end
-
     stub_request(:post, "http://localhost:9200/_bulk").with do |req|
+      connection_resets += 1
       raise ZeroDivisionError, "any not host_unreachable_exceptions exception"
     end
 
     driver.configure("reconnect_on_error false\n")
 
-    assert_raise(ZeroDivisionError) {
+    assert_raise(Fluent::Plugin::ElasticsearchOutput::RecoverableRequestFailure) {
       driver.run(default_tag: 'test', shutdown: false) do
         driver.feed(sample_record)
       end
@@ -2054,7 +1936,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_bulk_error_retags_when_configured
     driver.configure("retry_tag retry\n")
-    stub_elastic_ping
     stub_request(:post, 'http://localhost:9200/_bulk')
         .to_return(lambda do |req|
       { :status => 200,
@@ -2089,7 +1970,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_create_should_write_records_with_ids_and_skip_those_without
     driver.configure("write_operation create\nid_key my_id\n@log_level debug")
-    stub_elastic_ping
     stub_request(:post, 'http://localhost:9200/_bulk')
         .to_return(lambda do |req|
       { :status => 200,
@@ -2139,7 +2019,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_create_should_write_records_with_ids_and_emit_those_without
     driver.configure("write_operation create\nid_key my_id\nemit_error_for_missing_id true\n@log_level debug")
-    stub_elastic_ping
     stub_request(:post, 'http://localhost:9200/_bulk')
         .to_return(lambda do |req|
       { :status => 200,
@@ -2188,7 +2067,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_bulk_error
-    stub_elastic_ping
     stub_request(:post, 'http://localhost:9200/_bulk')
         .to_return(lambda do |req|
       { :status => 200,
@@ -2257,7 +2135,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_update_should_not_write_if_theres_no_id
     driver.configure("write_operation update\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -2267,7 +2144,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_upsert_should_not_write_if_theres_no_id
     driver.configure("write_operation upsert\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -2277,7 +2153,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_create_should_not_write_if_theres_no_id
     driver.configure("write_operation create\n")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -2288,7 +2163,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_update_should_write_update_op_and_doc_as_upsert_is_false
     driver.configure("write_operation update
                       id_key request_id")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -2302,7 +2176,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("write_operation update
                       id_key request_id
                       remove_keys_on_update parent_id")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -2314,7 +2187,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_upsert_should_write_update_op_and_doc_as_upsert_is_true
     driver.configure("write_operation upsert
                       id_key request_id")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -2328,7 +2200,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("write_operation upsert
                       id_key request_id
                       remove_keys_on_update parent_id")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -2343,7 +2214,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("write_operation upsert
                       id_key request_id
                       remove_keys_on_update parent_id")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -2357,7 +2227,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("write_operation upsert
                       id_key id
                       remove_keys_on_update foo,baz")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed("id" => 1, "foo" => "bar", "baz" => "quix", "zip" => "zam")
@@ -2382,7 +2251,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver.configure("write_operation upsert
                       id_key id
                       remove_keys_on_update_key keys_to_skip")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed("id" => 1, "foo" => "bar", "baz" => "quix", "keys_to_skip" => ["baz"])
@@ -2407,7 +2275,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
                       id_key id
                       remove_keys_on_update foo,bar
                       remove_keys_on_update_key keys_to_skip")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed("id" => 1, "foo" => "bar", "baz" => "quix", "keys_to_skip" => ["baz"])
@@ -2432,7 +2299,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   def test_create_should_write_create_op
     driver.configure("write_operation create
                       id_key request_id")
-    stub_elastic_ping
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -2441,7 +2307,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def test_include_index_in_url
-    stub_elastic_ping
     stub_elastic('http://localhost:9200/logstash-2018.01.01/_bulk')
 
     driver.configure("index_name logstash-2018.01.01
@@ -2456,7 +2321,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_use_simple_sniffer
     require 'fluent/plugin/elasticsearch_simple_sniffer'
-    stub_elastic_ping
     stub_elastic_info
     stub_elastic
     config = %[
@@ -2472,8 +2336,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
     log = driver.logs
     # 2 or 3 - one for the ping, one for the _bulk, (and client.info)
-    assert_logs_include_compare_size(4, ">", log, /In Fluent::Plugin::ElasticsearchSimpleSniffer hosts/)
-    assert_logs_include_compare_size(2, "<=", log, /In Fluent::Plugin::ElasticsearchSimpleSniffer hosts/)
+    assert_logs_include_compare_size(3, ">", log, /In Fluent::Plugin::ElasticsearchSimpleSniffer hosts/)
+    assert_logs_include_compare_size(1, "<=", log, /In Fluent::Plugin::ElasticsearchSimpleSniffer hosts/)
   end
 
 end

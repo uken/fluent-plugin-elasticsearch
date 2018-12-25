@@ -1,4 +1,7 @@
+require 'fluent/error'
+
 module Fluent::ElasticsearchIndexTemplate
+  class TemplateInstallationFailure < Fluent::UnrecoverableError; end
 
   def get_template(template_file)
     if !File.exists?(template_file)
@@ -31,7 +34,7 @@ module Fluent::ElasticsearchIndexTemplate
     retries = 0
     begin
       yield
-    rescue Fluent::Plugin::ElasticsearchOutput::ConnectionFailure, Timeout::Error => e
+    rescue *client.transport.host_unreachable_exceptions, Timeout::Error => e
       @_es = nil
       @_es_info = nil
       if retries < max_retries
@@ -40,7 +43,7 @@ module Fluent::ElasticsearchIndexTemplate
         log.warn "Could not push template(s) to Elasticsearch, resetting connection and trying again. #{e.message}"
         retry
       end
-      raise Fluent::Plugin::ElasticsearchOutput::ConnectionFailure, "Could not push template(s) to Elasticsearch after #{retries} retries. #{e.message}"
+      raise TemplateInstallationFailure, "Could not push template(s) to Elasticsearch after #{retries} retries. #{e.message}"
     end
   end
 
