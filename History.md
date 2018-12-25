@@ -2,6 +2,11 @@
 
 ### [Unreleased]
 
+### 3.0.0
+- Use fluentd core retry mechanism (#519)
+- Depends on builtin retrying mechanism (#518)
+- Loosen ConnectionRetryFailure condition when flush_thread_count > 1 and depends on Fluentd core retrying mechanism (#516)
+
 ### 2.12.5
 - Ensure sniffer class constants definition before calling #client (#515)
 
