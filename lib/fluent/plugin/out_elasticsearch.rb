@@ -504,7 +504,6 @@ EOC
 
       tag = chunk.metadata.tag
       extracted_values = expand_placeholders(chunk.metadata)
-      @last_seen_major_version = detect_es_major_version rescue @default_elasticsearch_version
 
       chunk.msgpack_each do |time, record|
         next unless record.is_a? Hash
