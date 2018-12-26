@@ -1,6 +1,8 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+### 3.0.1
+- Remove needless Elasticsearch version detection (#520)
 
 ### 3.0.0
 - Use fluentd core retry mechanism (#519)
