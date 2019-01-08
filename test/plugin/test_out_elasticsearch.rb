@@ -1764,13 +1764,24 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert(!index_cmds[0]['index'].has_key?('_parent'))
   end
 
-  def test_adds_routing_key_when_configured
-    driver.configure("routing_key routing_id\n")
-    stub_elastic
-    driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
+  class AddsRoutingKeyWhenConfiguredTest < self
+    def test_es6
+      driver('', 6).configure("routing_key routing_id\n")
+      stub_elastic
+      driver.run(default_tag: 'test') do
+        driver.feed(sample_record)
+      end
+      assert_equal(index_cmds[0]['index']['_routing'], 'routing')
     end
-    assert_equal(index_cmds[0]['index']['_routing'], 'routing')
+
+    def test_es7
+      driver('', 7).configure("routing_key routing_id\n")
+      stub_elastic
+      driver.run(default_tag: 'test') do
+        driver.feed(sample_record)
+      end
+      assert_equal(index_cmds[0]['index']['routing'], 'routing')
+    end
   end
 
   class NestedRoutingKeyTest < self

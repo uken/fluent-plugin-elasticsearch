@@ -268,6 +268,8 @@ EOC
       if @buffer_config.flush_thread_count < 2
         log.warn "To prevent events traffic jam, you should specify 2 or more 'flush_thread_count'."
       end
+
+      @routing_key_name = configure_routing_key_name
     end
 
     def backend_options
@@ -291,6 +293,14 @@ EOC
       Elasticsearch::VERSION
     end
 
+    def configure_routing_key_name
+      if @last_seen_major_version >= 7
+        'routing'
+      else
+        '_routing'
+      end
+    end
+
     def convert_compat_id_key(key)
       if key.include?('.') && !key.start_with?('$[')
         key = "$.#{key}" unless key.start_with?('$.')
@@ -302,7 +312,7 @@ EOC
       result = []
       result << [record_accessor_create(@id_key), '_id'] if @id_key
       result << [record_accessor_create(@parent_key), '_parent'] if @parent_key
-      result << [record_accessor_create(@routing_key), '_routing'] if @routing_key
+      result << [record_accessor_create(@routing_key), @routing_key_name] if @routing_key
       result
     end
 
