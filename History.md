@@ -1,6 +1,12 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+
+### 3.0.2
+-  appveyor: Remove Ruby 2.1 CI targets on AppVeyor (#524)
+- Follow removal of _routing field change on recent Elasticsearch (#523)
+- Travis: Tweak to use Ruby versions (#522)
+
 ### 3.0.1
 - Remove needless Elasticsearch version detection (#520)
 
