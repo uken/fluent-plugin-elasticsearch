@@ -32,7 +32,7 @@ module Fluent::Plugin
     end
 
     def create_meta_config_map
-      {'id_key' => '_id', 'parent_key' => '_parent', 'routing_key' => '_routing'}
+      {'id_key' => '_id', 'parent_key' => '_parent', 'routing_key' => @routing_key_name}
     end
 
 
