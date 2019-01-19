@@ -921,6 +921,18 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_requested(elastic_request)
   end
 
+  def test_custom_headers
+    stub_request(:head, "http://localhost:9200/").
+      to_return(:status => 200, :body => "", :headers => {})
+    elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
+                        with(headers: {'custom' => 'header1','and_others' => 'header2' })
+    driver.configure(%[custom_headers {"custom":"header1", "and_others":"header2"}])
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+    assert_requested(elastic_request)
+  end
+
   def test_write_message_with_bad_chunk
     driver.configure("target_index_key bad_value\n@log_level debug\n")
     stub_elastic

@@ -128,6 +128,7 @@ EOC
     config_param :verify_es_version_at_startup, :bool, :default => true
     config_param :default_elasticsearch_version, :integer, :default => DEFAULT_ELASTICSEARCH_VERSION
     config_param :log_es_400_reason, :bool, :default => false
+    config_param :custom_headers, :hash, :default => {}
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE
@@ -351,6 +352,7 @@ EOC
         if local_reload_connections && @reload_after > DEFAULT_RELOAD_AFTER
           local_reload_connections = @reload_after
         end
+        headers = { 'Content-Type' => @content_type.to_s }.merge(@custom_headers)
         transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(get_connection_options.merge(
                                                                             options: {
                                                                               reload_connections: local_reload_connections,
@@ -358,7 +360,7 @@ EOC
                                                                               resurrect_after: @resurrect_after,
                                                                               logger: @transport_logger,
                                                                               transport_options: {
-                                                                                headers: { 'Content-Type' => @content_type.to_s },
+                                                                                headers: headers,
                                                                                 request: { timeout: @request_timeout },
                                                                                 ssl: { verify: @ssl_verify, ca_file: @ca_file, version: @ssl_version }
                                                                               },
