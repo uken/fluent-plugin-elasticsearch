@@ -350,6 +350,30 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
   end
 
+  def test_retry_get_es_version
+    config = %{
+      host            logs.google.com
+      port            778
+      scheme          https
+      path            /es/
+      user            john
+      password        doe
+      max_retry_get_es_version 3
+    }
+
+    connection_resets = 0
+    stub_request(:get, "https://john:doe@logs.google.com:778/es//").with do |req|
+      connection_resets += 1
+      raise Timeout::Error, "Test message"
+    end
+
+    assert_raise(Fluent::Plugin::ElasticsearchError::RetryableOperationExhaustedFailure) do
+      driver(config, nil)
+    end
+
+    assert_equal(connection_resets, 4)
+  end
+
   def test_template_already_present
     config = %{
       host            logs.google.com

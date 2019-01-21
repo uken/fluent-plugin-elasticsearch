@@ -13,6 +13,7 @@ require 'fluent/plugin/output'
 require 'fluent/event'
 require 'fluent/error'
 require_relative 'elasticsearch_constants'
+require_relative 'elasticsearch_error'
 require_relative 'elasticsearch_error_handler'
 require_relative 'elasticsearch_index_template'
 begin
@@ -106,6 +107,7 @@ EOC
     config_param :application_name, :string, :default => "default"
     config_param :templates, :hash, :default => nil
     config_param :max_retry_putting_template, :integer, :default => 10
+    config_param :max_retry_get_es_version, :integer, :default => 15
     config_param :include_tag_key, :bool, :default => false
     config_param :tag_key, :string, :default => 'tag'
     config_param :time_parse_error_tag, :string, :default => 'Fluent::ElasticsearchOutput::TimeParser.error'
@@ -229,11 +231,8 @@ EOC
 
       @last_seen_major_version =
         if @verify_es_version_at_startup
-          begin
+          retry_operate(@max_retry_get_es_version) do
             detect_es_major_version
-          rescue
-            log.warn "Could not connect Elasticsearch or obtain version. Assuming Elasticsearch #{@default_elasticsearch_version}."
-            @default_elasticsearch_version
           end
         else
           @default_elasticsearch_version
