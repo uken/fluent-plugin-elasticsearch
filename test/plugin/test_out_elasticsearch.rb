@@ -636,7 +636,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       raise Faraday::ConnectionFailed, "Test message"
     end
 
-    assert_raise(Fluent::ElasticsearchIndexTemplate::TemplateInstallationFailure) do
+    assert_raise(Fluent::Plugin::ElasticsearchError::RetryableOperationExhaustedFailure) do
       driver(config)
     end
 
