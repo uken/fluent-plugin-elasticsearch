@@ -170,7 +170,7 @@ EOC
       raise Fluent::ConfigError, "'max_retry_putting_template' must be positive number." if @max_retry_putting_template < 0
 
       if @template_name && @template_file
-        retry_install(@max_retry_putting_template) do
+        retry_operate(@max_retry_putting_template) do
           if @customize_template
             if @rollover_index
               raise Fluent::ConfigError, "'deflector_alias' must be provided if 'rollover_index' is set true ." if not @deflector_alias
@@ -181,7 +181,7 @@ EOC
           end
         end
       elsif @templates
-        retry_install(@max_retry_putting_template) do
+        retry_operate(@max_retry_putting_template) do
           templates_hash_install(@templates, @template_overwrite)
         end
       end

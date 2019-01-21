@@ -29,7 +29,7 @@ module Fluent::ElasticsearchIndexTemplate
     return false
   end
 
-  def retry_install(max_retries)
+  def retry_operate(max_retries)
     return unless block_given?
     retries = 0
     begin
