@@ -42,6 +42,7 @@ Current maintainers: @cosmo0920
   + [index_prefix](#index_prefix)
   + [templates](#templates)
   + [max_retry_putting_template](#max_retry_putting_template)
+  + [max_retry_get_es_version](#max_retry_get_es_version)
   + [request_timeout](#request_timeout)
   + [reload_connections](#reload_connections)
   + [reload_on_failure](#reload_on_failure)
@@ -429,6 +430,17 @@ Usually, booting up clustered Elasticsearch containers are much slower than laun
 
 ```
 max_retry_putting_template 15 # defaults to 10
+```
+
+### max_retry_get_es_version
+
+You can specify times of retry obtaining Elasticsearch version.
+
+This is useful when Elasticsearch plugin cannot connect Elasticsearch to obtain Elasticsearch version.
+Usually, booting up clustered Elasticsearch containers are much slower than launching Fluentd container.
+
+```
+max_retry_get_es_version 17 # defaults to 15
 ```
 
 ### request_timeout
