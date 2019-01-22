@@ -350,6 +350,51 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
   end
 
+  class GetElasticsearchVersionTest < self
+    def create_driver(conf='', client_version="\"5.0\"")
+      # For request stub to detect compatibility.
+      @client_version ||= client_version
+      # Ensure original implementation existence.
+      Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
+        def detect_es_major_version
+          @_es_info ||= client.info
+          @_es_info["version"]["number"].to_i
+        end
+      CODE
+      Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
+        def client_library_version
+          #{@client_version}
+        end
+      CODE
+      Fluent::Test::Driver::Output.new(Fluent::Plugin::ElasticsearchOutput).configure(conf)
+    end
+
+    def test_retry_get_es_version
+      config = %{
+        host            logs.google.com
+        port            778
+        scheme          https
+        path            /es/
+        user            john
+        password        doe
+        verify_es_version_at_startup true
+        max_retry_get_es_version 3
+      }
+
+      connection_resets = 0
+      stub_request(:get, "https://john:doe@logs.google.com:778/es//").with do |req|
+        connection_resets += 1
+        raise Faraday::ConnectionFailed, "Test message"
+      end
+
+      assert_raise(Fluent::Plugin::ElasticsearchError::RetryableOperationExhaustedFailure) do
+        create_driver(config)
+      end
+
+      assert_equal(connection_resets, 4)
+    end
+  end
+
   def test_template_already_present
     config = %{
       host            logs.google.com
@@ -636,7 +681,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       raise Faraday::ConnectionFailed, "Test message"
     end
 
-    assert_raise(Fluent::ElasticsearchIndexTemplate::TemplateInstallationFailure) do
+    assert_raise(Fluent::Plugin::ElasticsearchError::RetryableOperationExhaustedFailure) do
       driver(config)
     end
 
