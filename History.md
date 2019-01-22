@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 3.1.0
+- Retry obtaining Elasticsearch version (#532)
+- Fix broken id links (#530)
+
 ### 3.0.2
 -  appveyor: Remove Ruby 2.1 CI targets on AppVeyor (#524)
 - Follow removal of _routing field change on recent Elasticsearch (#523)
