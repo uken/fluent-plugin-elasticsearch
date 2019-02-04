@@ -2,6 +2,11 @@
 
 ### [Unreleased]
 
+### 3.1.1
+- Add document for custom_headers (#538)
+- out_elasticsearch: Add custom_headers parameter (#529)
+- Bundle irb on Ruby 2.6 or later (#537)
+
 ### 3.1.0
 - Retry obtaining Elasticsearch version (#532)
 - Fix broken id links (#530)
