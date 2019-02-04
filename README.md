@@ -74,6 +74,7 @@ Current maintainers: @cosmo0920
   + [unrecoverable_error_types](#unrecoverable-error-types)
   + [verify_es version at startup](#verify_es_version_at_startup)
   + [default_elasticsearch_version](#default_elasticsearch_version)
+  + [custom_headers](#custom_headers)
   + [Not seeing a config you need?](#not-seeing-a-config-you-need)
   + [Dynamic configuration](#dynamic-configuration)
   + [Placeholders](#placeholders)
@@ -895,6 +896,14 @@ The default value is `true`.
 ### default_elasticsearch_version
 
 This parameter changes that ES plugin assumes default Elasticsearch version. The default value is `5`.
+
+### custom_headers
+
+This parameter adds additional headers to request. The default value is `{}`.
+
+```
+custom_headers {"token":"secret"}
+```
 
 ### Not seeing a config you need?
 
