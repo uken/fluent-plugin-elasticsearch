@@ -231,6 +231,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_true instance.verify_es_version_at_startup
     assert_equal Fluent::Plugin::ElasticsearchOutput::DEFAULT_ELASTICSEARCH_VERSION, instance.default_elasticsearch_version
     assert_false instance.log_es_400_reason
+    assert_equal 20 * 1024 * 1024, Fluent::Plugin::ElasticsearchOutput::TARGET_BULK_BYTES
   end
 
   test 'configure Content-Type' do
@@ -1012,6 +1013,25 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.feed(sample_record)
     end
     assert_equal('myindex', index_cmds.first['index']['_index'])
+  end
+
+  def test_writes_with_huge_records
+    driver.configure(Fluent::Config::Element.new(
+                       'ROOT', '', {
+                         '@type' => 'elasticsearch',
+                       }, [
+                         Fluent::Config::Element.new('buffer', 'tag', {
+                                                       'chunk_keys' => ['tag', 'time'],
+                                                       'chunk_limit_size' => '64MB',
+                                                     }, [])
+                       ]
+                     ))
+    request = stub_elastic
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record('huge_record' => ("a" * 20 * 1024 * 1024)))
+      driver.feed(sample_record('huge_record' => ("a" * 20 * 1024 * 1024)))
+    end
+    assert_requested(request, times: 2)
   end
 
   class IndexNamePlaceholdersTest < self
