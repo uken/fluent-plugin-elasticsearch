@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 3.2.0
+- Split huge record requests (#539)
+
 ### 3.1.1
 - Add document for custom_headers (#538)
 - out_elasticsearch: Add custom_headers parameter (#529)
