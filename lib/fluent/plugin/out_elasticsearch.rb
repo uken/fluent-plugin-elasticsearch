@@ -51,6 +51,7 @@ module Fluent::Plugin
     DEFAULT_TYPE_NAME_ES_7x = "_doc".freeze
     DEFAULT_TYPE_NAME = "fluentd".freeze
     DEFAULT_RELOAD_AFTER = -1
+    TARGET_BULK_BYTES = 20 * 1024 * 1024
 
     config_param :host, :string,  :default => 'localhost'
     config_param :port, :integer, :default => 9200
@@ -528,6 +529,15 @@ EOC
 
           if append_record_to_messages(@write_operation, meta, header, record, bulk_message[info])
             bulk_message_count[info] += 1;
+            if bulk_message[info].size > TARGET_BULK_BYTES
+              bulk_message.each do |info, msgs|
+                send_bulk(msgs, tag, chunk, bulk_message_count[info], extracted_values, info.index) unless msgs.empty?
+                msgs.clear
+                # Clear bulk_message_count for this info.
+                bulk_message_count[info] = 0;
+                next
+              end
+            end
           else
             if @emit_error_for_missing_id
               raise MissingIdFieldError, "Missing '_id' field. Write operation is #{@write_operation}"
