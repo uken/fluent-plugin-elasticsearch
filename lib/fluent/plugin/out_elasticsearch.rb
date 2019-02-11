@@ -173,20 +173,22 @@ EOC
 
       raise Fluent::ConfigError, "'max_retry_putting_template' must be positive number." if @max_retry_putting_template < 0
 
-      if @template_name && @template_file
-        retry_operate(@max_retry_putting_template) do
-          if @customize_template
-            if @rollover_index
-              raise Fluent::ConfigError, "'deflector_alias' must be provided if 'rollover_index' is set true ." if not @deflector_alias
+      if !Fluent::Engine.dry_run_mode
+        if @template_name && @template_file
+          retry_operate(@max_retry_putting_template) do
+            if @customize_template
+              if @rollover_index
+                raise Fluent::ConfigError, "'deflector_alias' must be provided if 'rollover_index' is set true ." if not @deflector_alias
+              end
+              template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @index_prefix, @rollover_index, @deflector_alias, @application_name, @index_date_pattern)
+            else
+              template_install(@template_name, @template_file, @template_overwrite)
             end
-            template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @index_prefix, @rollover_index, @deflector_alias, @application_name, @index_date_pattern)
-          else
-            template_install(@template_name, @template_file, @template_overwrite)
           end
-        end
-      elsif @templates
-        retry_operate(@max_retry_putting_template) do
-          templates_hash_install(@templates, @template_overwrite)
+        elsif @templates
+          retry_operate(@max_retry_putting_template) do
+            templates_hash_install(@templates, @template_overwrite)
+          end
         end
       end
 
@@ -232,7 +234,7 @@ EOC
       end
 
       @last_seen_major_version =
-        if @verify_es_version_at_startup
+        if @verify_es_version_at_startup && !Fluent::Engine.dry_run_mode
           retry_operate(@max_retry_get_es_version) do
             detect_es_major_version
           end
