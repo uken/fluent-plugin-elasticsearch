@@ -86,6 +86,7 @@ Current maintainers: @cosmo0920
   + [Cannot connect TLS enabled reverse Proxy](#cannot-connect-tls-enabled-reverse-proxy)
   + [Declined logs are resubmitted forever, why?](#declined-logs-are-resubmitted-forever-why)
   + [Suggested to increase flush_thread_count, why?](#suggested-to-increase-flush_thread_count-why)
+  + [Suggested to install typhoeus gem, why?](#suggested-to-install-typhoeus-gem-why)
 * [Contact](#contact)
 * [Contributing](#contributing)
 * [Running tests](#running-tests)
@@ -1271,6 +1272,25 @@ To prevent the following warning and sending events blocking, you must specify `
   </buffer>
 </match>
 ```
+
+### Suggested to install typhoeus gem, why?
+
+fluent-plugin-elasticsearch doesn't depend on typhoeus gem by default.
+If you want to use typhoeus backend, you must install typhoeus gem by your own.
+
+If you use vanilla Fluentd, you can install it by:
+
+```
+gem install typhoeus
+```
+
+But, you use td-agent instead of vannila Fluentd, you have to use `td-agent-gem`:
+
+```
+td-agent-gem install typhoeus
+```
+
+In more detail, please refer to [the official plugin management document](https://docs.fluentd.org/v1.0/articles/plugin-management).
 
 ## Contact
 
