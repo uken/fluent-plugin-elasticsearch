@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 3.2.1
+- Don't attempt to connect to Elasticsearch in dry run mode (#543)
+- Add FAQ for typhoeus gem installation (#544)
+
 ### 3.2.0
 - Split huge record requests (#539)
 
