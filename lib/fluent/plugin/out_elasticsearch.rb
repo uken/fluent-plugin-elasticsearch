@@ -249,7 +249,7 @@ EOC
         @type_name = '_doc'.freeze
       end
 
-      if @validate_client_version
+      if @validate_client_version && !Fluent::Engine.dry_run_mode
         if @last_seen_major_version != client_library_version.to_i
           raise Fluent::ConfigError, <<-EOC
             Detected ES #{@last_seen_major_version} but you use ES client #{client_library_version}.
