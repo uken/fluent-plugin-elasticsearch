@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 3.2.2
+- Don't validate ES cliuent version under dry-run mode (#547)
+
 ### 3.2.1
 - Don't attempt to connect to Elasticsearch in dry run mode (#543)
 - Add FAQ for typhoeus gem installation (#544)
