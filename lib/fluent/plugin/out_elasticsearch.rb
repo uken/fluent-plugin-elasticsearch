@@ -283,8 +283,9 @@ EOC
         require 'typhoeus'
         { sslkey: @client_key, sslcert: @client_cert, keypasswd: @client_key_pass }
       end
-    rescue LoadError
-      raise Fluent::ConfigError, "You must install #{@http_backend} gem."
+    rescue LoadError => ex
+      log.error_backtrace(ex.backtrace)
+      raise Fluent::ConfigError, "You must install #{@http_backend} gem. Exception: #{ex}"
     end
 
     def detect_es_major_version
