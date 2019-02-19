@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 3.2.3
+- Expose exception backtrace for typhoeus gem loading error (#550)
+
 ### 3.2.2
 - Don't validate ES cliuent version under dry-run mode (#547)
 
