@@ -24,3 +24,4 @@ Provide example config and message
   * paste boot log of fluentd or td-agent
   * paste result of ``fluent-gem list``, ``td-agent-gem list`` or your Gemfile.lock
 * ES version (optional)
+* ES template(s) (optional)
