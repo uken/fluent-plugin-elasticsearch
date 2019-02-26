@@ -500,10 +500,10 @@ EOC
       ret
     end
 
-    def expand_placeholders(metadata)
-      logstash_prefix = extract_placeholders(@logstash_prefix, metadata)
-      index_name = extract_placeholders(@index_name, metadata)
-      type_name = extract_placeholders(@type_name, metadata)
+    def expand_placeholders(chunk)
+      logstash_prefix = extract_placeholders(@logstash_prefix, chunk)
+      index_name = extract_placeholders(@index_name, chunk)
+      type_name = extract_placeholders(@type_name, chunk)
       return logstash_prefix, index_name, type_name
     end
 
@@ -518,7 +518,7 @@ EOC
       meta = {}
 
       tag = chunk.metadata.tag
-      extracted_values = expand_placeholders(chunk.metadata)
+      extracted_values = expand_placeholders(chunk)
 
       chunk.msgpack_each do |time, record|
         next unless record.is_a? Hash
