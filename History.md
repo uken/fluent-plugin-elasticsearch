@@ -1,6 +1,8 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+### 3.2.4
+- Pass chunk for built in placeholders (#553)
 
 ### 3.2.3
 - Expose exception backtrace for typhoeus gem loading error (#550)
