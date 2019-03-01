@@ -1,6 +1,10 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+
+### 3.3.0
+- Support builtin placeholders for host and hosts parameter (#554)
+
 ### 3.2.4
 - Pass chunk for built in placeholders (#553)
 
