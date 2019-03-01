@@ -15,6 +15,7 @@ Current maintainers: @cosmo0920
 * [Usage](#usage)
   + [Index templates](#index-templates)
 * [Configuration](#configuration)
+  + [host](#host)
   + [emit_error_for_missing_id](#emit_error_for_missing_id)
   + [hosts](#hosts)
   + [user, password, path, scheme, ssl_verify](#user-password-path-scheme-ssl_verify)
@@ -127,6 +128,16 @@ In your Fluentd configuration, use `@type elasticsearch`. Additional configurati
 This plugin creates Elasticsearch indices by merely writing to them. Consider using [Index Templates](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html) to gain control of what get indexed and how. See [this example](https://github.com/uken/fluent-plugin-elasticsearch/issues/33#issuecomment-38693282) for a good starting point.
 
 ## Configuration
+
+### host
+
+```
+host user-custom-host.domain # default localhost
+```
+
+You can specify Elasticsearch host by this parameter.
+
+**Note:** Since v3.3.0, `host` parameter supports builtin placeholders. If you want to send events dinamically into different hosts at runtime with `elasticsearch_dynamic` output plugin, please consider to switch to use plain `elasticsearch` output plugin. In more detail for builtin placeholders, please refer to [Placeholders](#placeholders) section.
 
 ### emit_error_for_missing_id
 
