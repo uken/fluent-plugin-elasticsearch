@@ -1462,6 +1462,88 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
   end
 
+  class HostnamePlaceholders < self
+    def test_writes_to_extracted_host
+      driver.configure("host ${tag}\n")
+      time = Time.parse Date.today.iso8601
+      elastic_request = stub_elastic("http://extracted-host:9200/_bulk")
+      driver.run(default_tag: 'extracted-host') do
+        driver.feed(time.to_i, sample_record)
+      end
+      assert_requested(elastic_request)
+    end
+
+    def test_writes_to_multi_hosts_with_placeholders
+      hosts = [['${tag}', 9201], ['192.168.33.51', 9201], ['192.168.33.52', 9201]]
+      hosts_string = hosts.map {|x| "#{x[0]}:#{x[1]}"}.compact.join(',')
+
+      driver.configure("hosts #{hosts_string}")
+
+      hosts.each do |host_info|
+        host, port = host_info
+        host = "extracted-host" if host == '${tag}'
+        stub_elastic_with_store_index_command_counts("http://#{host}:#{port}/_bulk")
+      end
+
+      driver.run(default_tag: 'extracted-host') do
+        1000.times do
+          driver.feed(sample_record.merge('age'=>rand(100)))
+        end
+      end
+
+      # @note: we cannot make multi chunks with options (flush_interval, buffer_chunk_limit)
+      # it's Fluentd test driver's constraint
+      # so @index_command_counts.size is always 1
+
+      assert(@index_command_counts.size > 0, "not working with hosts options")
+
+      total = 0
+      @index_command_counts.each do |url, count|
+        total += count
+      end
+      assert_equal(2000, total)
+    end
+
+    def test_writes_to_extracted_host_with_time_placeholder
+      driver.configure(Fluent::Config::Element.new(
+                         'ROOT', '', {
+                           '@type' => 'elasticsearch',
+                           'host' => 'host-%Y%m%d',
+                         }, [
+                           Fluent::Config::Element.new('buffer', 'tag,time', {
+                                                         'chunk_keys' => ['tag', 'time'],
+                                                         'timekey' => 3600,
+                                                       }, [])
+                         ]
+                       ))
+      stub_elastic
+      time = Time.parse Date.today.iso8601
+      elastic_request = stub_elastic("http://host-#{time.utc.strftime('%Y%m%d')}:9200/_bulk")
+      driver.run(default_tag: 'test') do
+        driver.feed(time.to_i, sample_record)
+      end
+      assert_requested(elastic_request)
+    end
+
+    def test_writes_to_extracted_host_with_custom_key_placeholder
+      driver.configure(Fluent::Config::Element.new(
+                         'ROOT', '', {
+                           '@type' => 'elasticsearch',
+                           'host' => 'myhost-${pipeline_id}',
+                         }, [
+                           Fluent::Config::Element.new('buffer', 'tag,pipeline_id', {}, [])
+                         ]
+                       ))
+      time = Time.parse Date.today.iso8601
+      pipeline_id = "5"
+      elastic_request = stub_elastic("http://myhost-5:9200/_bulk")
+      driver.run(default_tag: 'test') do
+        driver.feed(time.to_i, sample_record.merge({"pipeline_id" => pipeline_id}))
+      end
+      assert_requested(elastic_request)
+    end
+  end
+
   def test_writes_to_logstash_index_with_specified_prefix_uppercase
     driver.configure("logstash_format true
                       logstash_prefix MyPrefix")

@@ -348,7 +348,10 @@ EOC
       return Time.at(event_time).to_datetime
     end
 
-    def client
+    def client(host = nil)
+      # check here to see if we already have a client connection for the given host
+      connection_options = get_connection_options(host)
+
       @_es ||= begin
         adapter_conf = lambda {|f| f.adapter @http_backend, @backend_options }
         local_reload_connections = @reload_connections
@@ -356,7 +359,7 @@ EOC
           local_reload_connections = @reload_after
         end
         headers = { 'Content-Type' => @content_type.to_s }.merge(@custom_headers)
-        transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(get_connection_options.merge(
+        transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(connection_options.merge(
                                                                             options: {
                                                                               reload_connections: local_reload_connections,
                                                                               reload_on_failure: @reload_on_failure,
@@ -390,11 +393,11 @@ EOC
       end
     end
 
-    def get_connection_options
+    def get_connection_options(con_host=nil)
       raise "`password` must be present if `user` is present" if @user && !@password
 
-      hosts = if @hosts
-        @hosts.split(',').map do |host_str|
+      hosts = if con_host || @hosts
+        (con_host || @hosts).split(',').map do |host_str|
           # Support legacy hosts format host:port,host:port,host:port...
           if host_str.match(%r{^[^:]+(\:\d+)?$})
             {
@@ -519,22 +522,27 @@ EOC
 
       tag = chunk.metadata.tag
       extracted_values = expand_placeholders(chunk)
+      host = if @hosts
+               extract_placeholders(@hosts, chunk)
+             else
+               extract_placeholders(@host, chunk)
+             end
 
       chunk.msgpack_each do |time, record|
         next unless record.is_a? Hash
         begin
           meta, header, record = process_message(tag, meta, header, time, record, extracted_values)
           info = if @include_index_in_url
-                   RequestInfo.new(nil, meta.delete("_index".freeze))
+                   RequestInfo.new(host, meta.delete("_index".freeze))
                  else
-                   RequestInfo.new(nil, nil)
+                   RequestInfo.new(host, nil)
                  end
 
           if append_record_to_messages(@write_operation, meta, header, record, bulk_message[info])
             bulk_message_count[info] += 1;
             if bulk_message[info].size > TARGET_BULK_BYTES
               bulk_message.each do |info, msgs|
-                send_bulk(msgs, tag, chunk, bulk_message_count[info], extracted_values, info.index) unless msgs.empty?
+                send_bulk(msgs, tag, chunk, bulk_message_count[info], extracted_values, info) unless msgs.empty?
                 msgs.clear
                 # Clear bulk_message_count for this info.
                 bulk_message_count[info] = 0;
@@ -555,7 +563,7 @@ EOC
 
 
       bulk_message.each do |info, msgs|
-        send_bulk(msgs, tag, chunk, bulk_message_count[info], extracted_values, info.index) unless msgs.empty?
+        send_bulk(msgs, tag, chunk, bulk_message_count[info], extracted_values, info) unless msgs.empty?
         msgs.clear
       end
     end
@@ -648,11 +656,11 @@ EOC
 
     # send_bulk given a specific bulk request, the original tag,
     # chunk, and bulk_message_count
-    def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, index)
+    def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, info)
       begin
 
         log.on_trace { log.trace "bulk request: #{data}" }
-        response = client.bulk body: data, index: index
+        response = client(info.host).bulk body: data, index: info.index
         log.on_trace { log.trace "bulk response: #{response}" }
 
         if response['errors']
