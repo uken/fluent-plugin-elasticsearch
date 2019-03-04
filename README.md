@@ -1265,7 +1265,7 @@ The following configuration uses label:
 fluent-plugin-elasticsearch default behavior has a possibility to cause events traffic jam.
 When users use `flush_thread_count` = 1, ES plugin retries to send events if connection errors are disappeared.
 
-To prevent the following warning and sending events blocking, you must specify `flush_thread_count` > 2:
+To prevent the following warning and sending events blocking, you must specify `flush_thread_count` >= 2:
 
 ```log
 2018-12-24 14:32:06 +0900 [warn]: #0 To prevent events traffic jam, you should specify 2 or more 'flush_thread_count'.
