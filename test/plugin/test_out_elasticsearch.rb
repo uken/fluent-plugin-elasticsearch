@@ -2510,4 +2510,59 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_logs_include_compare_size(1, "<=", log, /In Fluent::Plugin::ElasticsearchSimpleSniffer hosts/)
   end
 
+  def test_suppress_doc_wrap
+    driver.configure('write_operation update
+                      id_key id
+                      remove_keys id
+                      suppress_doc_wrap true')
+    stub_elastic
+    doc_body = {'field' => 'value'}
+    script_body = {'source' => 'ctx._source.counter += params.param1',
+                   'lang' => 'painless',
+                   'params' => {'param1' => 1}}
+    upsert_body = {'counter' => 1}
+    driver.run(default_tag: 'test') do
+      driver.feed('id' => 1, 'doc' => doc_body)
+      driver.feed('id' => 2, 'script' => script_body, 'upsert' => upsert_body)
+    end
+    assert(
+      index_cmds[1] == {'doc' => doc_body}
+    )
+    assert(
+      index_cmds[3] == {
+        'script' => script_body,
+        'upsert' => upsert_body
+      }
+    )
+  end
+
+  def test_suppress_doc_wrap_should_handle_record_as_is_at_upsert
+    driver.configure('write_operation upsert
+                      id_key id
+                      remove_keys id
+                      suppress_doc_wrap true')
+    stub_elastic
+    doc_body = {'field' => 'value'}
+    script_body = {'source' => 'ctx._source.counter += params.param1',
+                   'lang' => 'painless',
+                   'params' => {'param1' => 1}}
+    upsert_body = {'counter' => 1}
+    driver.run(default_tag: 'test') do
+      driver.feed('id' => 1, 'doc' => doc_body, 'doc_as_upsert' => true)
+      driver.feed('id' => 2, 'script' => script_body, 'upsert' => upsert_body)
+    end
+    assert(
+      index_cmds[1] == {
+        'doc' => doc_body,
+        'doc_as_upsert' => true
+      }
+    )
+    assert(
+      index_cmds[3] == {
+        'script' => script_body,
+        'upsert' => upsert_body
+      }
+    )
+  end
+
 end
