@@ -1732,4 +1732,63 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_logs_include(log.out.logs, /In Fluent::ElasticsearchSimpleSniffer hosts/, 2)
   end
 
+  def test_suppress_doc_wrap
+    driver.configure('write_operation update
+                      id_key id
+                      remove_keys id
+                      suppress_doc_wrap true')
+    stub_elastic_ping
+    stub_elastic
+    doc_body = {'field' => 'value'}
+    doc_record = {'id' => 1, 'doc' => doc_body}
+    script_body = {'source' => 'ctx._source.counter += params.param1',
+                   'lang' => 'painless',
+                   'params' => {'param1' => 1}}
+    upsert_body = {'counter' => 1}
+    script_record = {'id' => 2, 'script' => script_body, 'upsert' => upsert_body}
+    driver.emit(doc_record, 1)
+    driver.emit(script_record, 2)
+    driver.run
+    assert(
+      index_cmds[1] == {'doc' => doc_body}
+    )
+    assert(
+      index_cmds[3] == {
+        'script' => script_body,
+        'upsert' => upsert_body
+      }
+    )
+  end
+
+  def test_suppress_doc_wrap_should_handle_record_as_is_at_upsert
+    driver.configure('write_operation upsert
+                      id_key id
+                      remove_keys id
+                      suppress_doc_wrap true')
+    stub_elastic_ping
+    stub_elastic
+    doc_body = {'field' => 'value'}
+    doc_record = {'id' => 1, 'doc' => doc_body, 'doc_as_upsert' => true}
+    script_body = {'source' => 'ctx._source.counter += params.param1',
+                   'lang' => 'painless',
+                   'params' => {'param1' => 1}}
+    upsert_body = {'counter' => 1}
+    script_record = {'id' => 2, 'script' => script_body, 'upsert' => upsert_body}
+    driver.emit(doc_record, 1)
+    driver.emit(script_record, 2)
+    driver.run
+    assert(
+      index_cmds[1] == {
+        'doc' => doc_body,
+        'doc_as_upsert' => true
+      }
+    )
+    assert(
+      index_cmds[3] == {
+        'script' => script_body,
+        'upsert' => upsert_body
+      }
+    )
+  end
+
 end

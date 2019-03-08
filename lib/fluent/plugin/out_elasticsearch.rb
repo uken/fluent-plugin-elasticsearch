@@ -90,6 +90,7 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
   config_param :emit_error_for_missing_id, :bool, :default => false
   config_param :sniffer_class_name, :string, :default => nil
   config_param :reload_after, :integer, :default => DEFAULT_RELOAD_AFTER
+  config_param :suppress_doc_wrap, :bool, :default => false
 
   include Fluent::ElasticsearchIndexTemplate
   include Fluent::ElasticsearchConstants
@@ -322,6 +323,9 @@ class Fluent::ElasticsearchOutput < Fluent::ObjectBufferedOutput
 
   def update_body(record, op)
     update = remove_keys(record)
+    if @suppress_doc_wrap
+      return update
+    end
     body = {"doc".freeze => update}
     if op == UPSERT_OP
       if update == record

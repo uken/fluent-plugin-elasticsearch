@@ -60,6 +60,7 @@ Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-
   + [reload_after](#reload_after)
   + [Not seeing a config you need?](#not-seeing-a-config-you-need)
   + [Dynamic configuration](#dynamic-configuration)
+  + [suppress_doc_wrap](#suppress_doc_wrap)
 * [Contact](#contact)
 * [Contributing](#contributing)
 * [Running tests](#running-tests)
@@ -637,6 +638,12 @@ If you want configurations to depend on information in messages, you can use `el
 ```
 
 **Please note, this uses Ruby's `eval` for every message, so there are performance and security implications.**
+
+### suppress_doc_wrap
+
+By default, record body is wrapped by 'doc'. This behavior can not handle update script requests. You can set this to suppress doc wrapping and allow record body to be untouched.
+￼
+Default value is `false`.
 
 ## Contact
 
