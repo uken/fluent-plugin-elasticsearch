@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 1.18.1
+- add new option to suppress doc wrapping (porting to v0.12) (#558)
+
 ### 1.18.0
 - Avoid NoMethodError on unknown Elasticsearch error responses (#487)
 
