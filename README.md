@@ -81,6 +81,7 @@ Current maintainers: @cosmo0920
   + [Placeholders](#placeholders)
   + [Multi workers](#multi-workers)
   + [log_es_400_reason](#log_es_400_reason)
+  + [suppress_doc_wrap](#suppress_doc_wrap)
 * [Troubleshooting](#troubleshooting)
   + [Cannot send events to elasticsearch](#cannot-send-events-to-elasticsearch)
   + [Cannot see detailed failure log](#cannot-see-detailed-failure-log)
@@ -1022,6 +1023,12 @@ Since Fluentd v0.14, multi workers feature had been implemented to increase thro
 ## log_es_400_reason
 
 By default, the error logger won't record the reason for a 400 error from the Elasticsearch API unless you set log_level to debug. However, this results in a lot of log spam, which isn't desirable if all you want is the 400 error reasons. You can set this `true` to capture the 400 error reasons without all the other debug logs.
+
+Default value is `false`.
+
+## suppress_doc_wrap
+
+By default, record body is wrapped by 'doc'. This behavior can not handle update script requests. You can set this to suppress doc wrapping and allow record body to be untouched.
 
 Default value is `false`.
 

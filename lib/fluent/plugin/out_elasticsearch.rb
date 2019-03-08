@@ -132,6 +132,7 @@ EOC
     config_param :default_elasticsearch_version, :integer, :default => DEFAULT_ELASTICSEARCH_VERSION
     config_param :log_es_400_reason, :bool, :default => false
     config_param :custom_headers, :hash, :default => {}
+    config_param :suppress_doc_wrap, :bool, :default => false
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE
@@ -468,6 +469,9 @@ EOC
 
     def update_body(record, op)
       update = remove_keys(record)
+      if @suppress_doc_wrap
+        return update
+      end
       body = {"doc".freeze => update}
       if op == UPSERT_OP
         if update == record
