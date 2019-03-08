@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 3.3.1
+- add new option to suppress doc wrapping (#557)
+- Include 2 (#555)
+
 ### 3.3.0
 - Support builtin placeholders for host and hosts parameter (#554)
 
