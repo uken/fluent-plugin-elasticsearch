@@ -158,7 +158,7 @@ hosts host1:port1,host2:port2,host3:port3
 You can specify multiple Elasticsearch hosts with separator ",".
 
 If you specify multiple hosts, this plugin will load balance updates to Elasticsearch. This is an [elasticsearch-ruby](https://github.com/elasticsearch/elasticsearch-ruby) feature, the default strategy is round-robin.
-**Note:** If you will use scheme https, do not include "https://" in your hosts ie. host "https://domain", this will cause ES cluster to be unreachable and you will recieve an error "Can not reach Elasticsearch cluster"
+**Note:** If you will use scheme https, do not include "https://" in your hosts ie. host "https://domain", this will cause ES cluster to be unreachable and you will receive an error "Can not reach Elasticsearch cluster"
 
 **Note:** Up until v2.8.5, it was allowed to embed the username/password in the URL. However, this syntax is deprecated as of v2.8.6 because it was found to cause serious connection problems (See #394). Please migrate your settings to use the `user` and `password` field (described below) instead.
 
@@ -190,7 +190,7 @@ Specify `ssl_verify false` to skip ssl verification (defaults to true)
 logstash_format true # defaults to false
 ```
 
-This is meant to make writing data into Elasticsearch indices compatible to what [Logstash](https://www.elastic.co/products/logstash) calls them. By doing this, one could take advantage of [Kibana](https://www.elastic.co/products/kibana). See logstash_prefix and logstash_dateformat to customize this index name pattern. The index name will be `#{logstash_prefix}-#{formated_date}`
+This is meant to make writing data into Elasticsearch indices compatible to what [Logstash](https://www.elastic.co/products/logstash) calls them. By doing this, one could take advantage of [Kibana](https://www.elastic.co/products/kibana). See logstash_prefix and logstash_dateformat to customize this index name pattern. The index name will be `#{logstash_prefix}-#{formatted_date}`
 
 :warning: Setting this option to `true` will ignore the `index_name` setting. The default index name prefix is `logstash-`.
 
@@ -236,7 +236,7 @@ pipeline pipeline_id
 
 The format of the time stamp field (`@timestamp` or what you specify with [time_key](#time_key)). This parameter only has an effect when [logstash_format](#logstash_format) is true as it only affects the name of the index we write to. Please see [Time#strftime](http://ruby-doc.org/core-1.9.3/Time.html#method-i-strftime) for information about the value of this format.
 
-Setting this to a known format can vastly improve your log ingestion speed if all most of your logs are in the same format. If there is an error parsing this format the timestamp will default to the ingestion time. If you are on Ruby 2.0 or later you can get a further performance improvment by installing the "strptime" gem: `fluent-gem install strptime`.
+Setting this to a known format can vastly improve your log ingestion speed if all most of your logs are in the same format. If there is an error parsing this format the timestamp will default to the ingestion time. If you are on Ruby 2.0 or later you can get a further performance improvement by installing the "strptime" gem: `fluent-gem install strptime`.
 
 For example to parse ISO8601 times with sub-second precision:
 
@@ -530,7 +530,7 @@ This following record `{"name": "Johnny", "request_id": "87d89af7daffad6"}` will
 { "name": "Johnny", "request_id": "87d89af7daffad6" }
 ```
 
-Fluentd re-emits events that failed to be indexed/ingested in Elasticsearch with a new and unique `_id` value, this means that congested Elasticsearch clusters that reject events (due to command queue overflow, for example) will cause Fluentd to re-emit the event with a new `_id`, however Elasticsearch may actually process both (or more) attempts (with some delay) and create duplicate events in the index (since each have a unique `_id` value), one possible workaround is to use the [fluent-plugin-genhashvalue](https://github.com/mtakemi/fluent-plugin-genhashvalue) plugin to generate a unique `_hash` key in the record of each event, this `_hash` record can be used as the `id_key` to prevent Elasticsearch from creating deplicate events.
+Fluentd re-emits events that failed to be indexed/ingested in Elasticsearch with a new and unique `_id` value, this means that congested Elasticsearch clusters that reject events (due to command queue overflow, for example) will cause Fluentd to re-emit the event with a new `_id`, however Elasticsearch may actually process both (or more) attempts (with some delay) and create duplicate events in the index (since each have a unique `_id` value), one possible workaround is to use the [fluent-plugin-genhashvalue](https://github.com/mtakemi/fluent-plugin-genhashvalue) plugin to generate a unique `_hash` key in the record of each event, this `_hash` record can be used as the `id_key` to prevent Elasticsearch from creating duplicate events.
 
 ```
 id_key _hash
@@ -540,7 +540,7 @@ Example configuration for [fluent-plugin-genhashvalue](https://github.com/mtakem
 ```
 <filter logs.**>
   @type genhashvalue
-  keys sessionid,requestid
+  keys session_id,request_id
   hash_type md5    # md5/sha1/sha256/sha512
   base64_enc true
   base91_enc false
@@ -745,7 +745,7 @@ http_backend typhoeus
 
 ### prefer_oj_serializer
 
-With default beavior, Elasticsearch client uses `Yajl` as JSON encoder/decoder.
+With default behavior, Elasticsearch client uses `Yajl` as JSON encoder/decoder.
 `Oj` is the alternative high performance JSON encoder/decoder.
 When this parameter sets as `true`, Elasticsearch client uses `Oj` as JSON encoder/decoder.
 
@@ -833,7 +833,7 @@ Here is a sample config:
   @type elasticsearch
   id_key _hash # specify same key name which is specified in hash_id_key
   remove_keys _hash # Elasticsearch doesn't like keys that start with _
-  # other settings are ommitted.
+  # other settings are omitted.
 </match>
 ```
 
@@ -961,7 +961,7 @@ If you want configurations to depend on information in messages, you can use `el
 
 v0.14 placeholders can handle `${tag}` for tag, `%Y%m%d` like strftime format, and custom record keys like as `record["mykey"]`.
 
-Note that custom chunk key is diffrent notations for `record_reformer` and `record_modifier`.
+Note that custom chunk key is different notations for `record_reformer` and `record_modifier`.
 They uses `record["some_key"]` to specify placeholders, but this feature uses `${key1}`, `${key2}` notation. And tag, time, and some arbitrary keys must be included in buffer directive attributes.
 
 They are used as below:
@@ -1052,7 +1052,7 @@ Or, fluent-plugin-elasticsearch v2.11.7 or later, users can inspect version inco
 validate_client_version true
 ```
 
-If you get the following error message, please consider to install compatibile elasticsearch client gems:
+If you get the following error message, please consider to install compatible elasticsearch client gems:
 
 ```
 Detected ES 5 but you use ES client 6.1.0.
@@ -1068,7 +1068,7 @@ A common cause of failure is that you are trying to connect to an Elasticsearch 
 For example, `out_elasticsearch` set up ssl_version to TLSv1 due to historical reason.
 Modern Elasticsearch ecosystem requests to communicate with TLS v1.2 or later.
 But, in this case, `out_elasticsearch` conceals transporter part failure log by default.
-If you want to aquire transporter log, please consider to set the following configuration:
+If you want to acquire transporter log, please consider to set the following configuration:
 
 ```
 with_transporter_log true
@@ -1157,7 +1157,7 @@ Oct 31 9:44:45 <ES-Host> fluentd[6442]:         from /opt/fluentd/embedded/bin/f
 Oct 31 9:44:45 <ES-Host> systemd[1]: fluentd.service: Control process exited, code=exited status=1
 ```
 
-If you want to aquire transporter log, please consider to set the following configuration:
+If you want to acquire transporter log, please consider to set the following configuration:
 
 ```
 with_transporter_log true
@@ -1171,7 +1171,7 @@ Then, the following log is shown in Fluentd log:
 2018-10-31 10:00:57 +0900 [error]: #7 [Faraday::ConnectionFailed] Connection reset by peer - SSL_connect (Errno::ECONNRESET) {:host=>"<ES-Host>", :port=>9400, :scheme=>"https", :protocol=>"https"}
 ```
 
-The above logs indicates that using incompatibile SSL/TLS version between fluent-plugin-elasticsearch and nginx, which is reverse proxy, is root cause of this issue.
+The above logs indicates that using incompatible SSL/TLS version between fluent-plugin-elasticsearch and nginx, which is reverse proxy, is root cause of this issue.
 
 If you want to use TLS v1.2, please use `ssl_version` parameter like as:
 
@@ -1302,7 +1302,7 @@ If you use vanilla Fluentd, you can install it by:
 gem install typhoeus
 ```
 
-But, you use td-agent instead of vannila Fluentd, you have to use `td-agent-gem`:
+But, you use td-agent instead of vanilla Fluentd, you have to use `td-agent-gem`:
 
 ```
 td-agent-gem install typhoeus
