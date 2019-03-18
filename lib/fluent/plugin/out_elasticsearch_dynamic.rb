@@ -28,7 +28,6 @@ module Fluent::Plugin
         @dynamic_config[key] = value.to_s
       }
       # end eval all configs
-      @current_config = nil
     end
 
     def create_meta_config_map
@@ -258,21 +257,6 @@ module Fluent::Plugin
     def is_valid_expand_param_type(param)
       return false if [:@buffer_type].include?(param)
       return self.instance_variable_get(param).is_a?(String)
-    end
-
-    def is_existing_connection(host)
-      # check if the host provided match the current connection
-      return false if @_es.nil?
-      return false if @current_config.nil?
-      return false if host.length != @current_config.length
-
-      for i in 0...host.length
-        if !host[i][:host].eql? @current_config[i][:host] || host[i][:port] != @current_config[i][:port]
-          return false
-        end
-      end
-
-      return true
     end
   end
 end

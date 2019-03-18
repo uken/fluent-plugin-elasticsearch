@@ -274,6 +274,7 @@ EOC
       end
 
       @routing_key_name = configure_routing_key_name
+      @current_config = nil
     end
 
     def backend_options
@@ -353,7 +354,10 @@ EOC
       # check here to see if we already have a client connection for the given host
       connection_options = get_connection_options(host)
 
+      @_es = nil unless is_existing_connection(connection_options[:hosts])
+
       @_es ||= begin
+        @current_config = connection_options[:hosts].clone
         adapter_conf = lambda {|f| f.adapter @http_backend, @backend_options }
         local_reload_connections = @reload_connections
         if local_reload_connections && @reload_after > DEFAULT_RELOAD_AFTER
@@ -427,8 +431,8 @@ EOC
       }
     end
 
-    def connection_options_description
-      get_connection_options[:hosts].map do |host_info|
+    def connection_options_description(con_host=nil)
+      get_connection_options(con_host)[:hosts].map do |host_info|
         attributes = host_info.dup
         attributes[:password] = 'obfuscated' if attributes.has_key?(:password)
         attributes.inspect
@@ -565,7 +569,6 @@ EOC
         end
       end
 
-
       bulk_message.each do |info, msgs|
         send_bulk(msgs, tag, chunk, bulk_message_count[info], extracted_values, info) unless msgs.empty?
         msgs.clear
@@ -678,8 +681,23 @@ EOC
         @_es = nil if @reconnect_on_error
         @_es_info = nil if @reconnect_on_error
         # FIXME: identify unrecoverable errors and raise UnrecoverableRequestFailure instead
-        raise RecoverableRequestFailure, "could not push logs to Elasticsearch cluster (#{connection_options_description}): #{e.message}"
+        raise RecoverableRequestFailure, "could not push logs to Elasticsearch cluster (#{connection_options_description(info.host)}): #{e.message}"
       end
+    end
+
+    def is_existing_connection(host)
+      # check if the host provided match the current connection
+      return false if @_es.nil?
+      return false if @current_config.nil?
+      return false if host.length != @current_config.length
+
+      for i in 0...host.length
+        if !host[i][:host].eql? @current_config[i][:host] || host[i][:port] != @current_config[i][:port]
+          return false
+        end
+      end
+
+      return true
     end
   end
 end

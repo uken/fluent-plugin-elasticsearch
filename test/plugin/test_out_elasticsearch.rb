@@ -1535,12 +1535,16 @@ class ElasticsearchOutput < Test::Unit::TestCase
                          ]
                        ))
       time = Time.parse Date.today.iso8601
-      pipeline_id = "5"
-      elastic_request = stub_elastic("http://myhost-5:9200/_bulk")
+      first_pipeline_id = "1"
+      second_pipeline_id = "2"
+      first_request = stub_elastic("http://myhost-1:9200/_bulk")
+      second_request = stub_elastic("http://myhost-2:9200/_bulk")
       driver.run(default_tag: 'test') do
-        driver.feed(time.to_i, sample_record.merge({"pipeline_id" => pipeline_id}))
+        driver.feed(time.to_i, sample_record.merge({"pipeline_id" => first_pipeline_id}))
+        driver.feed(time.to_i, sample_record.merge({"pipeline_id" => second_pipeline_id}))
       end
-      assert_requested(elastic_request)
+      assert_requested(first_request)
+      assert_requested(second_request)
     end
   end
 
@@ -1558,7 +1562,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(logstash_index, index_cmds.first['index']['_index'])
   end
 
-    def test_writes_to_logstash_index_with_specified_dateformat
+  def test_writes_to_logstash_index_with_specified_dateformat
     driver.configure("logstash_format true
                       logstash_dateformat %Y.%m")
     time = Time.parse Date.today.iso8601
