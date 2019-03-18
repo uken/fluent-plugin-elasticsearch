@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 3.3.2
+- Fix support for host, hosts placeholders (#560)
+- typo fixes in README.md (#559)
+
 ### 3.3.1
 - add new option to suppress doc wrapping (#557)
 - Include 2 (#555)
