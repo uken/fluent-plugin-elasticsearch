@@ -1546,6 +1546,26 @@ class ElasticsearchOutput < Test::Unit::TestCase
       assert_requested(first_request)
       assert_requested(second_request)
     end
+
+    def test_writes_to_extracted_host_with_placeholder_replaced_in_exception_message
+      driver.configure(Fluent::Config::Element.new(
+                         'ROOT', '', {
+                           '@type' => 'elasticsearch',
+                           'host' => 'myhost-${pipeline_id}',
+                         }, [
+                           Fluent::Config::Element.new('buffer', 'tag,pipeline_id', {}, [])
+                         ]
+                       ))
+      time = Time.parse Date.today.iso8601
+      pipeline_id = "1"
+      request = stub_elastic_unavailable("http://myhost-1:9200/_bulk")
+      exception = assert_raise(Fluent::Plugin::ElasticsearchOutput::RecoverableRequestFailure) {
+        driver.run(default_tag: 'test') do
+          driver.feed(time.to_i, sample_record.merge({"pipeline_id" => pipeline_id}))
+        end
+      }
+      assert_equal("could not push logs to Elasticsearch cluster ({:host=>\"myhost-1\", :port=>9200, :scheme=>\"http\"}): [503] ", exception.message)
+    end
   end
 
   def test_writes_to_logstash_index_with_specified_prefix_uppercase
