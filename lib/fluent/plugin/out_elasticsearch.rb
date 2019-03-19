@@ -133,6 +133,8 @@ EOC
     config_param :log_es_400_reason, :bool, :default => false
     config_param :custom_headers, :hash, :default => {}
     config_param :suppress_doc_wrap, :bool, :default => false
+    config_param :ignore_exceptions, :array, :default => [], value_type: :string, :desc => "Ignorable exception list"
+    config_param :exception_backup, :bool, :default => true, :desc => "Chunk backup flag when ignore exception occured"
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE
@@ -275,6 +277,16 @@ EOC
 
       @routing_key_name = configure_routing_key_name
       @current_config = nil
+
+      @ignore_exception_classes = @ignore_exceptions.map do |exception|
+        unless Object.const_defined?(exception)
+          log.warn "Cannot find class #{exception}. Will ignore it."
+
+          nil
+        else
+          Object.const_get(exception)
+        end
+      end.compact
     end
 
     def backend_options
@@ -678,10 +690,17 @@ EOC
         emit_tag = @retry_tag ? @retry_tag : tag
         router.emit_stream(emit_tag, e.retry_stream)
       rescue => e
+        ignore = @ignore_exception_classes.any? { |clazz| e.class <= clazz }
+
+        log.warn "Exception ignored in tag #{tag}: #{e.class.name} #{e.message}" if ignore
+
         @_es = nil if @reconnect_on_error
         @_es_info = nil if @reconnect_on_error
+
+        raise UnrecoverableRequestFailure if ignore && @exception_backup
+
         # FIXME: identify unrecoverable errors and raise UnrecoverableRequestFailure instead
-        raise RecoverableRequestFailure, "could not push logs to Elasticsearch cluster (#{connection_options_description(info.host)}): #{e.message}"
+        raise RecoverableRequestFailure, "could not push logs to Elasticsearch cluster (#{connection_options_description(info.host)}): #{e.message}" unless ignore
       end
     end
 

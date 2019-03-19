@@ -2569,4 +2569,32 @@ class ElasticsearchOutput < Test::Unit::TestCase
     )
   end
 
+  def test_ignore_exception
+    driver.configure('ignore_exceptions ["Elasticsearch::Transport::Transport::Errors::ServiceUnavailable"]')
+    stub_elastic_unavailable
+
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+  end
+
+  def test_ignore_exception_with_superclass
+    driver.configure('ignore_exceptions ["Elasticsearch::Transport::Transport::ServerError"]')
+    stub_elastic_unavailable
+
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+  end
+
+  def test_ignore_excetion_handles_appropriate_ones
+    driver.configure('ignore_exceptions ["Faraday::ConnectionFailed"]')
+    stub_elastic_unavailable
+
+    assert_raise(Fluent::Plugin::ElasticsearchOutput::RecoverableRequestFailure) {
+      driver.run(default_tag: 'test', shutdown: false) do
+        driver.feed(sample_record)
+      end
+    }
+  end
 end
