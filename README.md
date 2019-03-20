@@ -82,6 +82,8 @@ Current maintainers: @cosmo0920
   + [Multi workers](#multi-workers)
   + [log_es_400_reason](#log_es_400_reason)
   + [suppress_doc_wrap](#suppress_doc_wrap)
+  + [ignore_exceptions](#ignore_exceptions)
+  + [exception_backup](#exception_backup)
 * [Troubleshooting](#troubleshooting)
   + [Cannot send events to elasticsearch](#cannot-send-events-to-elasticsearch)
   + [Cannot see detailed failure log](#cannot-see-detailed-failure-log)
@@ -1031,6 +1033,24 @@ Default value is `false`.
 By default, record body is wrapped by 'doc'. This behavior can not handle update script requests. You can set this to suppress doc wrapping and allow record body to be untouched.
 
 Default value is `false`.
+
+## ignore_exceptions
+
+A list of exception that will be ignored - when the exception occurs the chunk will be discarded and the buffer retry mechanism won't be called. It is possible also to specify classes at higher level in the hierarchy. For example
+
+```
+ignore_exceptions ["Elasticsearch::Transport::Transport::ServerError"]
+```
+
+will match all subclasses of `ServerError` - `Elasticsearch::Transport::Transport::Errors::BadRequest`, `Elasticsearch::Transport::Transport::Errors::ServiceUnavailable`, etc.
+
+Default value is empty list (no exception is ignored).
+
+## exception_backup
+
+Indicates whether to backup chunk when ignore exception occurs.
+
+Default value is `true`.
 
 ## Troubleshooting
 
