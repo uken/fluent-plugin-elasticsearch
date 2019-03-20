@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 3.3.3
+- Add unit test for exception message (#563)
+- Add ignore_exceptions config (#562)
+
 ### 3.3.2
 - Fix support for host, hosts placeholders (#560)
 - typo fixes in README.md (#559)
