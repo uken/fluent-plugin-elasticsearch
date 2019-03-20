@@ -91,6 +91,7 @@ Current maintainers: @cosmo0920
   + [Declined logs are resubmitted forever, why?](#declined-logs-are-resubmitted-forever-why)
   + [Suggested to increase flush_thread_count, why?](#suggested-to-increase-flush_thread_count-why)
   + [Suggested to install typhoeus gem, why?](#suggested-to-install-typhoeus-gem-why)
+  + [Stopped to send events on k8s, why?](#stopped-to-send-events-on-k8s-why)
 * [Contact](#contact)
 * [Contributing](#contributing)
 * [Running tests](#running-tests)
@@ -1329,6 +1330,24 @@ td-agent-gem install typhoeus
 ```
 
 In more detail, please refer to [the official plugin management document](https://docs.fluentd.org/v1.0/articles/plugin-management).
+
+### Stopped to send events on k8s, why?
+
+fluent-plugin-elasticsearch reloads connection after 10000 requests. (Not correspond to events counts because ES plugin uses bulk API.)
+
+This functionality which is originated from elasticsaearch-ruby gem is enabled by default.
+
+Sometimes this reloading functionality bothers users to send events with ES plugin.
+
+On k8s platform, users sometimes shall specify the following settings:
+
+```aconf
+reload_connections false
+```
+
+If you use [fluentd-kubernetes-daemonset](https://github.com/fluent/fluentd-kubernetes-daemonset), you can specify `reload_connections` to be false with `FLUENT_ELASTICSEARCH_RELOAD_CONNECTIONS` environment variable.
+
+This issue had been reported at [#525](https://github.com/uken/fluent-plugin-elasticsearch/issues/525).
 
 ## Contact
 
