@@ -1343,9 +1343,15 @@ On k8s platform, users sometimes shall specify the following settings:
 
 ```aconf
 reload_connections false
+reconnect_on_error true
+reload_on_failure true
 ```
 
-If you use [fluentd-kubernetes-daemonset](https://github.com/fluent/fluentd-kubernetes-daemonset), you can specify `reload_connections` to be false with `FLUENT_ELASTICSEARCH_RELOAD_CONNECTIONS` environment variable.
+If you use [fluentd-kubernetes-daemonset](https://github.com/fluent/fluentd-kubernetes-daemonset), you can specify them with environment variables:
+
+* `FLUENT_ELASTICSEARCH_RELOAD_CONNECTIONS` as `false`
+* `FLUENT_ELASTICSEARCH_RECONNECT_ON_ERROR` as `true`
+* `FLUENT_ELASTICSEARCH_RELOAD_ON_FAILURE` as `true`
 
 This issue had been reported at [#525](https://github.com/uken/fluent-plugin-elasticsearch/issues/525).
 
