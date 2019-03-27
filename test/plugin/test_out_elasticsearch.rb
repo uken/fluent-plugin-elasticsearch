@@ -659,6 +659,26 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
   end
 
+  def test_template_installation_exclusive_for_host_placeholder
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_template.json')
+
+    config = %{
+      host            logs-${tag}.google.com
+      port            777
+      scheme          https
+      path            /es/
+      user            john
+      password        doe
+      template_name   logstash
+      template_file   #{template_file}
+    }
+
+    assert_raise(Fluent::ConfigError) do
+      driver(config)
+    end
+  end
+
   def test_template_retry_install
     cwd = File.dirname(__FILE__)
     template_file = File.join(cwd, 'test_template.json')
