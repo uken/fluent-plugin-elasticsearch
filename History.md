@@ -2,6 +2,11 @@
 
 ### [Unreleased]
 
+### 3.4.0
+- Check exclusive feature on #configure (#569)
+- Modify FAQ for highly load k8s EFK stack (#566)
+- Add FAQ for high load k8s EFK stack (#564)
+
 ### 3.3.3
 - Add unit test for exception message (#563)
 - Add ignore_exceptions config (#562)
