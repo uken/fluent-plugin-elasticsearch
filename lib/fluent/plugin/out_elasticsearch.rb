@@ -176,6 +176,12 @@ EOC
 
       raise Fluent::ConfigError, "'max_retry_putting_template' must be positive number." if @max_retry_putting_template < 0
 
+      # Raise error when using host placeholders and template features at same time.
+      valid_host_placeholder = placeholder?(:host_placeholder, @host)
+      if valid_host_placeholder && (@template_name && @template_file || @templates)
+        raise Fluent::ConfigError, "host placeholder and template installation are exclusive features."
+      end
+
       if !Fluent::Engine.dry_run_mode
         if @template_name && @template_file
           retry_operate(@max_retry_putting_template) do
@@ -287,6 +293,15 @@ EOC
           Object.const_get(exception)
         end
       end.compact
+    end
+
+    def placeholder?(name, param)
+      begin
+        placeholder_validate!(name, param)
+        true
+      rescue Fluent::ConfigError
+        false
+      end
     end
 
     def backend_options
