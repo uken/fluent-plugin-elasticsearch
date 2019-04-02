@@ -12,6 +12,7 @@ end
 require 'fluent/plugin/output'
 require 'fluent/event'
 require 'fluent/error'
+require 'fluent/time'
 require_relative 'elasticsearch_constants'
 require_relative 'elasticsearch_error'
 require_relative 'elasticsearch_error_handler'
@@ -366,7 +367,13 @@ EOC
           Proc.new { |value| DateTime.strptime(value, @time_key_format) }
         end
       else
-        Proc.new { |value| DateTime.parse(value) }
+        Proc.new { |value|
+          if value.is_a?(Numeric)
+            numeric_time_parser = Fluent::NumericTimeParser.new(:float)
+            value = Time.at(numeric_time_parser.parse(value).to_r).strftime("%Y-%m-%d %H:%M:%S.%N %z")
+          end
+          DateTime.parse(value)
+        }
       end
     end
 
