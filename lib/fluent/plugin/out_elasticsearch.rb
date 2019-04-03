@@ -377,6 +377,11 @@ EOC
       end
     end
 
+    def convert_numeric_time_into_string(numeric_time, time_key_format = "%Y-%m-%d %H:%M:%S.%N%z")
+      numeric_time_parser = Fluent::NumericTimeParser.new(:float)
+      Time.at(numeric_time_parser.parse(numeric_time).to_r).strftime(time_key_format)
+    end
+
     def parse_time(value, event_time, tag)
       @time_parser.call(value)
     rescue => e
