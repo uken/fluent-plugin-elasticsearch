@@ -1739,6 +1739,22 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal("logstash-2001.02.03", index_cmds[0]['index']['_index'])
   end
 
+  def test_uses_custom_time_key_with_float_record_and_format
+    driver.configure("logstash_format true
+                      time_key_format %Y-%m-%d %H:%M:%S.%N%z
+                      time_key vtm\n")
+    stub_elastic
+    ts = "2001-02-03 13:14:01.673+02:00"
+    time = Time.parse(ts)
+    current_zone_offset = Time.now.to_datetime.offset
+    float_time = time.to_f
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record.merge!('vtm' => float_time))
+    end
+    assert(index_cmds[1].has_key? '@timestamp')
+    assert_equal(index_cmds[1]['@timestamp'], DateTime.parse(ts).new_offset(current_zone_offset).iso8601(9))
+  end
+
   def test_uses_custom_time_key_with_format_without_logstash
     driver.configure("include_timestamp true
                       index_name test

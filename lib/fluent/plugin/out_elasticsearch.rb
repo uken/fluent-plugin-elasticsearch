@@ -359,12 +359,18 @@ EOC
           # Strptime doesn't support all formats, but for those it does it's
           # blazingly fast.
           strptime = Strptime.new(@time_key_format)
-          Proc.new { |value| strptime.exec(value).to_datetime }
+          Proc.new { |value|
+            value = convert_numeric_time_into_string(value, @time_key_format) if value.is_a?(Numeric)
+            strptime.exec(value).to_datetime
+          }
         rescue
           # Can happen if Strptime doesn't recognize the format; or
           # if strptime couldn't be required (because it's not installed -- it's
           # ruby 2 only)
-          Proc.new { |value| DateTime.strptime(value, @time_key_format) }
+          Proc.new { |value|
+            value = convert_numeric_time_into_string(value, @time_key_format) if value.is_a?(Numeric)
+            DateTime.strptime(value, @time_key_format)
+          }
         end
       else
         Proc.new { |value|
