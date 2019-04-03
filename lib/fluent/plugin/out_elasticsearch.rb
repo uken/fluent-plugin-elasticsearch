@@ -368,10 +368,7 @@ EOC
         end
       else
         Proc.new { |value|
-          if value.is_a?(Numeric)
-            numeric_time_parser = Fluent::NumericTimeParser.new(:float)
-            value = Time.at(numeric_time_parser.parse(value).to_r).strftime("%Y-%m-%d %H:%M:%S.%N %z")
-          end
+          value = convert_numeric_time_into_string(value) if value.is_a?(Numeric)
           DateTime.parse(value)
         }
       end
