@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 3.4.1
+- Handle non-String value on parse_time (#570)
+
 ### 3.4.0
 - Check exclusive feature on #configure (#569)
 - Modify FAQ for highly load k8s EFK stack (#566)
