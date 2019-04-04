@@ -12,6 +12,7 @@ end
 require 'fluent/plugin/output'
 require 'fluent/event'
 require 'fluent/error'
+require 'fluent/time'
 require_relative 'elasticsearch_constants'
 require_relative 'elasticsearch_error'
 require_relative 'elasticsearch_error_handler'
@@ -358,16 +359,30 @@ EOC
           # Strptime doesn't support all formats, but for those it does it's
           # blazingly fast.
           strptime = Strptime.new(@time_key_format)
-          Proc.new { |value| strptime.exec(value).to_datetime }
+          Proc.new { |value|
+            value = convert_numeric_time_into_string(value, @time_key_format) if value.is_a?(Numeric)
+            strptime.exec(value).to_datetime
+          }
         rescue
           # Can happen if Strptime doesn't recognize the format; or
           # if strptime couldn't be required (because it's not installed -- it's
           # ruby 2 only)
-          Proc.new { |value| DateTime.strptime(value, @time_key_format) }
+          Proc.new { |value|
+            value = convert_numeric_time_into_string(value, @time_key_format) if value.is_a?(Numeric)
+            DateTime.strptime(value, @time_key_format)
+          }
         end
       else
-        Proc.new { |value| DateTime.parse(value) }
+        Proc.new { |value|
+          value = convert_numeric_time_into_string(value) if value.is_a?(Numeric)
+          DateTime.parse(value)
+        }
       end
+    end
+
+    def convert_numeric_time_into_string(numeric_time, time_key_format = "%Y-%m-%d %H:%M:%S.%N%z")
+      numeric_time_parser = Fluent::NumericTimeParser.new(:float)
+      Time.at(numeric_time_parser.parse(numeric_time).to_r).strftime(time_key_format)
     end
 
     def parse_time(value, event_time, tag)
