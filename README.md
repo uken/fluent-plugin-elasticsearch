@@ -404,7 +404,7 @@ If [customize_template](#customize_template) is set, then this parameter will be
 
 ### deflector_alias
 
-Specify the deflector alias which would be assigned to the rollover index created. This is useful in case of using the Elasticsearch rollover API 
+Specify the deflector alias which would be assigned to the rollover index created. This is useful in case of using the Elasticsearch rollover API
 ```
 deflector_alias test-current
 ```
