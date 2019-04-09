@@ -161,6 +161,7 @@ hosts host1:port1,host2:port2,host3:port3
 You can specify multiple Elasticsearch hosts with separator ",".
 
 If you specify multiple hosts, this plugin will load balance updates to Elasticsearch. This is an [elasticsearch-ruby](https://github.com/elasticsearch/elasticsearch-ruby) feature, the default strategy is round-robin.
+
 **Note:** If you will use scheme https, do not include "https://" in your hosts ie. host "https://domain", this will cause ES cluster to be unreachable and you will receive an error "Can not reach Elasticsearch cluster"
 
 **Note:** Up until v2.8.5, it was allowed to embed the username/password in the URL. However, this syntax is deprecated as of v2.8.6 because it was found to cause serious connection problems (See #394). Please migrate your settings to use the `user` and `password` field (described below) instead.
@@ -309,7 +310,7 @@ By default, the records inserted into index `logstash-YYMMDD` with UTC (Coordina
 
 Tell this plugin to find the index name to write to in the record under this key in preference to other mechanisms. Key can be specified as path to nested record using dot ('.') as a separator.
 
-If it is present in the record (and the value is non falsey) the value will be used as the index name to write to and then removed from the record before output; if it is not found then it will use logstash_format or index_name settings as configured.
+If it is present in the record (and the value is non falsy) the value will be used as the index name to write to and then removed from the record before output; if it is not found then it will use logstash_format or index_name settings as configured.
 
 Suppose you have the following settings
 
@@ -403,7 +404,7 @@ If [customize_template](#customize_template) is set, then this parameter will be
 
 ### deflector_alias
 
-Specify the deflector alias which would be assigned to the rollover index created. This is useful in case of using the Elasticsearch rollover API 
+Specify the deflector alias which would be assigned to the rollover index created. This is useful in case of using the Elasticsearch rollover API
 ```
 deflector_alias test-current
 ```
