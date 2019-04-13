@@ -1336,7 +1336,7 @@ In more detail, please refer to [the official plugin management document](https:
 
 fluent-plugin-elasticsearch reloads connection after 10000 requests. (Not correspond to events counts because ES plugin uses bulk API.)
 
-This functionality which is originated from elasticsaearch-ruby gem is enabled by default.
+This functionality which is originated from elasticsearch-ruby gem is enabled by default.
 
 Sometimes this reloading functionality bothers users to send events with ES plugin.
 
