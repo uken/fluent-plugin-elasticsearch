@@ -667,7 +667,7 @@ EOC
           target_type = '_doc'.freeze
         end
       else
-        if @last_seen_major_version >= 7 && target_type != DEFAULT_TYPE_NAME_ES_7x
+        if @last_seen_major_version >= 7 && @type_name != DEFAULT_TYPE_NAME_ES_7x
           log.warn "Detected ES 7.x or above: `_doc` will be used as the document `_type`."
           target_type = '_doc'.freeze
         else
