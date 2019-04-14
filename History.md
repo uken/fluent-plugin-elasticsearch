@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 3.4.2
+- Comparing DEFAULT_TYPE_NAME_ES_7x to target_type instead of type_name (#573)
+
 ### 3.4.1
 - Handle non-String value on parse_time (#570)
 
