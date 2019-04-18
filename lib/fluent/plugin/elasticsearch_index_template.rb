@@ -28,7 +28,7 @@ module Fluent::ElasticsearchIndexTemplate
     return false
   end
 
-  def retry_operate(max_retries)
+  def retry_operate(max_retries, fail_on_retry_exceed = true)
     return unless block_given?
     retries = 0
     begin
@@ -42,8 +42,10 @@ module Fluent::ElasticsearchIndexTemplate
         log.warn "Could not communicate to Elasticsearch, resetting connection and trying again. #{e.message}"
         retry
       end
+      message = "Could not communicate to Elasticsearch after #{retries} retries. #{e.message}"
+      log.warn message
       raise Fluent::Plugin::ElasticsearchError::RetryableOperationExhaustedFailure,
-            "Could not communicate to Elasticsearch after #{retries} retries. #{e.message}"
+            message if fail_on_retry_exceed
     end
   end
 

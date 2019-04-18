@@ -679,7 +679,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
   end
 
-  def test_template_retry_install
+  def test_template_retry_install_fails
     cwd = File.dirname(__FILE__)
     template_file = File.join(cwd, 'test_template.json')
 
@@ -705,6 +705,35 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_raise(Fluent::Plugin::ElasticsearchError::RetryableOperationExhaustedFailure) do
       driver(config)
     end
+
+    assert_equal(connection_resets, 4)
+  end
+
+  def test_template_retry_install_does_not_fail
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_template.json')
+
+    config = %{
+      host            logs.google.com
+      port            778
+      scheme          https
+      path            /es/
+      user            john
+      password        doe
+      template_name   logstash
+      template_file   #{template_file}
+      max_retry_putting_template 3
+      fail_on_putting_template_retry_exceed false
+    }
+
+    connection_resets = 0
+    # check if template exists
+    stub_request(:get, "https://john:doe@logs.google.com:778/es//_template/logstash").with do |req|
+      connection_resets += 1
+      raise Faraday::ConnectionFailed, "Test message"
+    end
+
+    driver(config)
 
     assert_equal(connection_resets, 4)
   end

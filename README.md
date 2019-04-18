@@ -43,6 +43,7 @@ Current maintainers: @cosmo0920
   + [index_prefix](#index_prefix)
   + [templates](#templates)
   + [max_retry_putting_template](#max_retry_putting_template)
+  + [fail_on_putting_template_retry_exceed](#fail_on_putting_template_retry_exceed)
   + [max_retry_get_es_version](#max_retry_get_es_version)
   + [request_timeout](#request_timeout)
   + [reload_connections](#reload_connections)
@@ -448,6 +449,15 @@ Usually, booting up clustered Elasticsearch containers are much slower than laun
 
 ```
 max_retry_putting_template 15 # defaults to 10
+```
+
+### fail_on_putting_template_retry_exceed
+
+Indicates whether to fail when `max_retry_putting_template` is exceeded.
+If you have multiple output plugin, you could use this property to do not fail on fluentd statup.
+
+```
+fail_on_putting_template_retry_exceed false # defaults to true
 ```
 
 ### max_retry_get_es_version

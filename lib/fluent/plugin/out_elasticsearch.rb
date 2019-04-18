@@ -109,6 +109,7 @@ EOC
     config_param :application_name, :string, :default => "default"
     config_param :templates, :hash, :default => nil
     config_param :max_retry_putting_template, :integer, :default => 10
+    config_param :fail_on_putting_template_retry_exceed, :bool, :default => true
     config_param :max_retry_get_es_version, :integer, :default => 15
     config_param :include_tag_key, :bool, :default => false
     config_param :tag_key, :string, :default => 'tag'
@@ -185,7 +186,7 @@ EOC
 
       if !Fluent::Engine.dry_run_mode
         if @template_name && @template_file
-          retry_operate(@max_retry_putting_template) do
+          retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
             if @customize_template
               if @rollover_index
                 raise Fluent::ConfigError, "'deflector_alias' must be provided if 'rollover_index' is set true ." if not @deflector_alias
@@ -196,7 +197,7 @@ EOC
             end
           end
         elsif @templates
-          retry_operate(@max_retry_putting_template) do
+          retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
             templates_hash_install(@templates, @template_overwrite)
           end
         end
