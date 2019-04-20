@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 3.4.3
+- Add fail_on_putting_template_retry_exceed config (#579)
+
 ### 3.4.2
 - Comparing DEFAULT_TYPE_NAME_ES_7x to target_type instead of type_name (#573)
 
