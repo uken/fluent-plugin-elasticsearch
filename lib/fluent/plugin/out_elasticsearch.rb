@@ -11,6 +11,7 @@ end
 
 require 'fluent/output'
 require 'fluent/event'
+require 'fluent/log-ext'
 require_relative 'elasticsearch_constants'
 require_relative 'elasticsearch_error_handler'
 require_relative 'elasticsearch_index_template'
