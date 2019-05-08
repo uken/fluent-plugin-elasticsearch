@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 3.5.0
+- Adopt Elasticsearch ruby client v7 loggable class (#583)
+
 ### 3.4.3
 - Add fail_on_putting_template_retry_exceed config (#579)
 
