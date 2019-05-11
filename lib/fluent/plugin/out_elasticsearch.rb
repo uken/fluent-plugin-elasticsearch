@@ -138,6 +138,7 @@ EOC
     config_param :suppress_doc_wrap, :bool, :default => false
     config_param :ignore_exceptions, :array, :default => [], value_type: :string, :desc => "Ignorable exception list"
     config_param :exception_backup, :bool, :default => true, :desc => "Chunk backup flag when ignore exception occured"
+    config_param :bulk_message_request_threshold, :size, :default => TARGET_BULK_BYTES
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE
@@ -296,6 +297,16 @@ EOC
           Object.const_get(exception)
         end
       end.compact
+
+      if @bulk_message_request_threshold < 0
+        class << self
+          alias_method :split_request?, :split_request_size_uncheck?
+        end
+      else
+        class << self
+          alias_method :split_request?, :split_request_size_check?
+        end
+      end
     end
 
     def placeholder?(name, param)
@@ -592,7 +603,7 @@ EOC
 
           if append_record_to_messages(@write_operation, meta, header, record, bulk_message[info])
             bulk_message_count[info] += 1;
-            if bulk_message[info].size > TARGET_BULK_BYTES
+            if split_request?(bulk_message, info)
               bulk_message.each do |info, msgs|
                 send_bulk(msgs, tag, chunk, bulk_message_count[info], extracted_values, info) unless msgs.empty?
                 msgs.clear
@@ -617,6 +628,18 @@ EOC
         send_bulk(msgs, tag, chunk, bulk_message_count[info], extracted_values, info) unless msgs.empty?
         msgs.clear
       end
+    end
+
+    def split_request?(bulk_message, info)
+      # For safety.
+    end
+
+    def split_request_size_check?(bulk_message, info)
+      bulk_message[info].size > @bulk_message_request_threshold
+    end
+
+    def split_request_size_uncheck?(bulk_message, info)
+      false
     end
 
     def process_message(tag, meta, header, time, record, extracted_values)
