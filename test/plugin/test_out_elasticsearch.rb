@@ -1083,6 +1083,27 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_requested(request, times: 2)
   end
 
+  def test_writes_with_huge_records_but_uncheck
+    driver.configure(Fluent::Config::Element.new(
+                       'ROOT', '', {
+                         '@type' => 'elasticsearch',
+                         'bulk_message_request_threshold' => -1,
+                       }, [
+                         Fluent::Config::Element.new('buffer', 'tag', {
+                                                       'chunk_keys' => ['tag', 'time'],
+                                                       'chunk_limit_size' => '64MB',
+                                                     }, [])
+                       ]
+                     ))
+    request = stub_elastic
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record('huge_record' => ("a" * 20 * 1024 * 1024)))
+      driver.feed(sample_record('huge_record' => ("a" * 20 * 1024 * 1024)))
+    end
+    assert_false(driver.instance.split_request?({}, nil))
+    assert_requested(request, times: 1)
+  end
+
   class IndexNamePlaceholdersTest < self
     def test_writes_to_speficied_index_with_tag_placeholder
       driver.configure("index_name myindex.${tag}\n")

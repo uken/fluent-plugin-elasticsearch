@@ -85,6 +85,7 @@ Current maintainers: @cosmo0920
   + [suppress_doc_wrap](#suppress_doc_wrap)
   + [ignore_exceptions](#ignore_exceptions)
   + [exception_backup](#exception_backup)
+  + [bulk_message_request_threshold](#bulk_message_request_threshold)
 * [Troubleshooting](#troubleshooting)
   + [Cannot send events to elasticsearch](#cannot-send-events-to-elasticsearch)
   + [Cannot see detailed failure log](#cannot-see-detailed-failure-log)
@@ -1063,6 +1064,14 @@ Default value is empty list (no exception is ignored).
 Indicates whether to backup chunk when ignore exception occurs.
 
 Default value is `true`.
+
+## bulk_message_request_threshold
+
+Configure `bulk_message` request splitting threshold size.
+
+Default value is `20MB`. (20 * 1024 * 1024)
+
+If you specify this size as negative number, `bulk_message` request splitting feature will be disabled.
 
 ## Troubleshooting
 
