@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 3.5.1
+- Configurable split request size threshold (#586)
+
 ### 3.5.0
 - Adopt Elasticsearch ruby client v7 loggable class (#583)
 
