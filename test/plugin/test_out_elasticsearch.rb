@@ -2049,7 +2049,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   class AddsRoutingKeyWhenConfiguredTest < self
     def test_es6
-      driver('', 6).configure("routing_key routing_id\n")
+      driver("routing_key routing_id\n", 6)
       stub_elastic
       driver.run(default_tag: 'test') do
         driver.feed(sample_record)
@@ -2058,7 +2058,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
 
     def test_es7
-      driver('', 7).configure("routing_key routing_id\n")
+      driver("routing_key routing_id\n", 7)
       stub_elastic
       driver.run(default_tag: 'test') do
         driver.feed(sample_record)
