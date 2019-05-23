@@ -205,13 +205,6 @@ EOC
         end
       end
 
-      # Consider missing the prefix of "$." in nested key specifiers.
-      @id_key = convert_compat_id_key(@id_key) if @id_key
-      @parent_key = convert_compat_id_key(@parent_key) if @parent_key
-      @routing_key = convert_compat_id_key(@routing_key) if @routing_key
-
-      @meta_config_map = create_meta_config_map
-
       @serializer_class = nil
       begin
         require 'oj'
@@ -285,7 +278,13 @@ EOC
         log.warn "To prevent events traffic jam, you should specify 2 or more 'flush_thread_count'."
       end
 
+      # Consider missing the prefix of "$." in nested key specifiers.
+      @id_key = convert_compat_id_key(@id_key) if @id_key
+      @parent_key = convert_compat_id_key(@parent_key) if @parent_key
+      @routing_key = convert_compat_id_key(@routing_key) if @routing_key
+
       @routing_key_name = configure_routing_key_name
+      @meta_config_map = create_meta_config_map
       @current_config = nil
 
       @ignore_exception_classes = @ignore_exceptions.map do |exception|
