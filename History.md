@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 3.5.2
+- Fix `@meta_config_map` creation timing (#592)
+
 ### 3.5.1
 - Configurable split request size threshold (#586)
 
