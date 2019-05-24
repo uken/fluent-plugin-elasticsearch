@@ -475,7 +475,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     # creation
     stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
       to_return(:status => 200, :body => "", :headers => {})
-    
+
     driver(config)
 
     assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template", times: 1)
@@ -520,7 +520,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     # put the alias for the index
     stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/myapp_deflector").
       to_return(:status => 200, :body => "", :headers => {})
-    
+
     driver(config)
 
     assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template", times: 1)
@@ -584,7 +584,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     # creation
     stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
       to_return(:status => 200, :body => "", :headers => {})
-    
+
     driver(config)
 
     assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template", times: 1)
@@ -629,7 +629,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     # put the alias for the index
     stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E/_alias/myapp_deflector").
       to_return(:status => 200, :body => "", :headers => {})
-  
+
     driver(config)
 
     assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template", times: 1)
@@ -2049,7 +2049,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   class AddsRoutingKeyWhenConfiguredTest < self
     def test_es6
-      driver('', 6).configure("routing_key routing_id\n")
+      driver("routing_key routing_id\n", 6)
       stub_elastic
       driver.run(default_tag: 'test') do
         driver.feed(sample_record)
@@ -2058,7 +2058,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
 
     def test_es7
-      driver('', 7).configure("routing_key routing_id\n")
+      driver("routing_key routing_id\n", 7)
       stub_elastic
       driver.run(default_tag: 'test') do
         driver.feed(sample_record)
