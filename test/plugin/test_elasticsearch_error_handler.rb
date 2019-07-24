@@ -145,6 +145,20 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
     end
   end
 
+  def test_nil_items_responses
+    records = [{time: 123, record: {"foo" => "bar", '_id' => 'abc'}}]
+    response = parse_response(%({
+      "took" : 0,
+      "errors" : true,
+      "items" : [{}]
+     }))
+    chunk = MockChunk.new(records)
+    dummy_extracted_values = []
+    @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values)
+    assert_equal(0, @plugin.error_events.size)
+    assert_nil(@plugin.error_events[0])
+  end
+
   def test_dlq_400_responses
     records = [{time: 123, record: {"foo" => "bar", '_id' => 'abc'}}]
     response = parse_response(%({

@@ -56,10 +56,13 @@ class Fluent::Plugin::ElasticsearchErrorHandler
         next
       end
       item = items.shift
-      if item.has_key?(@plugin.write_operation)
+      if item.is_a?(Hash) && item.has_key?(@plugin.write_operation)
         write_operation = @plugin.write_operation
-      elsif INDEX_OP == @plugin.write_operation && item.has_key?(CREATE_OP)
+      elsif INDEX_OP == @plugin.write_operation && item.is_a?(Hash) && item.has_key?(CREATE_OP)
         write_operation = CREATE_OP
+      elsif item.nil?
+        stats[:errors_nil_resp] += 1
+        next
       else
         # When we don't have an expected ops field, something changed in the API
         # expected return values (ES 2.x)
