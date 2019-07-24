@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 3.5.3
+- Handle nil items response (#611)
+
 ### 3.5.2
 - Fix `@meta_config_map` creation timing (#592)
 
