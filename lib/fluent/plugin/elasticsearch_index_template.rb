@@ -38,8 +38,10 @@ module Fluent::ElasticsearchIndexTemplate
       @_es_info = nil
       if retries < max_retries
         retries += 1
-        sleep 2**retries
+        wait_seconds = 2**retries
+        sleep wait_seconds
         log.warn "Could not communicate to Elasticsearch, resetting connection and trying again. #{e.message}"
+        log.warn "Remaining retry: #{max_retries - retries}. Retry to communicate after #{wait_seconds} second(s)."
         retry
       end
       message = "Could not communicate to Elasticsearch after #{retries} retries. #{e.message}"
