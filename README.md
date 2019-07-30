@@ -94,6 +94,7 @@ Current maintainers: @cosmo0920
   + [Suggested to increase flush_thread_count, why?](#suggested-to-increase-flush_thread_count-why)
   + [Suggested to install typhoeus gem, why?](#suggested-to-install-typhoeus-gem-why)
   + [Stopped to send events on k8s, why?](#stopped-to-send-events-on-k8s-why)
+  + [Random 400 - Rejected by Elasticsearch is occured, why?](#random-400---rejected-by-elasticsearch-is-occured-why)
 * [Contact](#contact)
 * [Contributing](#contributing)
 * [Running tests](#running-tests)
@@ -1374,6 +1375,92 @@ If you use [fluentd-kubernetes-daemonset](https://github.com/fluent/fluentd-kube
 * `FLUENT_ELASTICSEARCH_RELOAD_ON_FAILURE` as `true`
 
 This issue had been reported at [#525](https://github.com/uken/fluent-plugin-elasticsearch/issues/525).
+
+### Random 400 - Rejected by Elasticsearch is occured, why?
+
+Index templates installed Elasticsearch sometimes generates 400 - Rejected by Elasticsearch errors.
+For example, kubernetes audit log has structure:
+
+```json
+"responseObject":{
+   "kind":"SubjectAccessReview",
+   "apiVersion":"authorization.k8s.io/v1beta1",
+   "metadata":{
+      "creationTimestamp":null
+   },
+   "spec":{
+      "nonResourceAttributes":{
+         "path":"/",
+         "verb":"get"
+      },
+      "user":"system:anonymous",
+      "group":[
+         "system:unauthenticated"
+      ]
+   },
+   "status":{
+      "allowed":true,
+      "reason":"RBAC: allowed by ClusterRoleBinding \"cluster-system-anonymous\" of ClusterRole \"cluster-admin\" to User \"system:anonymous\""
+   }
+},
+```
+
+The last element `status` sometimes becomes `"status":"Success"`.
+This element type glich causes status 400 error.
+
+There are some solutions for fixing this:
+
+#### Solution 1
+
+For a key which causes element type glich case.
+
+Using dymanic mapping with the following template:
+
+```json
+{
+  "template": "YOURINDEXNAME-*",
+  "mappings": {
+    "fluentd": {
+      "dynamic_templates": [
+        {
+          "default_no_index": {
+            "path_match": "^.*$",
+            "path_unmatch": "^(@timestamp|auditID|level|stage|requestURI|sourceIPs|metadata|objectRef|user|verb)(\\..+)?$",
+            "match_pattern": "regex",
+            "mapping": {
+              "index": false,
+              "enabled": false
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+Note that `YOURINDEXNAME` should be replaced with your using index prefix.
+
+#### Solution 2
+
+For unstable `responseObject` and `requestObject` key existence case.
+
+```aconf
+<filter YOURROUTETAG>
+  @id kube_api_audit_normalize
+  @type record_transformer
+  auto_typecast false
+  enable_ruby true
+  <record>
+    host "#{ENV['K8S_NODE_NAME']}"
+    responseObject ${record["responseObject"].nil? ? "none": record["responseObject"].to_json}
+    requestObject ${record["requestObject"].nil? ? "none": record["requestObject"].to_json}
+    origin kubernetes-api-audit
+  </record>
+</filter>
+```
+
+Normalize `responseObject` and `requestObject` key with record_transformer and other similiar plugins is needed.
 
 ## Contact
 
