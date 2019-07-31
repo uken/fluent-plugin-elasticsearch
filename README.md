@@ -1502,6 +1502,8 @@ There are usually a few feature requests, tagged [Easy](https://github.com/uken/
 
 Pull Requests are welcomed.
 
+Becore send a pull request or report an issue, please read [the contribution guideline](CONTRIBUTING.md).
+
 [![Pull Request Graph](https://graphs.waffle.io/uken/fluent-plugin-elasticsearch/throughput.svg)](https://waffle.io/uken/fluent-plugin-elasticsearch/metrics)
 
 ## Running tests
