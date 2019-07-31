@@ -95,6 +95,7 @@ Current maintainers: @cosmo0920
   + [Suggested to install typhoeus gem, why?](#suggested-to-install-typhoeus-gem-why)
   + [Stopped to send events on k8s, why?](#stopped-to-send-events-on-k8s-why)
   + [Random 400 - Rejected by Elasticsearch is occured, why?](#random-400---rejected-by-elasticsearch-is-occured-why)
+  + [Fluentd seems to hang if it unable to connect Elasticsearch, why?](#fluentd-seems-to-hang-if-it-unable-to-connect-elasticsearch-why)
 * [Contact](#contact)
 * [Contributing](#contributing)
 * [Running tests](#running-tests)
@@ -1461,6 +1462,35 @@ For unstable `responseObject` and `requestObject` key existence case.
 ```
 
 Normalize `responseObject` and `requestObject` key with record_transformer and other similiar plugins is needed.
+
+### Fluentd seems to hang if it unable to connect Elasticsearch, why?
+
+On `#configure` phase, ES plugin should wait until ES instance communication is succeeded.
+And ES plugin blocks to launch Fluentd by default.
+Because Fluentd requests to set up configuration correctly on `#configure` phase.
+
+After `#configure` phase, it runs very fast and send events heavily in some heavily using case.
+
+In this scenario, we need to set up configuration correctly until `#configure` phase.
+So, we provide default parameter is too conservative to use advanced users.
+
+To remove too pessimistic behavior, you can use the following configuration:
+
+```aconf
+<match **>
+  @type elasticsearch
+  # Some advanced users know their using ES version.
+  # We can disable startup ES version checking.
+  verify_es_version_at_startup false
+  # If you know that your using ES major version is 7, you can set as 7 here.
+  default_elasticsearch_version 7
+  # If using very stable ES cluster, you can reduce retry operation counts. (minmum is 1)
+  max_retry_get_es_version 1
+  # If using very stable ES cluster, you can reduce retry operation counts. (minmum is 1)
+  max_retry_putting_template 1
+  # ... and some ES plugin configuration
+</match>
+```
 
 ## Contact
 
