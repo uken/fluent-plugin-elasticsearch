@@ -2,6 +2,12 @@
 
 ### [Unreleased]
 
+### 3.5.4
+- Add FAQ for Fluentd seems to hang if it unable to connect Elasticsearch (#617)
+- Check bulk_message size before appending (#616)
+- Add FAQ for Elasticsearch index mapping glitch (#614)
+- Display retry counts and interval (#613)
+
 ### 3.5.3
 - Handle nil items response (#611)
 
