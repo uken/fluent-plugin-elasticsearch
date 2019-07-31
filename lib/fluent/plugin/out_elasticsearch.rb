@@ -600,17 +600,18 @@ EOC
                    RequestInfo.new(host, nil)
                  end
 
+          if split_request?(bulk_message, info)
+            bulk_message.each do |info, msgs|
+              send_bulk(msgs, tag, chunk, bulk_message_count[info], extracted_values, info) unless msgs.empty?
+              msgs.clear
+              # Clear bulk_message_count for this info.
+              bulk_message_count[info] = 0;
+              next
+            end
+          end
+
           if append_record_to_messages(@write_operation, meta, header, record, bulk_message[info])
             bulk_message_count[info] += 1;
-            if split_request?(bulk_message, info)
-              bulk_message.each do |info, msgs|
-                send_bulk(msgs, tag, chunk, bulk_message_count[info], extracted_values, info) unless msgs.empty?
-                msgs.clear
-                # Clear bulk_message_count for this info.
-                bulk_message_count[info] = 0;
-                next
-              end
-            end
           else
             if @emit_error_for_missing_id
               raise MissingIdFieldError, "Missing '_id' field. Write operation is #{@write_operation}"
