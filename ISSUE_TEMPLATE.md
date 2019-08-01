@@ -1,3 +1,6 @@
+(check apply)
+- [ ] read [the contribution guideline](CONTRIBUTING.md)
+
 #### Problem
 
 ...
