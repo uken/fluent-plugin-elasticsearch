@@ -1,5 +1,5 @@
 (check apply)
-- [ ] read [the contribution guideline](CONTRIBUTING.md)
+- [ ] read [the contribution guideline](https://github.com/uken/fluent-plugin-elasticsearch/blob/master/CONTRIBUTING.md)
 
 #### Problem
 
