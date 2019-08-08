@@ -95,7 +95,12 @@ class Fluent::Plugin::ElasticsearchErrorHandler
         end
         @plugin.router.emit_error_event(tag, time, rawrecord, ElasticsearchError.new("400 - Rejected by Elasticsearch#{reason}"))
       else
-        if item[write_operation].has_key?('error') && item[write_operation]['error'].has_key?('type')
+        if item[write_operation]['error'].is_a?(String)
+          reason = item[write_operation]['error']
+          stats[:errors_block_resp] += 1
+          @plugin.router.emit_error_event(tag, time, rawrecord, ElasticsearchError.new("#{status} - #{reason}"))
+          next
+        elsif item[write_operation].has_key?('error') && item[write_operation]['error'].has_key?('type')
           type = item[write_operation]['error']['type']
           stats[type] += 1
           retry_stream.add(time, rawrecord)
