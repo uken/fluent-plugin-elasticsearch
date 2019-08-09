@@ -1796,7 +1796,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_elastic
     ts = "2001-02-03 13:14:01.673+02:00"
     time = Time.parse(ts)
-    current_zone_offset = Time.now.to_datetime.offset
+    current_zone_offset = Time.new(2001, 02, 03).to_datetime.offset
     float_time = time.to_f
     driver.run(default_tag: 'test') do
       driver.feed(sample_record.merge!('vtm' => float_time))
