@@ -119,7 +119,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       content_type nonexistent/invalid
     }
     assert_raise(Fluent::ConfigError) {
-      instance = driver(config).instance
+      driver(config)
     }
   end
 
