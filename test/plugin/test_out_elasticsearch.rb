@@ -1193,7 +1193,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     time = Time.parse Date.today.iso8601
     stub_elastic
     driver.run(default_tag: 'test') do
-      driver.feed(time.to_i, sample_record.merge('@target_index' => 'local-override'))
+      driver.feed(time.to_i, sample_record.merge('@target_index' => 'LOCAL-OVERRIDE'))
     end
     # Allthough @target_index has upper-case characters,
     # it should be set as lower-case when sent to elasticsearch.
