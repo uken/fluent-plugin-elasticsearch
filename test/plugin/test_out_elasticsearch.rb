@@ -247,7 +247,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       content_type nonexistent/invalid
     }
     assert_raise(Fluent::ConfigError) {
-      instance = driver(config).instance
+      driver(config)
     }
   end
 
@@ -256,7 +256,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       max_retry_putting_template -3
     }
     assert_raise(Fluent::ConfigError) {
-      instance = driver(config).instance
+      driver(config)
     }
   end
 
@@ -274,7 +274,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       @log_level warn
       scheme https
     }
-    instance = driver(config, 6).instance
+    driver(config, 6)
     logs = driver.logs
     assert_logs_include(logs, /Detected ES 6.x or above and enabled insecure security/, 1)
   end
@@ -285,7 +285,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       @log_level warn
       scheme https
     }
-    instance = driver(config, 7).instance
+    driver(config, 7)
     logs = driver.logs
     assert_logs_include(logs, /Detected ES 6.x or above and enabled insecure security/, 0)
   end
@@ -296,7 +296,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       validate_client_version true
     }
     assert_nothing_raised do
-      driver(config, 6, "\"6.1.0\"").instance
+      driver(config, 6, "\"6.1.0\"")
     end
   end
 
@@ -306,7 +306,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       validate_client_version true
     }
     assert_raise_message(/Detected ES 7 but you use ES client 5.0/) do
-      driver(config, 7, "\"5.0.5\"").instance
+      driver(config, 7, "\"5.0.5\"")
     end
   end
 
