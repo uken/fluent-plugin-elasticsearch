@@ -179,6 +179,7 @@ EOC
       end
 
       raise Fluent::ConfigError, "'max_retry_putting_template' must be greater than or equal to zero." if @max_retry_putting_template < 0
+      raise Fluent::ConfigError, "'max_retry_get_es_version' must be greater than or equal to zero." if @max_retry_get_es_version < 0
 
       # Raise error when using host placeholders and template features at same time.
       valid_host_placeholder = placeholder?(:host_placeholder, @host)
