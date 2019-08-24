@@ -508,7 +508,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.feed(time, sample_record)
     end
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], Time.at(time).iso8601(9))
+    assert_equal(Time.at(time).iso8601(9), index_cmds[1]['@timestamp'])
   end
 
   def test_uses_subsecond_precision_when_configured
@@ -520,7 +520,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.feed(time, sample_record)
     end
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], Time.at(time).iso8601(3))
+    assert_equal(Time.at(time).iso8601(3), index_cmds[1]['@timestamp'])
   end
 
   def test_uses_custom_timestamp_when_included_in_record
@@ -531,7 +531,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.feed(sample_record.merge!('@timestamp' => ts))
     end
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], ts)
+    assert_equal(ts, index_cmds[1]['@timestamp'])
   end
 
   def test_uses_custom_timestamp_when_included_in_record_logstash
@@ -542,7 +542,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.feed(sample_record.merge!('@timestamp' => ts))
     end
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], ts)
+    assert_equal(ts, index_cmds[1]['@timestamp'])
   end
 
   def test_uses_custom_time_key_logstash
@@ -554,7 +554,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.feed(sample_record.merge!('vtm' => ts))
     end
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], ts)
+    assert_equal(ts, index_cmds[1]['@timestamp'])
   end
 
   def test_uses_custom_time_key_timestamp
@@ -566,7 +566,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.feed(sample_record.merge!('vtm' => ts))
     end
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], ts)
+    assert_equal(ts, index_cmds[1]['@timestamp'])
   end
 
   def test_uses_custom_time_key_timestamp_custom_index
@@ -579,7 +579,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.feed(sample_record.merge!('vtm' => ts))
     end
     assert(index_cmds[1].has_key? '@timestamp')
-    assert_equal(index_cmds[1]['@timestamp'], ts)
+    assert_equal(ts, index_cmds[1]['@timestamp'])
     assert_equal('test', index_cmds.first['index']['_index'])
   end
 
@@ -622,7 +622,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.feed(sample_record)
     end
     assert(index_cmds[1].has_key?('tag'))
-    assert_equal(index_cmds[1]['tag'], 'mytag')
+    assert_equal('mytag', index_cmds[1]['tag'])
   end
 
   def test_adds_id_key_when_configured
@@ -631,7 +631,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal(index_cmds[0]['index']['_id'], '42')
+    assert_equal('42', index_cmds[0]['index']['_id'])
   end
 
   class NestedIdKeyTest < self
@@ -641,7 +641,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
       end
-      assert_equal(index_cmds[0]['index']['_id'], '42')
+      assert_equal('42', index_cmds[0]['index']['_id'])
     end
 
     def test_adds_nested_id_key_with_dollar_dot
@@ -650,7 +650,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
       end
-      assert_equal(index_cmds[0]['index']['_id'], '42')
+      assert_equal('42', index_cmds[0]['index']['_id'])
     end
 
     def test_adds_nested_id_key_with_bracket
@@ -659,7 +659,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
       end
-      assert_equal(index_cmds[0]['index']['_id'], '42')
+      assert_equal('42', index_cmds[0]['index']['_id'])
     end
   end
 
@@ -686,7 +686,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal(index_cmds[0]['index']['_parent'], 'parent')
+    assert_equal('parent', index_cmds[0]['index']['_parent'])
   end
 
   class NestedParentKeyTest < self
@@ -696,7 +696,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
       end
-      assert_equal(index_cmds[0]['index']['_parent'], 'parent')
+      assert_equal('parent', index_cmds[0]['index']['_parent'])
     end
 
     def test_adds_nested_parent_key_with_dollar_dot
@@ -705,7 +705,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
       end
-      assert_equal(index_cmds[0]['index']['_parent'], 'parent')
+      assert_equal('parent', index_cmds[0]['index']['_parent'])
     end
 
     def test_adds_nested_parent_key_with_bracket
@@ -714,7 +714,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
       end
-      assert_equal(index_cmds[0]['index']['_parent'], 'parent')
+      assert_equal('parent', index_cmds[0]['index']['_parent'])
     end
   end
 
@@ -742,7 +742,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.run(default_tag: 'test') do
         driver.feed(sample_record)
       end
-      assert_equal(index_cmds[0]['index']['_routing'], 'routing')
+      assert_equal('routing', index_cmds[0]['index']['_routing'])
     end
 
     def test_es7
@@ -751,7 +751,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.run(default_tag: 'test') do
         driver.feed(sample_record)
       end
-      assert_equal(index_cmds[0]['index']['routing'], 'routing')
+      assert_equal('routing', index_cmds[0]['index']['routing'])
     end
   end
 
@@ -762,7 +762,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
       end
-      assert_equal(index_cmds[0]['index']['_routing'], 'routing')
+      assert_equal('routing', index_cmds[0]['index']['_routing'])
     end
 
     def test_adds_nested_routing_key_with_dollar_dot
@@ -771,7 +771,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
       end
-      assert_equal(index_cmds[0]['index']['_routing'], 'routing')
+      assert_equal('routing', index_cmds[0]['index']['_routing'])
     end
 
     def test_adds_nested_routing_key_with_bracket
@@ -780,7 +780,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
       end
-      assert_equal(index_cmds[0]['index']['_routing'], 'routing')
+      assert_equal('routing', index_cmds[0]['index']['_routing'])
     end
   end
 
@@ -874,7 +874,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
         driver.feed(sample_record)
       end
     }
-    assert_equal(connection_resets, 1)
+    assert_equal(1, connection_resets)
   end
 
   def test_reconnect_on_error_enabled
@@ -900,7 +900,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     }
     # FIXME: Consider keywords arguments in #run and how to test this later.
     # Because v0.14 test driver does not have 1 to 1 correspondence between #run and #flush in tests.
-    assert_equal(connection_resets, 1)
+    assert_equal(1, connection_resets)
   end
 
   def test_reconnect_on_error_disabled
@@ -924,7 +924,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
         driver.feed(sample_record)
       end
     }
-    assert_equal(connection_resets, 1)
+    assert_equal(1, connection_resets)
   end
 
   def test_update_should_not_write_if_theres_no_id
@@ -995,7 +995,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.feed(sample_record)
     end
 
-    assert_equal(index_cmds.length, 2)
-    assert_equal(index_cmds.first['index']['_index'], nil)
+    assert_equal(2, index_cmds.length)
+    assert_equal(nil, index_cmds.first['index']['_index'])
   end
 end
