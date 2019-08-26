@@ -2,6 +2,18 @@
 
 ### [Unreleased]
 
+### 3.5.5
+- Fix arguments order of `assert_equal` (#635)
+- Add description for `port` option (#634)
+- Fix description position and add examples for `hosts` option (#633)
+- Use upper-case to compare before and after conversion (#630)
+- Validate `max_retry_get_es_version` (#629)
+- Remove unused getting plugin instance (#628)
+- Fix error message for `max_retry_putting_template` (#627)
+- Fix DST-breaking unit test (#623)
+- Handle ClusterBlockException (#621)
+- Add contribution guideline document (#618)
+
 ### 3.5.4
 - Add FAQ for Fluentd seems to hang if it unable to connect Elasticsearch (#617)
 - Check bulk_message size before appending (#616)
