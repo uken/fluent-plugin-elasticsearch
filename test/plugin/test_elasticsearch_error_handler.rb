@@ -159,6 +159,28 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
     assert_nil(@plugin.error_events[0])
   end
 
+  def test_blocked_items_responses
+    records = [{time: 123, record: {"foo" => "bar", '_id' => 'abc'}}]
+    response = parse_response(%({
+      "took" : 0,
+      "errors" : true,
+      "items" : [
+        {
+          "create" : {
+            "_index" : "foo",
+            "status" : 503,
+            "error" : "ClusterBlockException[blocked by: [SERVICE_UNAVAILABLE/1/state not recovered / initialized];]"
+          }
+        }
+      ]
+     }))
+    chunk = MockChunk.new(records)
+    dummy_extracted_values = []
+    @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values)
+    assert_equal(1, @plugin.error_events.size)
+    assert_true(@plugin.error_events[0][:error].respond_to?(:backtrace))
+  end
+
   def test_dlq_400_responses
     records = [{time: 123, record: {"foo" => "bar", '_id' => 'abc'}}]
     response = parse_response(%({
