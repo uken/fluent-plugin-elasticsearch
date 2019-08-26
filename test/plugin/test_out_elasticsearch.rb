@@ -1009,6 +1009,21 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal nil, host1[:path]
   end
 
+  def test_host_and_port_are_ignored_if_specify_hosts
+    config = %{
+      host  logs.google.com
+      port  9200
+      hosts host1:50,host2:100
+    }
+    instance = driver(config).instance
+
+    params = instance.get_connection_options[:hosts]
+    hosts = params.map { |p| p[:host] }
+    ports = params.map { |p| p[:port] }
+    assert(hosts.none? { |h| h == 'logs.google.com' })
+    assert(ports.none? { |p| p == 9200 })
+  end
+
   def test_content_type_header
     stub_request(:head, "http://localhost:9200/").
       to_return(:status => 200, :body => "", :headers => {})

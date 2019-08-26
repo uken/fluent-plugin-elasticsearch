@@ -175,13 +175,26 @@ You can specify multiple Elasticsearch hosts with separator ",".
 
 If you specify multiple hosts, this plugin will load balance updates to Elasticsearch. This is an [elasticsearch-ruby](https://github.com/elasticsearch/elasticsearch-ruby) feature, the default strategy is round-robin.
 
+If you specify `hosts` option, `host` and `port` options are ignored.
+
+```
+host user-custom-host.domain # ignored
+port 9200                    # ignored
+hosts host1:port1,host2:port2,host3:port3
+```
+
+If you specify `hosts` option without port, `port` option is used.
+
+```
+port 9200
+hosts host1:port1,host2:port2,host3 # port3 is 9200
+```
+
 **Note:** If you will use scheme https, do not include "https://" in your hosts ie. host "https://domain", this will cause ES cluster to be unreachable and you will receive an error "Can not reach Elasticsearch cluster"
 
 **Note:** Up until v2.8.5, it was allowed to embed the username/password in the URL. However, this syntax is deprecated as of v2.8.6 because it was found to cause serious connection problems (See #394). Please migrate your settings to use the `user` and `password` field (described below) instead.
 
 ### user, password, path, scheme, ssl_verify
-
-If you specify this option, port options are ignored.
 
 ```
 user demo
