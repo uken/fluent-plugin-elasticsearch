@@ -454,7 +454,7 @@ EOC
     end
 
     def get_connection_options(con_host=nil)
-      raise "`password` must be present if `user` is present" if @user && !@password
+      raise "`password` must be present if `user` is present" if @user && @password.nil?
 
       hosts = if con_host || @hosts
         (con_host || @hosts).split(',').map do |host_str|
