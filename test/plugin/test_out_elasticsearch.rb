@@ -1024,6 +1024,16 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert(ports.none? { |p| p == 9200 })
   end
 
+  def test_password_is_required_if_specify_user
+    config = %{
+      user john
+    }
+
+    assert_raise(Fluent::ConfigError) do
+      driver(config)
+    end
+  end
+
   def test_content_type_header
     stub_request(:head, "http://localhost:9200/").
       to_return(:status => 200, :body => "", :headers => {})
