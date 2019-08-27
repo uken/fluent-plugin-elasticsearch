@@ -329,7 +329,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
                  'scheme' => 'https',
                  'path' => '/es/',
                  'user' => 'john',
-                 'pasword' => 'doe',
+                 'password' => 'doe',
                }, [
                  Fluent::Config::Element.new('buffer', 'mykey', {
                                                'chunk_keys' => 'mykey'
@@ -349,7 +349,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
                  'scheme' => 'https',
                  'path' => '/es/',
                  'user' => 'john',
-                 'pasword' => 'doe',
+                 'password' => 'doe',
                }, [
                  Fluent::Config::Element.new('buffer', 'tag', {
                                              }, [])
