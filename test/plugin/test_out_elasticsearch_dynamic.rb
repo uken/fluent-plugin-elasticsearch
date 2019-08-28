@@ -141,7 +141,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
                  'scheme' => 'https',
                  'path' => '/es/',
                  'user' => 'john',
-                 'pasword' => 'doe',
+                 'password' => 'doe',
                }, [
                  Fluent::Config::Element.new('buffer', 'tag', {
                                              }, [])

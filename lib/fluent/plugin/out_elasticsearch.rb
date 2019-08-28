@@ -218,6 +218,8 @@ EOC
         @dump_proc = Yajl.method(:dump)
       end
 
+      raise Fluent::ConfigError, "`password` must be present if `user` is present" if @user && @password.nil?
+
       if @user && m = @user.match(/%{(?<user>.*)}/)
         @user = URI.encode_www_form_component(m["user"])
       end
@@ -454,7 +456,6 @@ EOC
     end
 
     def get_connection_options(con_host=nil)
-      raise "`password` must be present if `user` is present" if @user && !@password
 
       hosts = if con_host || @hosts
         (con_host || @hosts).split(',').map do |host_str|

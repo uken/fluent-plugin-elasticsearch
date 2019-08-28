@@ -329,7 +329,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
                  'scheme' => 'https',
                  'path' => '/es/',
                  'user' => 'john',
-                 'pasword' => 'doe',
+                 'password' => 'doe',
                }, [
                  Fluent::Config::Element.new('buffer', 'mykey', {
                                                'chunk_keys' => 'mykey'
@@ -349,7 +349,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
                  'scheme' => 'https',
                  'path' => '/es/',
                  'user' => 'john',
-                 'pasword' => 'doe',
+                 'password' => 'doe',
                }, [
                  Fluent::Config::Element.new('buffer', 'tag', {
                                              }, [])
@@ -1022,6 +1022,16 @@ class ElasticsearchOutput < Test::Unit::TestCase
     ports = params.map { |p| p[:port] }
     assert(hosts.none? { |h| h == 'logs.google.com' })
     assert(ports.none? { |p| p == 9200 })
+  end
+
+  def test_password_is_required_if_specify_user
+    config = %{
+      user john
+    }
+
+    assert_raise(Fluent::ConfigError) do
+      driver(config)
+    end
   end
 
   def test_content_type_header
