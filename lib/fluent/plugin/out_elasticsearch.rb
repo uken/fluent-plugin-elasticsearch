@@ -18,6 +18,7 @@ require_relative 'elasticsearch_constants'
 require_relative 'elasticsearch_error'
 require_relative 'elasticsearch_error_handler'
 require_relative 'elasticsearch_index_template'
+require_relative 'elasticsearch_simple_sniffer'
 begin
   require_relative 'oj_serializer'
 rescue LoadError
