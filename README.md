@@ -894,6 +894,25 @@ sniffer_class_name Fluent::Plugin::ElasticsearchSimpleSniffer
 reload_after 100
 ```
 
+#### Tips
+
+The included sniffer class does not required `out_elasticsearch`.
+You should tell Fluentd where the sniffer class exists.
+
+If you use td-agent, you must put the following lines into `TD_AGENT_DEFAULT` file:
+
+```
+sniffer=$(td-agent-gem contents fluent-plugin-elasticsearch|grep elasticsearch_simple_sniffer.rb)
+TD_AGENT_OPTIONS="--use-v1-config -r $sniffer"
+```
+
+If you use Fluentd directly, you must pass the following lines as Fluentd command line option:
+
+```
+sniffer=$(td-agent-gem contents fluent-plugin-elasticsearch|grep elasticsearch_simple_sniffer.rb)
+$ fluentd -r $sniffer" [AND YOUR OTHER OPTIONS]
+```
+
 ### Reload After
 
 When `reload_connections true`, this is the integer number of operations after which the plugin will
