@@ -27,7 +27,7 @@ class Fluent::Plugin::ElasticsearchErrorHandler
     if @plugin.log_es_400_reason
       block.call
     else
-      @plugin.log.on_debug &block
+      @plugin.log.on_debug(&block)
     end
   end
 
