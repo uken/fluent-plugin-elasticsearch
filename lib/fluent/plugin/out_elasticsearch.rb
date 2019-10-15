@@ -2,6 +2,10 @@
 require 'date'
 require 'excon'
 require 'elasticsearch'
+begin
+  require 'elasticsearch/xpack'
+rescue LoadError
+end
 require 'json'
 require 'uri'
 begin
@@ -18,6 +22,7 @@ require_relative 'elasticsearch_constants'
 require_relative 'elasticsearch_error'
 require_relative 'elasticsearch_error_handler'
 require_relative 'elasticsearch_index_template'
+require_relative 'elasticsearch_index_lifecycle_management'
 begin
   require_relative 'oj_serializer'
 rescue LoadError
@@ -54,6 +59,7 @@ module Fluent::Plugin
     DEFAULT_TYPE_NAME = "fluentd".freeze
     DEFAULT_RELOAD_AFTER = -1
     TARGET_BULK_BYTES = 20 * 1024 * 1024
+    DEFAULT_POLICY_ID = "logstash-policy"
 
     config_param :host, :string,  :default => 'localhost'
     config_param :port, :integer, :default => 9200
@@ -139,6 +145,9 @@ EOC
     config_param :ignore_exceptions, :array, :default => [], value_type: :string, :desc => "Ignorable exception list"
     config_param :exception_backup, :bool, :default => true, :desc => "Chunk backup flag when ignore exception occured"
     config_param :bulk_message_request_threshold, :size, :default => TARGET_BULK_BYTES
+    config_param :enable_ilm, :bool, :default => false
+    config_param :ilm_policy_id, :string, :default => DEFAULT_POLICY_ID
+    config_param :ilm_policy, :hash, :default => {}
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE
@@ -148,6 +157,7 @@ EOC
 
     include Fluent::ElasticsearchIndexTemplate
     include Fluent::Plugin::ElasticsearchConstants
+    include Fluent::Plugin::ElasticsearchIndexLifecycleManagement
 
     def initialize
       super
@@ -190,14 +200,17 @@ EOC
       if !Fluent::Engine.dry_run_mode
         if @template_name && @template_file
           retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
-            if @customize_template
-              if @rollover_index
-                raise Fluent::ConfigError, "'deflector_alias' must be provided if 'rollover_index' is set true ." if not @deflector_alias
-              end
-              template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @index_prefix, @rollover_index, @deflector_alias, @application_name, @index_date_pattern)
-            else
-              template_install(@template_name, @template_file, @template_overwrite)
+            if @rollover_index
+              raise Fluent::ConfigError, "'deflector_alias' must be provided if 'rollover_index' is set true ." if not @deflector_alias
             end
+
+            verify_ilm_working if @enable_ilm
+            if @customize_template
+              template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @enable_ilm, @deflector_alias, @ilm_policy_id)
+            else
+              template_install(@template_name, @template_file, @template_overwrite, @enable_ilm, @deflector_alias, @ilm_policy_id)
+            end
+            create_rollover_alias(@index_prefix, @rollover_index, @deflector_alias, @application_name, @index_date_pattern, @enable_ilm, @ilm_policy_id, @ilm_policy)
           end
         elsif @templates
           retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do

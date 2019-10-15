@@ -61,40 +61,84 @@ module Fluent::ElasticsearchIndexTemplate
       log.error("Error while index creation - #{index_name}: #{e.inspect}")
   end
 
-  def template_install(name, template_file, overwrite)
+  def template_install(name, template_file, overwrite, enable_ilm = false, deflector_alias_name = nil, ilm_policy_id = nil)
+    inject_template_name = get_template_name(enable_ilm, name, deflector_alias_name)
     if overwrite
-      template_put(name, get_template(template_file))
-      log.info("Template '#{name}' overwritten with #{template_file}.")
+      template_put(inject_template_name,
+                   enable_ilm ? inject_ilm_settings_to_template(deflector_alias_name,
+                                                                ilm_policy_id,
+                                                                get_template(template_file)) :
+                     get_template(template_file))
+
+      log.info("Template '#{inject_template_name}' overwritten with #{template_file}.")
       return
     end
-    if !template_exists?(name)
-      template_put(name, get_template(template_file))
+    if !template_exists?(inject_template_name)
+      template_put(inject_template_name,
+                   enable_ilm ? inject_ilm_settings_to_template(deflector_alias_name,
+                                                                ilm_policy_id,
+                                                                get_template(template_file)) :
+                     get_template(template_file))
       log.info("Template configured, but no template installed. Installed '#{name}' from #{template_file}.")
     else
       log.info("Template configured and already installed.")
     end
   end
 
-  def template_custom_install(template_name, template_file, overwrite, customize_template, index_prefix, rollover_index, deflector_alias_name, app_name, index_date_pattern)
-    template_custom_name=template_name.downcase
+  def template_custom_install(template_name, template_file, overwrite, customize_template, enable_ilm, deflector_alias_name, ilm_policy_id)
+    template_custom_name = get_template_name(enable_ilm, template_name, deflector_alias_name)
+    custom_template = if enable_ilm
+                        inject_ilm_settings_to_template(deflector_alias_name, ilm_policy_id,
+                                                        get_custom_template(template_file,
+                                                                            customize_template))
+                      else
+                        get_custom_template(template_file, customize_template)
+                      end
     if overwrite
-      template_put(template_custom_name, get_custom_template(template_file, customize_template))
+      template_put(template_custom_name, custom_template)
       log.info("Template '#{template_custom_name}' overwritten with #{template_file}.")
     else
       if !template_exists?(template_custom_name)
-        template_put(template_custom_name, get_custom_template(template_file, customize_template))
+        template_put(template_custom_name, custom_template)
         log.info("Template configured, but no template installed. Installed '#{template_custom_name}' from #{template_file}.")
       else
         log.info("Template configured and already installed.")
       end
     end
+  end
 
+  def get_template_name(enable_ilm, template_name, deflector_alias_name)
+    enable_ilm && !template_name ? deflector_alias_name : template_name
+  end
+
+  def inject_ilm_settings_to_template(deflector_alias_name, ilm_policy_id, template)
+    log.info("Overwriting index patterns when Index Lifecycle Management is enabled.")
+    template.delete('template') if template.include?('template')
+    template['index_patterns'] = "#{deflector_alias_name}-*"
+    if template['settings'] && (template['settings']['index.lifecycle.name'] || template['settings']['index.lifecycle.rollover_alias'])
+      log.info("Overwriting index lifecycle name and rollover alias when Index Lifecycle Management is enabled.")
+    end
+    template['settings'].update({ 'index.lifecycle.name' => ilm_policy_id, 'index.lifecycle.rollover_alias' => deflector_alias_name})
+    template
+  end
+
+  def create_rollover_alias(index_prefix, rollover_index, deflector_alias_name, app_name, index_date_pattern, enable_ilm, ilm_policy_id, ilm_policy)
     if rollover_index
       if !client.indices.exists_alias(:name => deflector_alias_name)
         index_name_temp='<'+index_prefix.downcase+'-'+app_name.downcase+'-{'+index_date_pattern+'}-000001>'
         indexcreation(index_name_temp)
-        client.indices.put_alias(:index => index_name_temp, :name => deflector_alias_name)
+        body = {}
+        body = rollover_alias_payload(deflector_alias_name) if enable_ilm
+        client.indices.put_alias(:index => index_name_temp, :name => deflector_alias_name,
+                                 :body => body)
         log.info("The alias '#{deflector_alias_name}' is created for the index '#{index_name_temp}'")
+        if enable_ilm
+          if ilm_policy.empty?
+            setup_ilm(enable_ilm, ilm_policy_id)
+          else
+            setup_ilm(enable_ilm, ilm_policy_id, ilm_policy)
+          end
+        end
       else
         log.info("The alias '#{deflector_alias_name}' is already present")
       end
@@ -109,4 +153,13 @@ module Fluent::ElasticsearchIndexTemplate
     end
   end
 
+  def rollover_alias_payload(rollover_alias)
+    {
+      'aliases' => {
+        rollover_alias => {
+          'is_write_index' =>  true
+        }
+      }
+    }
+  end
 end
