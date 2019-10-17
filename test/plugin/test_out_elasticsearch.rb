@@ -269,6 +269,20 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
   end
 
+  test 'invalid configuration of index lifecycle management' do
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_template.json')
+
+    config = %{
+      enable_ilm    true
+      template_name logstash
+      template_file #{template_file}
+    }
+    assert_raise(Fluent::ConfigError) {
+      driver(config)
+    }
+  end
+
   test 'Detected Elasticsearch 7' do
     config = %{
       type_name changed

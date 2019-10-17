@@ -203,6 +203,9 @@ EOC
             if @rollover_index
               raise Fluent::ConfigError, "'deflector_alias' must be provided if 'rollover_index' is set true ." if not @deflector_alias
             end
+            if @enable_ilm
+              raise Fluent::ConfigError, "'rollover_index' and 'deflector_alias' must be provided if 'enable_ilm' is set true ." if !@deflector_alias &&!@deflector_alias
+            end
 
             verify_ilm_working if @enable_ilm
             if @customize_template
