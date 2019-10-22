@@ -122,10 +122,10 @@ module Fluent::ElasticsearchIndexTemplate
     template
   end
 
-  def create_rollover_alias(index_prefix, rollover_index, deflector_alias_name, app_name, index_date_pattern, enable_ilm, ilm_policy_id, ilm_policy)
+  def create_rollover_alias(index_prefix, rollover_index, deflector_alias_name, app_name, index_date_pattern, index_separator, enable_ilm, ilm_policy_id, ilm_policy)
     if rollover_index
       if !client.indices.exists_alias(:name => deflector_alias_name)
-        index_name_temp='<'+index_prefix.downcase+'-'+app_name.downcase+'-{'+index_date_pattern+'}-000001>'
+        index_name_temp='<'+index_prefix.downcase+index_separator+app_name.downcase+'-{'+index_date_pattern+'}-000001>'
         indexcreation(index_name_temp)
         body = {}
         body = rollover_alias_payload(deflector_alias_name) if enable_ilm

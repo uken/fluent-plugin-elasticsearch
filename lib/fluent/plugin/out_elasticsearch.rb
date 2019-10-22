@@ -111,6 +111,7 @@ EOC
     config_param :customize_template, :hash, :default => nil
     config_param :rollover_index, :string, :default => false
     config_param :index_date_pattern, :string, :default => "now/d"
+    config_param :index_separator, :string, :default => "-"
     config_param :deflector_alias, :string, :default => nil
     config_param :index_prefix, :string, :default => "logstash"
     config_param :application_name, :string, :default => "default"
@@ -756,7 +757,7 @@ EOC
           else
             template_install(@template_name, @template_file, @template_overwrite, @enable_ilm, deflector_alias, @ilm_policy_id)
           end
-          create_rollover_alias(@index_prefix, @rollover_index, deflector_alias, application_name, @index_date_pattern, @enable_ilm, @ilm_policy_id, @ilm_policy)
+          create_rollover_alias(@index_prefix, @rollover_index, deflector_alias, application_name, @index_date_pattern, @index_separator, @enable_ilm, @ilm_policy_id, @ilm_policy)
         end
       end
 
