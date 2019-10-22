@@ -197,28 +197,17 @@ EOC
         raise Fluent::ConfigError, "host placeholder and template installation are exclusive features."
       end
 
-      if !Fluent::Engine.dry_run_mode
-        if @template_name && @template_file
-          retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
-            if @rollover_index
-              raise Fluent::ConfigError, "'deflector_alias' must be provided if 'rollover_index' is set true ." if not @deflector_alias
-            end
-            if @enable_ilm
-              raise Fluent::ConfigError, "'rollover_index' and 'deflector_alias' must be provided if 'enable_ilm' is set true ." if !@deflector_alias &&!@deflector_alias
-            end
-
-            verify_ilm_working if @enable_ilm
-            if @customize_template
-              template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @enable_ilm, @deflector_alias, @ilm_policy_id)
-            else
-              template_install(@template_name, @template_file, @template_overwrite, @enable_ilm, @deflector_alias, @ilm_policy_id)
-            end
-            create_rollover_alias(@index_prefix, @rollover_index, @deflector_alias, @application_name, @index_date_pattern, @enable_ilm, @ilm_policy_id, @ilm_policy)
-          end
-        elsif @templates
-          retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
-            templates_hash_install(@templates, @template_overwrite)
-          end
+      if @template_name && @template_file
+        if @rollover_index
+          raise Fluent::ConfigError, "'deflector_alias' must be provided if 'rollover_index' is set true ." if not @deflector_alias
+        end
+        if @enable_ilm
+          raise Fluent::ConfigError, "'rollover_index' and 'deflector_alias' must be provided if 'enable_ilm' is set true ." if !@deflector_alias &&!@deflector_alias
+        end
+        verify_ilm_working if @enable_ilm
+      elsif @templates
+        retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
+          templates_hash_install(@templates, @template_overwrite)
         end
       end
 
@@ -587,7 +576,17 @@ EOC
       logstash_prefix = extract_placeholders(@logstash_prefix, chunk)
       index_name = extract_placeholders(@index_name, chunk)
       type_name = extract_placeholders(@type_name, chunk)
-      return logstash_prefix, index_name, type_name
+      if @deflector_alias
+        deflector_alias = extract_placeholders(@deflector_alias, chunk)
+      else
+        deflector_alias = nil
+      end
+      if @application_name
+        application_name = extract_placeholders(@application_name, chunk)
+      else
+        application_name = nil
+      end
+      return logstash_prefix, index_name, type_name, deflector_alias, application_name
     end
 
     def multi_workers_ready?
@@ -661,7 +660,7 @@ EOC
     end
 
     def process_message(tag, meta, header, time, record, extracted_values)
-      logstash_prefix, index_name, type_name = extracted_values
+      logstash_prefix, index_name, type_name, deflector_alias, application_name = extracted_values
 
       if @flatten_hashes
         record = flatten_record(record)
@@ -749,6 +748,18 @@ EOC
     # send_bulk given a specific bulk request, the original tag,
     # chunk, and bulk_message_count
     def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, info)
+      logstash_prefix, index_name, type_name, deflector_alias, application_name = extracted_values
+      if @template_name && @template_file
+        retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
+          if @customize_template
+            template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @enable_ilm, deflector_alias, @ilm_policy_id)
+          else
+            template_install(@template_name, @template_file, @template_overwrite, @enable_ilm, deflector_alias, @ilm_policy_id)
+          end
+          create_rollover_alias(@index_prefix, @rollover_index, deflector_alias, application_name, @index_date_pattern, @enable_ilm, @ilm_policy_id, @ilm_policy)
+        end
+      end
+
       begin
 
         log.on_trace { log.trace "bulk request: #{data}" }
