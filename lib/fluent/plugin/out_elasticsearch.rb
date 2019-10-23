@@ -49,6 +49,8 @@ module Fluent::Plugin
 
     RequestInfo = Struct.new(:host, :index)
 
+    attr_reader :alias_indexes
+
     helpers :event_emitter, :compat_parameters, :record_accessor
 
     Fluent::Plugin.register_output('elasticsearch', self)
@@ -198,6 +200,7 @@ EOC
         raise Fluent::ConfigError, "host placeholder and template installation are exclusive features."
       end
 
+      @alias_indexes = []
       if !Fluent::Engine.dry_run_mode
         if @template_name && @template_file
           if @rollover_index
@@ -753,13 +756,18 @@ EOC
     def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, info)
       logstash_prefix, index_name, type_name, deflector_alias, application_name = extracted_values
       if @template_name && @template_file
-        retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
-          if @customize_template
-            template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @enable_ilm, deflector_alias, @ilm_policy_id)
-          else
-            template_install(@template_name, @template_file, @template_overwrite, @enable_ilm, deflector_alias, @ilm_policy_id)
+        if @alias_indexes.include? deflector_alias
+          log.debug("Index alias #{deflector_alias} already exists (cached)")
+        else
+          retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
+            if @customize_template
+              template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @enable_ilm, deflector_alias, @ilm_policy_id)
+            else
+              template_install(@template_name, @template_file, @template_overwrite, @enable_ilm, deflector_alias, @ilm_policy_id)
+            end
+            create_rollover_alias(@index_prefix, @rollover_index, deflector_alias, application_name, @index_date_pattern, @index_separator, @enable_ilm, @ilm_policy_id, @ilm_policy)
           end
-          create_rollover_alias(@index_prefix, @rollover_index, deflector_alias, application_name, @index_date_pattern, @index_separator, @enable_ilm, @ilm_policy_id, @ilm_policy)
+          @alias_indexes << deflector_alias
         end
       end
 
