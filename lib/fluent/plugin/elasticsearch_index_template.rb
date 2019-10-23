@@ -58,7 +58,7 @@ module Fluent::ElasticsearchIndexTemplate
   def indexcreation(index_name)
     client.indices.create(:index => index_name)
   rescue Elasticsearch::Transport::Transport::Error => e
-    if e.message == "already exists"
+    if e.message =~ /"already exists"/
       log.debug("Index #{index_name} already exists")
     else
       log.error("Error while index creation - #{index_name}: #{e.inspect}")
