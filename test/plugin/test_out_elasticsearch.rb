@@ -475,7 +475,10 @@ class ElasticsearchOutput < Test::Unit::TestCase
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
-
+    stub_elastic("https://logs.google.com:777/es//_bulk")
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
     assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
   end
 
@@ -524,6 +527,13 @@ class ElasticsearchOutput < Test::Unit::TestCase
       stub_request(:head, "https://logs.google.com:777/es//_alias/myapp_deflector").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 404, :body => "", :headers => {})
+      stub_request(:get, "https://logs.google.com:777/es//_template/myapp_deflector").
+        with(basic_auth: ['john', 'doe']).
+        to_return(status: 404, body: "", headers: {})
+      stub_request(:put, "https://logs.google.com:777/es//_template/myapp_deflector").
+        with(basic_auth: ['john', 'doe'],
+             body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"myapp_deflector\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"myapp_deflector-*\"}").
+        to_return(status: 200, body: "", headers: {})
       # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
@@ -545,7 +555,12 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
       driver(config)
 
-      assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
+      elastic_request = stub_elastic("https://logs.google.com:777/es//_bulk")
+      driver.run(default_tag: 'test') do
+        driver.feed(sample_record)
+      end
+
+      assert_requested(elastic_request)
     end
 
     def test_template_create_with_rollover_index_and_custom_ilm
@@ -585,6 +600,13 @@ class ElasticsearchOutput < Test::Unit::TestCase
       stub_request(:head, "https://logs.google.com:777/es//_alias/myapp_deflector").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 404, :body => "", :headers => {})
+      stub_request(:get, "https://logs.google.com:777/es//_template/myapp_deflector").
+        with(basic_auth: ['john', 'doe']).
+        to_return(status: 404, body: "", headers: {})
+      stub_request(:put, "https://logs.google.com:777/es//_template/myapp_deflector").
+        with(basic_auth: ['john', 'doe'],
+             body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"myapp_deflector\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"myapp_deflector-*\"}").
+        to_return(status: 200, body: "", headers: {})
       # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
@@ -606,7 +628,12 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
       driver(config)
 
-      assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
+      elastic_request = stub_elastic("https://logs.google.com:777/es//_bulk")
+      driver.run(default_tag: 'test') do
+        driver.feed(sample_record)
+      end
+
+      assert_requested(elastic_request)
     end
   end
 
@@ -640,6 +667,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
+
+    stub_elastic("https://logs.google.com:777/es//_bulk")
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
 
     assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
@@ -691,6 +723,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
+
+    stub_elastic("https://logs.google.com:777/es//_bulk")
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
 
     assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
@@ -747,6 +784,13 @@ class ElasticsearchOutput < Test::Unit::TestCase
       stub_request(:head, "https://logs.google.com:777/es//_alias/myapp_deflector").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 404, :body => "", :headers => {})
+      stub_request(:get, "https://logs.google.com:777/es//_template/myapp_deflector").
+        with(basic_auth: ['john', 'doe']).
+        to_return(status: 404, body: "", headers: {})
+      stub_request(:put, "https://logs.google.com:777/es//_template/myapp_deflector").
+        with(basic_auth: ['john', 'doe'],
+             body: "{\"order\":5,\"settings\":{\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"myapp_deflector\"},\"mappings\":{},\"aliases\":{\"myapp-logs-alias\":{}},\"index_patterns\":\"myapp_deflector-*\"}").
+        to_return(status: 200, body: "", headers: {})
       # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/myapp_deflector").
         with(basic_auth: ['john', 'doe'],
@@ -765,7 +809,12 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
       driver(config)
 
-      assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
+      elastic_request = stub_elastic("https://logs.google.com:777/es//_bulk")
+      driver.run(default_tag: 'test') do
+        driver.feed(sample_record)
+      end
+
+      assert_requested(elastic_request)
     end
 
     def test_custom_template_with_rollover_index_create_and_custom_ilm
@@ -812,6 +861,12 @@ class ElasticsearchOutput < Test::Unit::TestCase
       stub_request(:head, "https://logs.google.com:777/es//_alias/myapp_deflector").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 404, :body => "", :headers => {})
+      stub_request(:get, "https://logs.google.com:777/es//_template/myapp_deflector").
+        with(basic_auth: ['john', 'doe']).
+        to_return(status: 404, body: "", headers: {})
+      stub_request(:put, "https://logs.google.com:777/es//_template/myapp_deflector").
+        with(basic_auth: ['john', 'doe']).
+        to_return(status: 200, body: "", headers: {})
       # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/myapp_deflector").
         with(basic_auth: ['john', 'doe'],
@@ -830,7 +885,12 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
       driver(config)
 
-      assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
+      elastic_request = stub_elastic("https://logs.google.com:777/es//_bulk")
+      driver.run(default_tag: 'test') do
+        driver.feed(sample_record)
+      end
+
+      assert_requested(elastic_request)
     end
   end
 
@@ -864,6 +924,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
+
+    stub_elastic("https://logs.google.com:777/es//_bulk")
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
 
     assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
   end
@@ -899,6 +964,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
+
+    stub_elastic("https://logs.google.com:777/es//_bulk")
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
 
     assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
@@ -951,6 +1021,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     driver(config)
 
+    stub_elastic("https://logs.google.com:777/es//_bulk")
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+
     assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
 
@@ -975,8 +1050,13 @@ class ElasticsearchOutput < Test::Unit::TestCase
       with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
 
+    driver(config)
+
+    stub_elastic("https://logs.google.com:777/es//_bulk")
     assert_raise(RuntimeError) {
-      driver(config)
+      driver.run(default_tag: 'test') do
+        driver.feed(sample_record)
+      end
     }
   end
 
@@ -1024,8 +1104,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
       raise Faraday::ConnectionFailed, "Test message"
     end
 
-    assert_raise(Fluent::Plugin::ElasticsearchError::RetryableOperationExhaustedFailure) do
-      driver(config)
+    driver(config)
+
+    stub_elastic("https://logs.google.com:777/es//_bulk")
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
     end
 
     assert_equal(4, connection_resets)
@@ -1057,6 +1140,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
 
     driver(config)
+
+    stub_elastic("https://logs.google.com:778/es//_bulk")
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
 
     assert_equal(4, connection_resets)
   end
@@ -1192,6 +1280,11 @@ class ElasticsearchOutput < Test::Unit::TestCase
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
+
+    stub_elastic("https://logs.google.com:777/es//_bulk")
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
 
     assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
 
