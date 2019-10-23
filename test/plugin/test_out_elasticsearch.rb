@@ -392,7 +392,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
       }
 
       connection_resets = 0
-      stub_request(:get, "https://john:doe@logs.google.com:778/es//").with do |req|
+      stub_request(:get, "https://logs.google.com:778/es//").
+        with(basic_auth: ['john', 'doe']) do |req|
         connection_resets += 1
         raise Faraday::ConnectionFailed, "Test message"
       end
@@ -418,15 +419,17 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
 
     # connection start
-    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+    stub_request(:head, "https://logs.google.com:777/es//").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
     # check if template exists
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash").
+    stub_request(:get, "https://logs.google.com:777/es//_template/logstash").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
 
-    assert_not_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash")
+    assert_not_requested(:put, "https://logs.google.com:777/es//_template/logstash")
   end
 
   def test_template_create
@@ -445,18 +448,21 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
 
     # connection start
-    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+    stub_request(:head, "https://logs.google.com:777/es//").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
     # check if template exists
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash").
+    stub_request(:get, "https://logs.google.com:777/es//_template/logstash").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
     # creation
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash").
+    stub_request(:put, "https://logs.google.com:777/es//_template/logstash").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
 
-    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash", times: 1)
+    assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
   end
 
   def test_custom_template_create
@@ -476,18 +482,21 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
 
     # connection start
-    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+    stub_request(:head, "https://logs.google.com:777/es//").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
     # check if template exists
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
+    stub_request(:get, "https://logs.google.com:777/es//_template/myapp_alias_template").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
     # creation
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
+    stub_request(:put, "https://logs.google.com:777/es//_template/myapp_alias_template").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
 
-    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template", times: 1)
+    assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
 
   def test_custom_template_with_rollover_index_create
@@ -512,27 +521,33 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
 
     # connection start
-    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+    stub_request(:head, "https://logs.google.com:777/es//").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
     # check if template exists
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
+    stub_request(:get, "https://logs.google.com:777/es//_template/myapp_alias_template").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
     # creation
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
+    stub_request(:put, "https://logs.google.com:777/es//_template/myapp_alias_template").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
     # creation of index which can rollover
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
+    stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
     # check if alias exists
-    stub_request(:head, "https://john:doe@logs.google.com:777/es//_alias/myapp_deflector").
+    stub_request(:head, "https://logs.google.com:777/es//_alias/myapp_deflector").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
     # put the alias for the index
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/myapp_deflector").
+    stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/myapp_deflector").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
 
-    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template", times: 1)
+    assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
 
 
@@ -553,18 +568,21 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
 
     # connection start
-    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+    stub_request(:head, "https://logs.google.com:777/es//").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
     # check if template exists
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash").
+    stub_request(:get, "https://logs.google.com:777/es//_template/logstash").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
     # creation
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash").
+    stub_request(:put, "https://logs.google.com:777/es//_template/logstash").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
 
-    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash", times: 1)
+    assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
   end
 
   def test_custom_template_overwrite
@@ -585,18 +603,21 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
 
     # connection start
-    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+    stub_request(:head, "https://logs.google.com:777/es//").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
     # check if template exists
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
+    stub_request(:get, "https://logs.google.com:777/es//_template/myapp_alias_template").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
     # creation
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
+    stub_request(:put, "https://logs.google.com:777/es//_template/myapp_alias_template").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
 
-    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template", times: 1)
+    assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
 
   def test_custom_template_with_rollover_index_overwrite
@@ -621,27 +642,33 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
 
     # connection start
-    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+    stub_request(:head, "https://logs.google.com:777/es//").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
     # check if template exists
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
+    stub_request(:get, "https://logs.google.com:777/es//_template/myapp_alias_template").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
     # creation
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template").
+    stub_request(:put, "https://logs.google.com:777/es//_template/myapp_alias_template").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
     # creation of index which can rollover
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E").
+    stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
     # check if alias exists
-    stub_request(:head, "https://john:doe@logs.google.com:777/es//_alias/myapp_deflector").
+    stub_request(:head, "https://logs.google.com:777/es//_alias/myapp_deflector").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
     # put the alias for the index
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E/_alias/myapp_deflector").
+    stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E/_alias/myapp_deflector").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
 
-    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/myapp_alias_template", times: 1)
+    assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
 
   def test_template_create_invalid_filename
@@ -657,10 +684,12 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
 
     # connection start
-    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+    stub_request(:head, "https://logs.google.com:777/es//").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
     # check if template exists
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash").
+    stub_request(:get, "https://logs.google.com:777/es//_template/logstash").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
 
     assert_raise(RuntimeError) {
@@ -706,7 +735,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     connection_resets = 0
     # check if template exists
-    stub_request(:get, "https://john:doe@logs.google.com:778/es//_template/logstash").with do |req|
+    stub_request(:get, "https://logs.google.com:778/es//_template/logstash")
+      .with(basic_auth: ['john', 'doe']) do |req|
       connection_resets += 1
       raise Faraday::ConnectionFailed, "Test message"
     end
@@ -737,7 +767,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     connection_resets = 0
     # check if template exists
-    stub_request(:get, "https://john:doe@logs.google.com:778/es//_template/logstash").with do |req|
+    stub_request(:get, "https://logs.google.com:778/es//_template/logstash")
+      .with(basic_auth: ['john', 'doe']) do |req|
       connection_resets += 1
       raise Faraday::ConnectionFailed, "Test message"
     end
@@ -760,29 +791,36 @@ class ElasticsearchOutput < Test::Unit::TestCase
       templates       {"logstash1":"#{template_file}", "logstash2":"#{template_file}","logstash3":"#{template_file}" }
     }
 
-    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+    stub_request(:head, "https://logs.google.com:777/es//").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
      # check if template exists
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash1").
+    stub_request(:get, "https://logs.google.com:777/es//_template/logstash1").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash2").
+    stub_request(:get, "https://logs.google.com:777/es//_template/logstash2").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
 
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash3").
+    stub_request(:get, "https://logs.google.com:777/es//_template/logstash3").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {}) #exists
 
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash1").
+    stub_request(:put, "https://logs.google.com:777/es//_template/logstash1").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash2").
+    stub_request(:put, "https://logs.google.com:777/es//_template/logstash2").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash3").
+    stub_request(:put, "https://logs.google.com:777/es//_template/logstash3").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
 
-    assert_requested( :put, "https://john:doe@logs.google.com:777/es//_template/logstash1", times: 1)
-    assert_requested( :put, "https://john:doe@logs.google.com:777/es//_template/logstash2", times: 1)
-    assert_not_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash3") #exists
+    assert_requested( :put, "https://logs.google.com:777/es//_template/logstash1", times: 1)
+    assert_requested( :put, "https://logs.google.com:777/es//_template/logstash2", times: 1)
+    assert_not_requested(:put, "https://logs.google.com:777/es//_template/logstash3") #exists
   end
 
   def test_templates_overwrite
@@ -799,28 +837,35 @@ class ElasticsearchOutput < Test::Unit::TestCase
       template_overwrite true
     }
 
-    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+    stub_request(:head, "https://logs.google.com:777/es//").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
      # check if template exists
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash1").
+    stub_request(:get, "https://logs.google.com:777/es//_template/logstash1").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash2").
+    stub_request(:get, "https://logs.google.com:777/es//_template/logstash2").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash3").
+    stub_request(:get, "https://logs.google.com:777/es//_template/logstash3").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {}) #exists
 
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash1").
+    stub_request(:put, "https://logs.google.com:777/es//_template/logstash1").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash2").
+    stub_request(:put, "https://logs.google.com:777/es//_template/logstash2").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash3").
+    stub_request(:put, "https://logs.google.com:777/es//_template/logstash3").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
 
-    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash1", times: 1)
-    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash2", times: 1)
-    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash3", times: 1)
+    assert_requested(:put, "https://logs.google.com:777/es//_template/logstash1", times: 1)
+    assert_requested(:put, "https://logs.google.com:777/es//_template/logstash2", times: 1)
+    assert_requested(:put, "https://logs.google.com:777/es//_template/logstash3", times: 1)
   end
 
   def test_templates_not_used
@@ -839,29 +884,36 @@ class ElasticsearchOutput < Test::Unit::TestCase
       templates       {"logstash1":"#{template_file}", "logstash2":"#{template_file}" }
     }
     # connection start
-    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+    stub_request(:head, "https://logs.google.com:777/es//").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
     # check if template exists
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash").
+    stub_request(:get, "https://logs.google.com:777/es//_template/logstash").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash1").
+    stub_request(:get, "https://logs.google.com:777/es//_template/logstash1").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash2").
+    stub_request(:get, "https://logs.google.com:777/es//_template/logstash2").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
     #creation
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash").
+    stub_request(:put, "https://logs.google.com:777/es//_template/logstash").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash1").
+    stub_request(:put, "https://logs.google.com:777/es//_template/logstash1").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash2").
+    stub_request(:put, "https://logs.google.com:777/es//_template/logstash2").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
 
-    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash", times: 1)
+    assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
 
-    assert_not_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash1")
-    assert_not_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash2")
+    assert_not_requested(:put, "https://logs.google.com:777/es//_template/logstash1")
+    assert_not_requested(:put, "https://logs.google.com:777/es//_template/logstash2")
   end
 
   def test_templates_can_be_partially_created_if_error_occurs
@@ -876,25 +928,30 @@ class ElasticsearchOutput < Test::Unit::TestCase
       password        doe
       templates       {"logstash1":"#{template_file}", "logstash2":"/abc" }
     }
-    stub_request(:head, "https://john:doe@logs.google.com:777/es//").
+    stub_request(:head, "https://logs.google.com:777/es//").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
      # check if template exists
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash1").
+    stub_request(:get, "https://logs.google.com:777/es//_template/logstash1").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
-    stub_request(:get, "https://john:doe@logs.google.com:777/es//_template/logstash2").
+    stub_request(:get, "https://logs.google.com:777/es//_template/logstash2").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
 
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash1").
+    stub_request(:put, "https://logs.google.com:777/es//_template/logstash1").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
-    stub_request(:put, "https://john:doe@logs.google.com:777/es//_template/logstash2").
+    stub_request(:put, "https://logs.google.com:777/es//_template/logstash2").
+      with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
 
     assert_raise(RuntimeError) {
       driver(config)
     }
 
-    assert_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash1", times: 1)
-    assert_not_requested(:put, "https://john:doe@logs.google.com:777/es//_template/logstash2")
+    assert_requested(:put, "https://logs.google.com:777/es//_template/logstash1", times: 1)
+    assert_not_requested(:put, "https://logs.google.com:777/es//_template/logstash2")
   end
 
   def test_legacy_hosts_list
