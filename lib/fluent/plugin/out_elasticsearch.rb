@@ -198,17 +198,19 @@ EOC
         raise Fluent::ConfigError, "host placeholder and template installation are exclusive features."
       end
 
-      if @template_name && @template_file
-        if @rollover_index
-          raise Fluent::ConfigError, "'deflector_alias' must be provided if 'rollover_index' is set true ." if not @deflector_alias
-        end
-        if @enable_ilm
-          raise Fluent::ConfigError, "'rollover_index' and 'deflector_alias' must be provided if 'enable_ilm' is set true ." if !@deflector_alias &&!@deflector_alias
-        end
-        verify_ilm_working if @enable_ilm
-      elsif @templates
-        retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
-          templates_hash_install(@templates, @template_overwrite)
+      if !Fluent::Engine.dry_run_mode
+        if @template_name && @template_file
+          if @rollover_index
+            raise Fluent::ConfigError, "'deflector_alias' must be provided if 'rollover_index' is set true ." if not @deflector_alias
+          end
+          if @enable_ilm
+            raise Fluent::ConfigError, "'rollover_index' and 'deflector_alias' must be provided if 'enable_ilm' is set true ." if !@deflector_alias &&!@deflector_alias
+          end
+          verify_ilm_working if @enable_ilm
+        elsif @templates
+          retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
+            templates_hash_install(@templates, @template_overwrite)
+          end
         end
       end
 
