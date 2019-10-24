@@ -58,7 +58,11 @@ module Fluent::ElasticsearchIndexTemplate
   def indexcreation(index_name)
     client.indices.create(:index => index_name)
   rescue Elasticsearch::Transport::Transport::Error => e
+    if e.message =~ /"already exists"/
+      log.debug("Index #{index_name} already exists")
+    else
       log.error("Error while index creation - #{index_name}: #{e.inspect}")
+    end
   end
 
   def template_install(name, template_file, overwrite, enable_ilm = false, deflector_alias_name = nil, ilm_policy_id = nil)
@@ -79,9 +83,9 @@ module Fluent::ElasticsearchIndexTemplate
                                                                 ilm_policy_id,
                                                                 get_template(template_file)) :
                      get_template(template_file))
-      log.info("Template configured, but no template installed. Installed '#{name}' from #{template_file}.")
+      log.info("Template configured, but no template installed. Installed '#{inject_template_name}' from #{template_file}.")
     else
-      log.info("Template configured and already installed.")
+      log.debug("Template '#{inject_template_name}' configured and already installed.")
     end
   end
 
@@ -102,30 +106,30 @@ module Fluent::ElasticsearchIndexTemplate
         template_put(template_custom_name, custom_template)
         log.info("Template configured, but no template installed. Installed '#{template_custom_name}' from #{template_file}.")
       else
-        log.info("Template configured and already installed.")
+        log.debug("Template '#{template_custom_name}' configured and already installed.")
       end
     end
   end
 
   def get_template_name(enable_ilm, template_name, deflector_alias_name)
-    enable_ilm && !template_name ? deflector_alias_name : template_name
+    enable_ilm ? deflector_alias_name : template_name
   end
 
   def inject_ilm_settings_to_template(deflector_alias_name, ilm_policy_id, template)
-    log.info("Overwriting index patterns when Index Lifecycle Management is enabled.")
+    log.debug("Overwriting index patterns when Index Lifecycle Management is enabled.")
     template.delete('template') if template.include?('template')
     template['index_patterns'] = "#{deflector_alias_name}-*"
     if template['settings'] && (template['settings']['index.lifecycle.name'] || template['settings']['index.lifecycle.rollover_alias'])
-      log.info("Overwriting index lifecycle name and rollover alias when Index Lifecycle Management is enabled.")
+      log.debug("Overwriting index lifecycle name and rollover alias when Index Lifecycle Management is enabled.")
     end
     template['settings'].update({ 'index.lifecycle.name' => ilm_policy_id, 'index.lifecycle.rollover_alias' => deflector_alias_name})
     template
   end
 
-  def create_rollover_alias(index_prefix, rollover_index, deflector_alias_name, app_name, index_date_pattern, enable_ilm, ilm_policy_id, ilm_policy)
+  def create_rollover_alias(index_prefix, rollover_index, deflector_alias_name, app_name, index_date_pattern, index_separator, enable_ilm, ilm_policy_id, ilm_policy)
     if rollover_index
       if !client.indices.exists_alias(:name => deflector_alias_name)
-        index_name_temp='<'+index_prefix.downcase+'-'+app_name.downcase+'-{'+index_date_pattern+'}-000001>'
+        index_name_temp='<'+index_prefix.downcase+index_separator+app_name.downcase+'-{'+index_date_pattern+'}-000001>'
         indexcreation(index_name_temp)
         body = {}
         body = rollover_alias_payload(deflector_alias_name) if enable_ilm
@@ -140,7 +144,7 @@ module Fluent::ElasticsearchIndexTemplate
           end
         end
       else
-        log.info("The alias '#{deflector_alias_name}' is already present")
+        log.debug("The alias '#{deflector_alias_name}' is already present")
       end
     else
       log.info("No index and alias creation action performed because rollover_index is set to '#{rollover_index}'")
