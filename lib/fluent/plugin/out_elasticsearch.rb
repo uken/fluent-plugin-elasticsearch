@@ -767,7 +767,7 @@ EOC
             end
             create_rollover_alias(@index_prefix, @rollover_index, deflector_alias, application_name, @index_date_pattern, @index_separator, @enable_ilm, @ilm_policy_id, @ilm_policy)
           end
-          @alias_indexes << deflector_alias
+          @alias_indexes << deflector_alias unless deflector_alias.nil?
         end
       end
 
