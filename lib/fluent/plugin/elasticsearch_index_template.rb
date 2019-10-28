@@ -21,8 +21,8 @@ module Fluent::ElasticsearchIndexTemplate
     JSON.parse(file_contents)
   end
 
-  def template_exists?(name)
-    client.indices.get_template(:name => name)
+  def template_exists?(name, host = nil)
+    client(host).indices.get_template(:name => name)
     return true
   rescue Elasticsearch::Transport::Transport::Errors::NotFound
     return false
@@ -51,12 +51,12 @@ module Fluent::ElasticsearchIndexTemplate
     end
   end
 
-  def template_put(name, template)
-    client.indices.put_template(:name => name, :body => template)
+  def template_put(name, template, host = nil)
+    client(host).indices.put_template(:name => name, :body => template)
   end
 
-  def indexcreation(index_name)
-    client.indices.create(:index => index_name)
+  def indexcreation(index_name, host = nil)
+    client(host).indices.create(:index => index_name)
   rescue Elasticsearch::Transport::Transport::Error => e
     if e.message =~ /"already exists"/
       log.debug("Index #{index_name} already exists")
@@ -65,31 +65,31 @@ module Fluent::ElasticsearchIndexTemplate
     end
   end
 
-  def template_install(name, template_file, overwrite, enable_ilm = false, deflector_alias_name = nil, ilm_policy_id = nil)
+  def template_install(name, template_file, overwrite, enable_ilm = false, deflector_alias_name = nil, ilm_policy_id = nil, host = nil)
     inject_template_name = get_template_name(enable_ilm, name, deflector_alias_name)
     if overwrite
       template_put(inject_template_name,
                    enable_ilm ? inject_ilm_settings_to_template(deflector_alias_name,
                                                                 ilm_policy_id,
                                                                 get_template(template_file)) :
-                     get_template(template_file))
+                     get_template(template_file), host)
 
       log.info("Template '#{inject_template_name}' overwritten with #{template_file}.")
       return
     end
-    if !template_exists?(inject_template_name)
+    if !template_exists?(inject_template_name, host)
       template_put(inject_template_name,
                    enable_ilm ? inject_ilm_settings_to_template(deflector_alias_name,
                                                                 ilm_policy_id,
                                                                 get_template(template_file)) :
-                     get_template(template_file))
+                     get_template(template_file), host)
       log.info("Template configured, but no template installed. Installed '#{inject_template_name}' from #{template_file}.")
     else
       log.debug("Template '#{inject_template_name}' configured and already installed.")
     end
   end
 
-  def template_custom_install(template_name, template_file, overwrite, customize_template, enable_ilm, deflector_alias_name, ilm_policy_id)
+  def template_custom_install(template_name, template_file, overwrite, customize_template, enable_ilm, deflector_alias_name, ilm_policy_id, host)
     template_custom_name = get_template_name(enable_ilm, template_name, deflector_alias_name)
     custom_template = if enable_ilm
                         inject_ilm_settings_to_template(deflector_alias_name, ilm_policy_id,
@@ -99,11 +99,11 @@ module Fluent::ElasticsearchIndexTemplate
                         get_custom_template(template_file, customize_template)
                       end
     if overwrite
-      template_put(template_custom_name, custom_template)
+      template_put(template_custom_name, custom_template, host)
       log.info("Template '#{template_custom_name}' overwritten with #{template_file}.")
     else
-      if !template_exists?(template_custom_name)
-        template_put(template_custom_name, custom_template)
+      if !template_exists?(template_custom_name, host)
+        template_put(template_custom_name, custom_template, host)
         log.info("Template configured, but no template installed. Installed '#{template_custom_name}' from #{template_file}.")
       else
         log.debug("Template '#{template_custom_name}' configured and already installed.")
@@ -126,11 +126,11 @@ module Fluent::ElasticsearchIndexTemplate
     template
   end
 
-  def create_rollover_alias(index_prefix, rollover_index, deflector_alias_name, app_name, index_date_pattern, index_separator, enable_ilm, ilm_policy_id, ilm_policy)
+  def create_rollover_alias(index_prefix, rollover_index, deflector_alias_name, app_name, index_date_pattern, index_separator, enable_ilm, ilm_policy_id, ilm_policy, host)
     if rollover_index
       if !client.indices.exists_alias(:name => deflector_alias_name)
         index_name_temp='<'+index_prefix.downcase+index_separator+app_name.downcase+'-{'+index_date_pattern+'}-000001>'
-        indexcreation(index_name_temp)
+        indexcreation(index_name_temp, host)
         body = {}
         body = rollover_alias_payload(deflector_alias_name) if enable_ilm
         client.indices.put_alias(:index => index_name_temp, :name => deflector_alias_name,

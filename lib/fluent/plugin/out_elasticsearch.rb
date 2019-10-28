@@ -194,10 +194,13 @@ EOC
       raise Fluent::ConfigError, "'max_retry_putting_template' must be greater than or equal to zero." if @max_retry_putting_template < 0
       raise Fluent::ConfigError, "'max_retry_get_es_version' must be greater than or equal to zero." if @max_retry_get_es_version < 0
 
-      # Raise error when using host placeholders and template features at same time.
+      # Dump log when using host placeholders and template features at same time.
       valid_host_placeholder = placeholder?(:host_placeholder, @host)
       if valid_host_placeholder && (@template_name && @template_file || @templates)
-        raise Fluent::ConfigError, "host placeholder and template installation are exclusive features."
+        if @verify_es_version_at_startup
+          raise Fluent::ConfigError, "host placeholder, template installation, and verify Elasticsearch version at startup are exclusive feature at same time. Please specify verify_es_version_at_startup as `false` when host placeholder and template installation are enabled."
+        end
+        log.info "host placeholder and template installation makes your Elasticsearch cluster a bit slow down(beta)."
       end
 
       @alias_indexes = []
@@ -761,11 +764,11 @@ EOC
         else
           retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
             if @customize_template
-              template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @enable_ilm, deflector_alias, @ilm_policy_id)
+              template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @enable_ilm, deflector_alias, @ilm_policy_id, info.host)
             else
-              template_install(@template_name, @template_file, @template_overwrite, @enable_ilm, deflector_alias, @ilm_policy_id)
+              template_install(@template_name, @template_file, @template_overwrite, @enable_ilm, deflector_alias, @ilm_policy_id, info.host)
             end
-            create_rollover_alias(@index_prefix, @rollover_index, deflector_alias, application_name, @index_date_pattern, @index_separator, @enable_ilm, @ilm_policy_id, @ilm_policy)
+            create_rollover_alias(@index_prefix, @rollover_index, deflector_alias, application_name, @index_date_pattern, @index_separator, @enable_ilm, @ilm_policy_id, @ilm_policy, info.host)
           end
           @alias_indexes << deflector_alias unless deflector_alias.nil?
         end
