@@ -353,6 +353,27 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
   end
 
+  test 'Detected exclusive features which are host placeholder, template installation, and verify Elasticsearch version at startup' do
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_template.json')
+
+    assert_raise_message(/host placeholder, template installation, and verify Elasticsearch version at startup are exclusive feature at same time./) do
+      config = %{
+        host            logs-${tag}.google.com
+        port            777
+        scheme          https
+        path            /es/
+        user            john
+        password        doe
+        template_name   logstash
+        template_file   #{template_file}
+        verify_es_version_at_startup true
+        default_elasticsearch_version 6
+      }
+      driver(config)
+    end
+  end
+
   sub_test_case 'connection exceptions' do
     test 'default connection exception' do
       driver(Fluent::Config::Element.new(
@@ -749,6 +770,44 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
 
     assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
+  end
+
+  def test_custom_template_installation_for_host_placeholder
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_template.json')
+
+    config = %{
+      host            logs-${tag}.google.com
+      port            777
+      scheme          https
+      path            /es/
+      user            john
+      password        doe
+      template_name   logstash
+      template_file   #{template_file}
+      verify_es_version_at_startup false
+      default_elasticsearch_version 6
+      customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
+    }
+
+    # connection start
+    stub_request(:head, "https://logs-test.google.com:777/es//").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 200, :body => "", :headers => {})
+    # check if template exists
+    stub_request(:get, "https://logs-test.google.com:777/es//_template/logstash").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 404, :body => "", :headers => {})
+    stub_request(:put, "https://logs-test.google.com:777/es//_template/logstash").
+      with(basic_auth: ['john', 'doe']).
+      to_return(status: 200, body: "", headers: {})
+
+    driver(config)
+
+    stub_elastic("https://logs-test.google.com:777/es//_bulk")
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
   end
 
   def test_custom_template_with_rollover_index_create
@@ -1215,7 +1274,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
   end
 
-  def test_template_installation_exclusive_for_host_placeholder
+  def test_template_create_for_host_placeholder
     cwd = File.dirname(__FILE__)
     template_file = File.join(cwd, 'test_template.json')
 
@@ -1228,10 +1287,30 @@ class ElasticsearchOutput < Test::Unit::TestCase
       password        doe
       template_name   logstash
       template_file   #{template_file}
+      verify_es_version_at_startup false
+      default_elasticsearch_version 6
     }
 
-    assert_raise(Fluent::ConfigError) do
-      driver(config)
+    # connection start
+    stub_request(:head, "https://logs-test.google.com:777/es//").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 200, :body => "", :headers => {})
+    # check if template exists
+    stub_request(:get, "https://logs-test.google.com:777/es//_template/logstash").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 404, :body => "", :headers => {})
+    stub_request(:put, "https://logs-test.google.com:777/es//_template/logstash").
+      with(basic_auth: ['john', 'doe']).
+      to_return(status: 200, body: "", headers: {})
+    stub_request(:post, "https://logs-test.google.com:777/es//_bulk").
+      with(basic_auth: ['john', 'doe']).
+      to_return(status: 200, body: "", headers: {})
+
+    driver(config)
+
+    stub_elastic("https://logs.google.com:777/es//_bulk")
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
     end
   end
 
