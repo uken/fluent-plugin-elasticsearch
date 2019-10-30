@@ -277,6 +277,14 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal '_doc', instance.type_name
   end
 
+  test 'Detected Elasticsearch 8' do
+    config = %{
+      type_name noeffect
+    }
+    instance = driver(config, 8).instance
+    assert_equal nil, instance.type_name
+  end
+
   test 'Detected Elasticsearch 6 and insecure security' do
     config = %{
       ssl_version TLSv1_1
@@ -1130,20 +1138,32 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_logs_include(error_log, /(input string invalid)|(invalid byte sequence in UTF-8)/)
   end
 
-  def test_writes_to_default_index
+  data('Elasticsearch 6' => [6, 'fluentd'],
+       'Elasticsearch 7' => [7, 'fluentd'],
+       'Elasticsearch 8' => [8, 'fluentd'],
+      )
+  def test_writes_to_default_index(data)
+    version, index_name = data
     stub_elastic
+    driver("", version)
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal('fluentd', index_cmds.first['index']['_index'])
+    assert_equal(index_name, index_cmds.first['index']['_index'])
   end
 
-  def test_writes_to_default_type
+  data('Elasticsearch 6' => [6, Fluent::Plugin::ElasticsearchOutput::DEFAULT_TYPE_NAME],
+       'Elasticsearch 7' => [7, Fluent::Plugin::ElasticsearchOutput::DEFAULT_TYPE_NAME_ES_7x],
+       'Elasticsearch 8' => [8, nil],
+      )
+  def test_writes_to_default_type(data)
+    version, index_type = data
     stub_elastic
+    driver("", version)
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal(default_type_name, index_cmds.first['index']['_type'])
+    assert_equal(index_type, index_cmds.first['index']['_type'])
   end
 
   def test_writes_to_speficied_index
