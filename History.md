@@ -1,6 +1,13 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+### 3.5.6
+- Support elasticsearch8 removal of mapping types (#656)
+- Upgrade webmock to 3 (#652)
+- Suppress `ruby -c` warnings (#649)
+- Add tips for sniffer class (#644)
+- Make `client_key_pass` secret (#637)
+- Validate `user` and `password` early (#636)
 
 ### 3.5.5
 - Fix arguments order of `assert_equal` (#635)
