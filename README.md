@@ -132,6 +132,10 @@ In your Fluentd configuration, use `@type elasticsearch`. Additional configurati
 </match>
 ```
 
+NOTE: `type_name` parameter will be used fixed `_doc` value for Elasticsearch 7.
+
+NOTE: `type_name` parameter will make no effect for Elasticsearch 8.
+
 ### Index templates
 
 This plugin creates Elasticsearch indices by merely writing to them. Consider using [Index Templates](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html) to gain control of what get indexed and how. See [this example](https://github.com/uken/fluent-plugin-elasticsearch/issues/33#issuecomment-38693282) for a good starting point.
