@@ -119,6 +119,7 @@ module Fluent::ElasticsearchIndexTemplate
     log.debug("Overwriting index patterns when Index Lifecycle Management is enabled.")
     template.delete('template') if template.include?('template')
     template['index_patterns'] = "#{deflector_alias_name}-*"
+    template['order'] = template['order'] ? template['order'] + deflector_alias_name.split('-').length : 50 + deflector_alias_name.split('-').length
     if template['settings'] && (template['settings']['index.lifecycle.name'] || template['settings']['index.lifecycle.rollover_alias'])
       log.debug("Overwriting index lifecycle name and rollover alias when Index Lifecycle Management is enabled.")
     end
