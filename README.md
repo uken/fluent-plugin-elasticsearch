@@ -66,6 +66,7 @@ Current maintainers: @cosmo0920
   + [include_index_in_url](#include_index_in_url)
   + [http_backend](#http_backend)
   + [prefer_oj_serializer](#prefer_oj_serializer)
+  + [compression_level](#compression_level)
   + [Client/host certificate options](#clienthost-certificate-options)
   + [Proxy Support](#proxy-support)
   + [Buffer options](#buffer-options)
@@ -781,6 +782,13 @@ Default value is `excon` which is default http_backend of elasticsearch plugin.
 ```
 http_backend typhoeus
 ```
+
+### compression_level
+You can add gzip compression of output data. In this case `default_compression`, `best_compression` or `best speed` option should be chosen. 
+By default there is no compression, default value for this option is `no_compression`
+```
+compression_level best_compression
+``` 
 
 ### prefer_oj_serializer
 
