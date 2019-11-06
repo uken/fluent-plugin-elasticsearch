@@ -44,7 +44,11 @@ module Fluent::Plugin
       @_es ||= begin
         @current_config = connection_options[:hosts].clone
         adapter_conf = lambda {|f| f.adapter @http_backend, @backend_options }
-        gzip_headers = if compression then {'Content-Encoding' => 'gzip'} else {} end
+        gzip_headers = if compression
+                         {'Content-Encoding' => 'gzip'}
+                       else
+                         {}
+                       end
         headers = { 'Content-Type' => @content_type.to_s, }.merge(gzip_headers)
         transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(connection_options.merge(
                                                                             options: {
@@ -213,7 +217,11 @@ module Fluent::Plugin
 
     def send_bulk(data, host, index)
       begin
-        prepared_data = if compression then gzip(data) else data end
+        prepared_data = if compression
+                          gzip(data)
+                        else
+                          data
+                        end
         response = client(host).bulk body: prepared_data, index: index
         if response['errors']
           log.error "Could not push log to Elasticsearch: #{response}"
