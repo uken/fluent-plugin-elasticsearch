@@ -2,6 +2,10 @@
 require 'date'
 require 'excon'
 require 'elasticsearch'
+begin
+  require 'elasticsearch/xpack'
+rescue LoadError
+end
 require 'json'
 require 'uri'
 begin
@@ -18,6 +22,7 @@ require_relative 'elasticsearch_constants'
 require_relative 'elasticsearch_error'
 require_relative 'elasticsearch_error_handler'
 require_relative 'elasticsearch_index_template'
+require_relative 'elasticsearch_index_lifecycle_management'
 begin
   require_relative 'oj_serializer'
 rescue LoadError
@@ -44,6 +49,8 @@ module Fluent::Plugin
 
     RequestInfo = Struct.new(:host, :index)
 
+    attr_reader :alias_indexes
+
     helpers :event_emitter, :compat_parameters, :record_accessor
 
     Fluent::Plugin.register_output('elasticsearch', self)
@@ -54,6 +61,7 @@ module Fluent::Plugin
     DEFAULT_TYPE_NAME = "fluentd".freeze
     DEFAULT_RELOAD_AFTER = -1
     TARGET_BULK_BYTES = 20 * 1024 * 1024
+    DEFAULT_POLICY_ID = "logstash-policy"
 
     config_param :host, :string,  :default => 'localhost'
     config_param :port, :integer, :default => 9200
@@ -105,6 +113,7 @@ EOC
     config_param :customize_template, :hash, :default => nil
     config_param :rollover_index, :string, :default => false
     config_param :index_date_pattern, :string, :default => "now/d"
+    config_param :index_separator, :string, :default => "-"
     config_param :deflector_alias, :string, :default => nil
     config_param :index_prefix, :string, :default => "logstash"
     config_param :application_name, :string, :default => "default"
@@ -139,6 +148,9 @@ EOC
     config_param :ignore_exceptions, :array, :default => [], value_type: :string, :desc => "Ignorable exception list"
     config_param :exception_backup, :bool, :default => true, :desc => "Chunk backup flag when ignore exception occured"
     config_param :bulk_message_request_threshold, :size, :default => TARGET_BULK_BYTES
+    config_param :enable_ilm, :bool, :default => false
+    config_param :ilm_policy_id, :string, :default => DEFAULT_POLICY_ID
+    config_param :ilm_policy, :hash, :default => {}
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE
@@ -148,6 +160,7 @@ EOC
 
     include Fluent::ElasticsearchIndexTemplate
     include Fluent::Plugin::ElasticsearchConstants
+    include Fluent::Plugin::ElasticsearchIndexLifecycleManagement
 
     def initialize
       super
@@ -181,24 +194,25 @@ EOC
       raise Fluent::ConfigError, "'max_retry_putting_template' must be greater than or equal to zero." if @max_retry_putting_template < 0
       raise Fluent::ConfigError, "'max_retry_get_es_version' must be greater than or equal to zero." if @max_retry_get_es_version < 0
 
-      # Raise error when using host placeholders and template features at same time.
+      # Dump log when using host placeholders and template features at same time.
       valid_host_placeholder = placeholder?(:host_placeholder, @host)
       if valid_host_placeholder && (@template_name && @template_file || @templates)
-        raise Fluent::ConfigError, "host placeholder and template installation are exclusive features."
+        if @verify_es_version_at_startup
+          raise Fluent::ConfigError, "host placeholder, template installation, and verify Elasticsearch version at startup are exclusive feature at same time. Please specify verify_es_version_at_startup as `false` when host placeholder and template installation are enabled."
+        end
+        log.info "host placeholder and template installation makes your Elasticsearch cluster a bit slow down(beta)."
       end
 
+      @alias_indexes = []
       if !Fluent::Engine.dry_run_mode
         if @template_name && @template_file
-          retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
-            if @customize_template
-              if @rollover_index
-                raise Fluent::ConfigError, "'deflector_alias' must be provided if 'rollover_index' is set true ." if not @deflector_alias
-              end
-              template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @index_prefix, @rollover_index, @deflector_alias, @application_name, @index_date_pattern)
-            else
-              template_install(@template_name, @template_file, @template_overwrite)
-            end
+          if @rollover_index
+            raise Fluent::ConfigError, "'deflector_alias' must be provided if 'rollover_index' is set true ." if not @deflector_alias
           end
+          if @enable_ilm
+            raise Fluent::ConfigError, "'rollover_index' and 'deflector_alias' must be provided if 'enable_ilm' is set true ." if !@deflector_alias &&!@deflector_alias
+          end
+          verify_ilm_working if @enable_ilm
         elsif @templates
           retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
             templates_hash_install(@templates, @template_overwrite)
@@ -579,7 +593,17 @@ EOC
       else
         type_name = nil
       end
-      return logstash_prefix, index_name, type_name
+      if @deflector_alias
+        deflector_alias = extract_placeholders(@deflector_alias, chunk)
+      else
+        deflector_alias = nil
+      end
+      if @application_name
+        application_name = extract_placeholders(@application_name, chunk)
+      else
+        application_name = nil
+      end
+      return logstash_prefix, index_name, type_name, deflector_alias, application_name
     end
 
     def multi_workers_ready?
@@ -653,7 +677,7 @@ EOC
     end
 
     def process_message(tag, meta, header, time, record, extracted_values)
-      logstash_prefix, index_name, type_name = extracted_values
+      logstash_prefix, index_name, type_name, deflector_alias, application_name = extracted_values
 
       if @flatten_hashes
         record = flatten_record(record)
@@ -747,6 +771,23 @@ EOC
     # send_bulk given a specific bulk request, the original tag,
     # chunk, and bulk_message_count
     def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, info)
+      logstash_prefix, index_name, type_name, deflector_alias, application_name = extracted_values
+      if @template_name && @template_file
+        if @alias_indexes.include? deflector_alias
+          log.debug("Index alias #{deflector_alias} already exists (cached)")
+        else
+          retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
+            if @customize_template
+              template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @enable_ilm, deflector_alias, @ilm_policy_id, info.host)
+            else
+              template_install(@template_name, @template_file, @template_overwrite, @enable_ilm, deflector_alias, @ilm_policy_id, info.host)
+            end
+            create_rollover_alias(@index_prefix, @rollover_index, deflector_alias, application_name, @index_date_pattern, @index_separator, @enable_ilm, @ilm_policy_id, @ilm_policy, info.host)
+          end
+          @alias_indexes << deflector_alias unless deflector_alias.nil?
+        end
+      end
+
       begin
 
         log.on_trace { log.trace "bulk request: #{data}" }

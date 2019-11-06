@@ -87,6 +87,9 @@ Current maintainers: @cosmo0920
   + [ignore_exceptions](#ignore_exceptions)
   + [exception_backup](#exception_backup)
   + [bulk_message_request_threshold](#bulk_message_request_threshold)
+  + [enable_ilm](#enable_ilm)
+  + [ilm_policy_id](#ilm_policy_id)
+  + [ilm_policy](#ilm_policy)
 * [Troubleshooting](#troubleshooting)
   + [Cannot send events to elasticsearch](#cannot-send-events-to-elasticsearch)
   + [Cannot see detailed failure log](#cannot-see-detailed-failure-log)
@@ -97,6 +100,7 @@ Current maintainers: @cosmo0920
   + [Stopped to send events on k8s, why?](#stopped-to-send-events-on-k8s-why)
   + [Random 400 - Rejected by Elasticsearch is occured, why?](#random-400---rejected-by-elasticsearch-is-occured-why)
   + [Fluentd seems to hang if it unable to connect Elasticsearch, why?](#fluentd-seems-to-hang-if-it-unable-to-connect-elasticsearch-why)
+  + [Enable Index Lifecycle Management](#enable-index-lifecycle-management)
 * [Contact](#contact)
 * [Contributing](#contributing)
 * [Running tests](#running-tests)
@@ -111,6 +115,8 @@ Current maintainers: @cosmo0920
 NOTE: For v0.12 version, you should use 1.x.y version. Please send patch into v0.12 branch if you encountered 1.x version's bug.
 
 NOTE: This documentation is for fluent-plugin-elasticsearch 2.x or later. For 1.x documentation, please see [v0.12 branch](https://github.com/uken/fluent-plugin-elasticsearch/tree/v0.12).
+
+NOTE: Using Index Lifecycle management(ILM) feature needs to install elasticsearch-xpack gem v7.4.0 or later.
 
 ## Installation
 
@@ -1120,6 +1126,30 @@ Default value is `20MB`. (20 * 1024 * 1024)
 
 If you specify this size as negative number, `bulk_message` request splitting feature will be disabled.
 
+## enable_ilm
+
+Enable Index Lifecycle Management (ILM).
+
+Default value is `false`.
+
+**NOTE:** This parameter requests to install elasticsearch-xpack gem.
+
+## ilm_policy_id
+
+Specify ILM policy id.
+
+Default value is `logstash-policy`.
+
+**NOTE:** This parameter requests to install elasticsearch-xpack gem.
+
+## ilm_policy
+
+Specify ILM policy contents as Hash.
+
+Default value is `{}`.
+
+**NOTE:** This parameter requests to install elasticsearch-xpack gem.
+
 ## Troubleshooting
 
 ### Cannot send events to Elasticsearch
@@ -1536,6 +1566,42 @@ To remove too pessimistic behavior, you can use the following configuration:
   # ... and some ES plugin configuration
 </match>
 ```
+
+### Enable Index Lifecycle Management
+
+Index lifecycle management is template based index management feature.
+
+Main ILM feature parameters are:
+
+* `rollover_index`
+* `deflector_alias`
+* `enable_ilm`
+* `ilm_policy_id`
+* `ilm_policy`
+
+They are not all mandatory parameters but they are used for ILM feature in effect.
+
+And also, ILM feature users should specify their Elasticsearch template for ILM enabled indices.
+Because ILM settings are injected into their Elasticsearch templates.
+
+```aconf
+index_name fluentd-${tag}
+# Should specify rollover_index as true
+rollover_index true
+deflector_alias fluentd-${tag} # Should specify as same index_name
+index_prefix fluentd
+application_name ${tag}
+index_date_pattern "now/d"
+enable_ilm true
+# Policy configurations
+ilm_policy_id fluentd-policy
+# ilm_policy {} # Use default policy
+template_name your-fluentd-template
+template_file /path/to/fluentd-template.json
+customize_template {"<<index_prefix>>": "fluentd"}
+```
+
+Note: This plugin only creates rollover-enabled indices, which are aliases pointing to them and index templates, and creates an ILM policy if enabled.
 
 ## Contact
 
