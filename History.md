@@ -1,6 +1,12 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+### 3.6.0
+- Set order in newly created templates (#660)
+- Merge Support index lifecycle management into master (#659)
+- Support template installation with host placeholder (#654)
+- Support index lifecycle management (#651)
+
 ### 3.5.6
 - Support elasticsearch8 removal of mapping types (#656)
 - Upgrade webmock to 3 (#652)
