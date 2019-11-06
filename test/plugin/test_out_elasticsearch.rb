@@ -1812,7 +1812,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def test_writes_to_default_index_with_compression
     config = %[
-      compression_level best_compression
+      compression_level default_compression
     ]
 
     bodystr = %({

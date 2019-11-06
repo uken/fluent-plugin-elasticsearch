@@ -104,6 +104,44 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_false instance.with_transporter_log
     assert_equal :"application/json", instance.content_type
     assert_equal :excon, instance.http_backend
+    assert_false instance.compression
+    assert_equal :no_compression, instance.compression_level
+  end
+
+  test 'configure compression' do
+    config = %{
+      compression_level best_compression
+    }
+    instance = driver(config).instance
+
+    assert_equal true, instance.compression
+  end
+
+  test 'check compression strategy' do
+    config = %{
+      compression_level best_speed
+    }
+    instance = driver(config).instance
+
+    assert_equal Zlib::BEST_SPEED, instance.compression_strategy
+  end
+
+  test 'check content-encoding header with compression' do
+    config = %{
+      compression_level best_compression
+    }
+    instance = driver(config).instance
+
+    assert_equal "gzip", instance.client.transport.options[:transport_options][:headers]["Content-Encoding"]
+  end
+
+  test 'check compression option is passed to transport' do
+    config = %{
+      compression_level best_compression
+    }
+    instance = driver(config).instance
+
+    assert_equal true, instance.client.transport.options[:compression]
   end
 
   test 'configure Content-Type' do
@@ -303,6 +341,46 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.feed(sample_record)
     end
     assert_equal('fluentd', index_cmds.first['index']['_index'])
+  end
+
+  # gzip compress data
+  def gzip(string, strategy)
+    wio = StringIO.new("w")
+    w_gz = Zlib::GzipWriter.new(wio, strategy = strategy)
+    w_gz.write(string)
+    w_gz.close
+    wio.string
+  end
+
+  def test_writes_to_default_index_with_compression
+    config = %[
+      compression_level default_compression
+    ]
+
+    bodystr = %({
+          "took" : 500,
+          "errors" : false,
+          "items" : [
+            {
+              "create": {
+                "_index" : "fluentd",
+                "_type"  : "fluentd"
+              }
+            }
+           ]
+        })
+
+    compressed_body = gzip(bodystr, Zlib::DEFAULT_COMPRESSION)
+
+    elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
+        to_return(:status => 200, :headers => {"Content-Type": "Application/json"}, :body => compressed_body)
+
+    driver(config)
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+
+    assert_requested(elastic_request)
   end
 
   def test_writes_to_default_type
