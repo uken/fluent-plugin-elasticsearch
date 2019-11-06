@@ -116,6 +116,8 @@ NOTE: For v0.12 version, you should use 1.x.y version. Please send patch into v0
 
 NOTE: This documentation is for fluent-plugin-elasticsearch 2.x or later. For 1.x documentation, please see [v0.12 branch](https://github.com/uken/fluent-plugin-elasticsearch/tree/v0.12).
 
+NOTE: Using Index Lifecycle management(ILM) feature needs to install elasticsearch-xpack gem v7.4.0 or later.
+
 ## Installation
 
 ```sh
@@ -1130,17 +1132,23 @@ Enable Index Lifecycle Management (ILM).
 
 Default value is `false`.
 
+**NOTE:** This parameter requests to install elasticsearch-xpack gem.
+
 ## ilm_policy_id
 
 Specify ILM policy id.
 
 Default value is `logstash-policy`.
 
+**NOTE:** This parameter requests to install elasticsearch-xpack gem.
+
 ## ilm_policy
 
 Specify ILM policy contents as Hash.
 
 Default value is `{}`.
+
+**NOTE:** This parameter requests to install elasticsearch-xpack gem.
 
 ## Troubleshooting
 

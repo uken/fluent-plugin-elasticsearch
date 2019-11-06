@@ -33,7 +33,13 @@ module Fluent::Plugin::ElasticsearchIndexLifecycleManagement
   end
 
   def xpack_info
-    client.xpack.info rescue nil
+    begin
+      client.xpack.info
+    rescue NoMethodError
+      raise RuntimeError, "elasticsearch-xpack gem is not installed."
+    rescue
+      nil
+    end
   end
 
   def get_ilm_policy
