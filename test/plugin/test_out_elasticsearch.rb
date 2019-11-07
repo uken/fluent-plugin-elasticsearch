@@ -341,23 +341,65 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
   end
 
-  test 'lack of tag in chunk_keys' do
-    assert_raise_message(/'tag' in chunk_keys is required./) do
-      driver(Fluent::Config::Element.new(
-               'ROOT', '', {
-                 '@type' => 'elasticsearch',
-                 'host' => 'log.google.com',
-                 'port' => 777,
-                 'scheme' => 'https',
-                 'path' => '/es/',
-                 'user' => 'john',
-                 'password' => 'doe',
-               }, [
-                 Fluent::Config::Element.new('buffer', 'mykey', {
-                                               'chunk_keys' => 'mykey'
-                                             }, [])
-               ]
-             ))
+  sub_test_case 'chunk_keys requirement' do
+    test 'tag in chunk_keys' do
+      assert_nothing_raised do
+        driver(Fluent::Config::Element.new(
+                 'ROOT', '', {
+                   '@type' => 'elasticsearch',
+                   'host' => 'log.google.com',
+                   'port' => 777,
+                   'scheme' => 'https',
+                   'path' => '/es/',
+                   'user' => 'john',
+                   'password' => 'doe',
+                 }, [
+                   Fluent::Config::Element.new('buffer', 'tag', {
+                                                 'chunk_keys' => 'tag'
+                                               }, [])
+                 ]
+               ))
+      end
+    end
+
+    test '_index in chunk_keys' do
+      assert_nothing_raised do
+        driver(Fluent::Config::Element.new(
+                 'ROOT', '', {
+                   '@type' => 'elasticsearch',
+                   'host' => 'log.google.com',
+                   'port' => 777,
+                   'scheme' => 'https',
+                   'path' => '/es/',
+                   'user' => 'john',
+                   'password' => 'doe',
+                 }, [
+                   Fluent::Config::Element.new('buffer', '_index', {
+                                                 'chunk_keys' => '_index'
+                                               }, [])
+                 ]
+               ))
+      end
+    end
+
+    test 'lack of tag and _index in chunk_keys' do
+      assert_raise_message(/'tag' or '_index' in chunk_keys is required./) do
+        driver(Fluent::Config::Element.new(
+                 'ROOT', '', {
+                   '@type' => 'elasticsearch',
+                   'host' => 'log.google.com',
+                   'port' => 777,
+                   'scheme' => 'https',
+                   'path' => '/es/',
+                   'user' => 'john',
+                   'password' => 'doe',
+                 }, [
+                   Fluent::Config::Element.new('buffer', 'mykey', {
+                                                 'chunk_keys' => 'mykey'
+                                               }, [])
+                 ]
+               ))
+      end
     end
   end
 
