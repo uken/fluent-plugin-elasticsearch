@@ -18,6 +18,7 @@ require 'fluent/event'
 require 'fluent/error'
 require 'fluent/time'
 require 'fluent/log-ext'
+require 'zlib'
 require_relative 'elasticsearch_constants'
 require_relative 'elasticsearch_error'
 require_relative 'elasticsearch_error_handler'
@@ -148,6 +149,7 @@ EOC
     config_param :ignore_exceptions, :array, :default => [], value_type: :string, :desc => "Ignorable exception list"
     config_param :exception_backup, :bool, :default => true, :desc => "Chunk backup flag when ignore exception occured"
     config_param :bulk_message_request_threshold, :size, :default => TARGET_BULK_BYTES
+    config_param :compression_level, :enum, {list: [:no_compression, :best_speed, :best_compression, :default_compression], :default => :no_compression}
     config_param :enable_ilm, :bool, :default => false
     config_param :ilm_policy_id, :string, :default => DEFAULT_POLICY_ID
     config_param :ilm_policy, :hash, :default => {}
@@ -327,6 +329,18 @@ EOC
           alias_method :split_request?, :split_request_size_check?
         end
       end
+
+      version_arr = Elasticsearch::Transport::VERSION.split('.')
+
+      if (version_arr[0].to_i < 7) || (version_arr[0].to_i == 7 && version_arr[1].to_i < 2)
+        if compression
+          raise Fluent::ConfigError, <<-EOC
+            Cannot use compression with elasticsearch-transport plugin version < 7.2.0
+            Your elasticsearch-transport plugin version version is #{Elasticsearch::Transport::VERSION}.
+            Please consider to upgrade ES client.
+          EOC
+        end
+      end
     end
 
     def placeholder?(name, param)
@@ -335,6 +349,23 @@ EOC
         true
       rescue Fluent::ConfigError
         false
+      end
+    end
+
+    def compression
+      !(@compression_level == :no_compression)
+    end
+
+    def compression_strategy
+      case @compression_level
+      when :default_compression
+        Zlib::DEFAULT_COMPRESSION
+      when :best_compression
+        Zlib::BEST_COMPRESSION
+      when :best_speed
+        Zlib::BEST_SPEED
+      else
+        Zlib::NO_COMPRESSION
       end
     end
 
@@ -438,7 +469,14 @@ EOC
         if local_reload_connections && @reload_after > DEFAULT_RELOAD_AFTER
           local_reload_connections = @reload_after
         end
-        headers = { 'Content-Type' => @content_type.to_s }.merge(@custom_headers)
+
+        gzip_headers = if compression
+                         {'Content-Encoding' => 'gzip'}
+                       else
+                         {}
+                       end
+        headers = { 'Content-Type' => @content_type.to_s }.merge(@custom_headers).merge(gzip_headers)
+
         transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(connection_options.merge(
                                                                             options: {
                                                                               reload_connections: local_reload_connections,
@@ -456,6 +494,7 @@ EOC
                                                                               },
                                                                               sniffer_class: @sniffer_class,
                                                                               serializer_class: @serializer_class,
+                                                                              compression: compression,
                                                                             }), &adapter_conf)
         Elasticsearch::Client.new transport: transport
       end
@@ -768,6 +807,15 @@ EOC
       [parent_object, path[-1]]
     end
 
+    # gzip compress data
+    def gzip(string)
+      wio = StringIO.new("w")
+      w_gz = Zlib::GzipWriter.new(wio, strategy = compression_strategy)
+      w_gz.write(string)
+      w_gz.close
+      wio.string
+    end
+
     # send_bulk given a specific bulk request, the original tag,
     # chunk, and bulk_message_count
     def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, info)
@@ -791,7 +839,14 @@ EOC
       begin
 
         log.on_trace { log.trace "bulk request: #{data}" }
-        response = client(info.host).bulk body: data, index: info.index
+
+        prepared_data = if compression
+                          gzip(data)
+                        else
+                          data
+                        end
+
+        response = client(info.host).bulk body: prepared_data, index: info.index
         log.on_trace { log.trace "bulk response: #{response}" }
 
         if response['errors']
