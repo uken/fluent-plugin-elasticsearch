@@ -1831,7 +1831,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     compressed_body = gzip(bodystr, Zlib::DEFAULT_COMPRESSION)
 
     elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
-        to_return(:status => 200, :headers => {"Content-Type": "Application/json"}, :body => compressed_body)
+        to_return(:status => 200, :headers => {'Content-Type' => 'Application/json'}, :body => compressed_body)
 
     driver(config)
     driver.run(default_tag: 'test') do
