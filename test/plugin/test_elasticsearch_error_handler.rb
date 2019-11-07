@@ -7,7 +7,8 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
 
   class TestPlugin
     attr_reader :log
-    attr_reader :write_operation, :error_events
+    attr_reader :error_events
+    attr_accessor :write_operation
     def initialize(log)
       @log = log
       @write_operation = 'index'
@@ -80,21 +81,13 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
     assert_true(@plugin.error_events[0][:error].respond_to?(:backtrace))
   end
 
-  def test_retry_error
-    records = []
-    error_records = Hash.new(false)
-    error_records.merge!({0=>true, 4=>true, 9=>true})
-    10.times do |i|
-      records << {time: 12345, record: {"message"=>"record #{i}","_id"=>i,"raise"=>error_records[i]}}
-    end
-    chunk = MockChunk.new(records)
-
-    response = parse_response(%({
+  def create_mock_response(method)
+    parse_response(%({
       "took" : 1,
       "errors" : true,
       "items" : [
         {
-          "create" : {
+          "#{method}" : {
             "_index" : "foo",
             "_type"  : "bar",
             "_id" : "1",
@@ -102,7 +95,7 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
           }
         },
         {
-          "create" : {
+          "#{method}" : {
             "_index" : "foo",
             "_type"  : "bar",
             "_id" : "2",
@@ -114,15 +107,19 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
           }
         },
         {
-          "create" : {
+          "#{method}" : {
             "_index" : "foo",
             "_type"  : "bar",
             "_id" : "3",
-            "status" : 409
+            "status" : 409,
+            "error" : {
+              "type":"version_conflict_engine_exception",
+              "reason":"document already exists"
+            }
           }
         },
         {
-          "create" : {
+          "#{method}" : {
             "_index" : "foo",
             "_type"  : "bar",
             "_id" : "5",
@@ -133,7 +130,7 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
           }
         },
         {
-          "create" : {
+          "#{method}" : {
             "_index" : "foo",
             "_type"  : "bar",
             "_id" : "6",
@@ -145,7 +142,7 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
           }
         },
         {
-          "create" : {
+          "#{method}" : {
             "_index" : "foo",
             "_type"  : "bar",
             "_id" : "7",
@@ -157,7 +154,7 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
           }
         },
         {
-          "create" : {
+          "#{method}" : {
             "_index" : "foo",
             "_type"  : "bar",
             "_id" : "8",
@@ -170,7 +167,18 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
         }
       ]
     }))
+  end
 
+  def test_retry_error_index
+    records = []
+    error_records = Hash.new(false)
+    error_records.merge!({0=>true, 4=>true, 9=>true})
+    10.times do |i|
+      records << {time: 12345, record: {"message"=>"record #{i}","_id"=>i,"raise"=>error_records[i]}}
+    end
+    chunk = MockChunk.new(records)
+
+    response = create_mock_response('create')
     begin
       failed = false
       @handler.handle_error(response, 'atag', chunk, response['items'].length)
@@ -193,6 +201,42 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
     end
     assert_true failed
 
+  end
+
+  def test_retry_error_upsert
+    @plugin.write_operation = 'upsert'
+    records = []
+    error_records = Hash.new(false)
+    error_records.merge!({0=>true, 4=>true, 9=>true})
+    10.times do |i|
+      records << {time: 12345, record: {"message"=>"record #{i}","_id"=>i,"raise"=>error_records[i]}}
+    end
+    chunk = MockChunk.new(records)
+
+    response = create_mock_response('update')
+    begin
+      failed = false
+      @handler.handle_error(response, 'atag', chunk, response['items'].length)
+    rescue Fluent::ElasticsearchOutput::RetryStreamError=>e
+      failed = true
+      records = [].tap do |records|
+        e.retry_stream.each {|time, record| records << record}
+      end
+      assert_equal 4, records.length
+      assert_equal 2, records[0]['_id']
+      # upsert is retried in case of conflict error.
+      assert_equal 3, records[1]['_id']
+      assert_equal 6, records[2]['_id']
+      assert_equal 8, records[3]['_id']
+      error_ids = @plugin.error_events.collect {|h| h[:record]['_id']}
+      assert_equal 2, error_ids.length
+      assert_equal 5, error_ids[0]
+      assert_equal 7, error_ids[1]
+      @plugin.error_events.collect {|h| h[:error]}.each do |e|
+        assert_true e.respond_to?(:backtrace)
+      end
+    end
+    assert_true failed
   end
 
   def test_old_es_1_X_responses

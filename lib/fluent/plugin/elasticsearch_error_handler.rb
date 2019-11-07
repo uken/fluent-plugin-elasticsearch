@@ -40,6 +40,8 @@ class Fluent::ElasticsearchErrorHandler
         write_operation = @plugin.write_operation
       elsif INDEX_OP == @plugin.write_operation && item.has_key?(CREATE_OP)
         write_operation = CREATE_OP
+      elsif UPSERT_OP == @plugin.write_operation && item.has_key?(UPDATE_OP)
+        write_operation = UPDATE_OP
       else
         # When we don't have an expected ops field, something changed in the API
         # expected return values (ES 2.x)
