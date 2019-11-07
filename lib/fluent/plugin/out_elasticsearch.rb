@@ -172,7 +172,7 @@ EOC
       compat_parameters_convert(conf, :buffer)
 
       super
-      raise Fluent::ConfigError, "'tag' in chunk_keys is required." if not @chunk_key_tag
+      raise Fluent::ConfigError, "'tag' or '_index' in chunk_keys is required." if not @buffer_config.chunk_keys.include? "tag" and not @buffer_config.chunk_keys.include? "_index"
 
       @time_parser = create_time_parser
       @backend_options = backend_options
