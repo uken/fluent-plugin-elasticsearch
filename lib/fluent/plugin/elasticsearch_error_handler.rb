@@ -60,6 +60,8 @@ class Fluent::Plugin::ElasticsearchErrorHandler
         write_operation = @plugin.write_operation
       elsif INDEX_OP == @plugin.write_operation && item.is_a?(Hash) && item.has_key?(CREATE_OP)
         write_operation = CREATE_OP
+      elsif UPSERT_OP == @plugin.write_operation && item.is_a?(Hash) && item.has_key?(UPDATE_OP)
+        write_operation = UPDATE_OP
       elsif item.nil?
         stats[:errors_nil_resp] += 1
         next
