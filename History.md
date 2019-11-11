@@ -1,6 +1,11 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+### 3.6.1
+- retry upsert on recoverable error. (#667)
+- Allow `_index` in chunk_keys (#665)
+- Support compression feature (#664)
+
 ### 3.6.0
 - Set order in newly created templates (#660)
 - Merge Support index lifecycle management into master (#659)
