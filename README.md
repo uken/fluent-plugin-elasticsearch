@@ -91,6 +91,7 @@ Current maintainers: @cosmo0920
   + [enable_ilm](#enable_ilm)
   + [ilm_policy_id](#ilm_policy_id)
   + [ilm_policy](#ilm_policy)
+* [Configuration - Elasticsearch Input](#configuration---elasticsearch-input)
 * [Troubleshooting](#troubleshooting)
   + [Cannot send events to elasticsearch](#cannot-send-events-to-elasticsearch)
   + [Cannot see detailed failure log](#cannot-see-detailed-failure-log)
@@ -1157,6 +1158,10 @@ Specify ILM policy contents as Hash.
 Default value is `{}`.
 
 **NOTE:** This parameter requests to install elasticsearch-xpack gem.
+
+## Configuration - Elasticsearch Input
+
+See [Elasticsearch Input plugin document](README.ElasticsearchInput.md)
 
 ## Troubleshooting
 
