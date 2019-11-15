@@ -330,7 +330,7 @@ EOC
         end
       end
 
-      version_arr = Elasticsearch::Transport::VERSION.split('.')
+      version_arr = ::Elasticsearch::Transport::VERSION.split('.')
 
       if (version_arr[0].to_i < 7) || (version_arr[0].to_i == 7 && version_arr[1].to_i < 2)
         if compression
