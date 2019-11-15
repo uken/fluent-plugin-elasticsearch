@@ -34,14 +34,14 @@ module Fluent::Plugin
     config_param :request_timeout, :time, :default => 5
     config_param :reload_connections, :bool, :default => true
     config_param :reload_on_failure, :bool, :default => false
+    config_param :resurrect_after, :time, :default => 60
+    config_param :reload_after, :integer, :default => DEFAULT_RELOAD_AFTER
     config_param :ssl_verify , :bool, :default => true
     config_param :client_key, :string, :default => nil
     config_param :client_cert, :string, :default => nil
     config_param :client_key_pass, :string, :default => nil, :secret => true
     config_param :ca_file, :string, :default => nil
     config_param :ssl_version, :enum, list: [:SSLv23, :TLSv1, :TLSv1_1, :TLSv1_2], :default => :TLSv1_2
-    config_param :resurrect_after, :time, :default => 60
-    config_param :reload_after, :integer, :default => DEFAULT_RELOAD_AFTER
     config_param :with_transporter_log, :bool, :default => false
     config_param :sniffer_class_name, :string, :default => nil
     config_param :custom_headers, :hash, :default => {}
