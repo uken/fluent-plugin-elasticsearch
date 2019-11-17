@@ -45,7 +45,6 @@ host user-custom-host.domain # default localhost
 
 You can specify Elasticsearch host by this parameter.
 
-**Note:** Since v3.3.2, `host` parameter supports builtin placeholders. If you want to send events dynamically into different hosts at runtime with `elasticsearch_dynamic` output plugin, please consider to switch to use plain `elasticsearch` output plugin. In more detail for builtin placeholders, please refer to [Placeholders](#placeholders) section.
 
 ### port
 
