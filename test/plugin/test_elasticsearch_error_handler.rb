@@ -629,7 +629,6 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
         next unless e.respond_to?(:retry_stream)
         e.retry_stream.each {|time, record| records << record}
       end
-      puts records
       assert_equal 3, records.length
       assert_equal 2, records[0]['_id']
       # upsert is retried in case of conflict error.
