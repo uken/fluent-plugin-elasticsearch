@@ -794,11 +794,11 @@ http_backend typhoeus
 ```
 
 ### compression_level
-You can add gzip compression of output data. In this case `default_compression`, `best_compression` or `best speed` option should be chosen. 
+You can add gzip compression of output data. In this case `default_compression`, `best_compression` or `best speed` option should be chosen.
 By default there is no compression, default value for this option is `no_compression`
 ```
 compression_level best_compression
-``` 
+```
 
 ### prefer_oj_serializer
 
