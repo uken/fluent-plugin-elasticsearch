@@ -23,6 +23,7 @@
   + [docinfo_fields](#docinfo_fields)
   + [docinfo_target](#docinfo_target)
   + [docinfo](#docinfo)
+* [Advanced Usage](#advanced-usage)
 
 ## Usage
 
@@ -260,4 +261,33 @@ This parameter specifies whether docinfo information including or not. The defau
 
 ```
 docinfo false
+```
+
+## Advanced Usage
+
+Elasticsearch Input plugin and Elasticsearch output plugin can combine to transfer records into another cluster.
+
+```aconf
+<source>
+  @type elasticsearch
+  host original-cluster.local
+  port 9200
+  tag raw.elasticsearch
+  index_name logstash-*
+  docinfo true
+  # repeat false
+  # num_slices 2
+  # with_transporter_log true
+</source>
+<match raw.elasticsearch>
+  @type elasticsearch
+  host transferred-cluster.local
+  port 9200
+  index_name ${$.@metadata._index}
+  # type_name ${$.@metadata._type} # This parameter is optional due to Removal of mapping types since ES7.
+  id_key ${$.@metadata._id} # This parameter is needed for prevent duplicated records.
+  <buffer tag, $.@metadata._index, $.@metadata._type, $.@metadata._id>
+    @type memory # should use file buffer for preventing chunk lost
+  </buffer>
+</match>
 ```
