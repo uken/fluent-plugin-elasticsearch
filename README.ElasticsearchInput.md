@@ -27,7 +27,7 @@
 
 ## Usage
 
-In your Fluentd configuration, use `@type elasticsearch` and specify `tag your.awesome.tga`. Additional configuration is optional, default values would look like this:
+In your Fluentd configuration, use `@type elasticsearch` and specify `tag your.awesome.tag`. Additional configuration is optional, default values would look like this:
 
 ```
 <source>
