@@ -341,6 +341,44 @@ class ElasticsearchInputTest < Test::Unit::TestCase
     assert_equal expected, event
   end
 
+  def test_emit_with_parse_timestamp
+    index_name = "fluentd"
+    stub_request(:get, "http://localhost:9200/#{index_name}/_search?scroll=1m&size=1000").
+      with(body: "{\"sort\":[\"_doc\"]}").
+      to_return(status: 200, body: sample_response(index_name).to_s,
+                headers: {'Content-Type' => 'application/json'})
+
+    driver(CONFIG + %[parse_timestamp])
+    driver.run(expect_emits: 1, timeout: 10)
+    expected = {"message"    => "Hi from Fluentd!",
+                "@timestamp" => "2019-11-14T16:45:10.559841000+09:00"}
+    event = driver.events.map {|e| e.last}.last
+    time = driver.events.map {|e| e[1]}.last
+    expected_time = event_time("2019-11-14T16:45:10.559841000+09:00")
+    assert_equal expected_time.to_time, time.to_time
+    assert_equal expected, event
+  end
+
+  def test_emit_with_parse_timestamp_and_timstamp_format
+    index_name = "fluentd"
+    stub_request(:get, "http://localhost:9200/#{index_name}/_search?scroll=1m&size=1000").
+      with(body: "{\"sort\":[\"_doc\"]}").
+      to_return(status: 200, body: sample_response(index_name).to_s,
+                headers: {'Content-Type' => 'application/json'})
+
+    driver(CONFIG + %[parse_timestamp true
+                      timestamp_key_format %Y-%m-%dT%H:%M:%S.%N%z
+                      ])
+    driver.run(expect_emits: 1, timeout: 10)
+    expected = {"message"    => "Hi from Fluentd!",
+                "@timestamp" => "2019-11-14T16:45:10.559841000+09:00"}
+    event = driver.events.map {|e| e.last}.last
+    time = driver.events.map {|e| e[1]}.last
+    expected_time = event_time("2019-11-14T16:45:10.559841000+09:00")
+    assert_equal expected_time.to_time, time.to_time
+    assert_equal expected, event
+  end
+
   def test_emit_with_docinfo
     stub_request(:get, "http://localhost:9200/fluentd/_search?scroll=1m&size=1000").
       with(body: "{\"sort\":[\"_doc\"]}").

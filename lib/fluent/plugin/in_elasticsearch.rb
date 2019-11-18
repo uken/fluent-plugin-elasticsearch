@@ -2,6 +2,7 @@ require 'elasticsearch'
 
 require 'fluent/log-ext'
 require 'fluent/plugin/input'
+require_relative 'elasticsearch_constants'
 
 module Fluent::Plugin
   class ElasticsearchInput < Input
@@ -24,6 +25,9 @@ module Fluent::Plugin
     config_param :scheme, :enum, :list => [:https, :http], :default => :http
     config_param :hosts, :string, :default => nil
     config_param :index_name, :string, :default => "fluentd"
+    config_param :parse_timestamp, :bool, :default => false
+    config_param :timestamp_key_format, :string, :default => nil
+    config_param :timestamp_parse_error_tag, :string, :default => 'elasticsearch_plugin.input.time.error'
     config_param :query, :hash, :default => {"sort" => [ "_doc" ]}
     config_param :scroll, :string, :default => "1m"
     config_param :size, :integer, :default => 1000
@@ -49,6 +53,8 @@ module Fluent::Plugin
     config_param :docinfo_target, :string, :default => METADATA
     config_param :docinfo, :bool, :default => false
 
+    include Fluent::Plugin::ElasticsearchConstants
+
     def initialize
       super
     end
@@ -56,6 +62,7 @@ module Fluent::Plugin
     def configure(conf)
       super
 
+      @timestamp_parser = create_time_parser
       @backend_options = backend_options
 
       raise Fluent::ConfigError, "`password` must be present if `user` is present" if @user && @password.nil?
@@ -151,6 +158,48 @@ module Fluent::Plugin
       super
 
       timer_execute(:in_elasticsearch_timer, @interval, repeat: @repeat, &method(:run))
+    end
+
+    # once fluent v0.14 is released we might be able to use
+    # Fluent::Parser::TimeParser, but it doesn't quite do what we want - if gives
+    # [sec,nsec] where as we want something we can call `strftime` on...
+    def create_time_parser
+      if @timestamp_key_format
+        begin
+          # Strptime doesn't support all formats, but for those it does it's
+          # blazingly fast.
+          strptime = Strptime.new(@timestamp_key_format)
+          Proc.new { |value|
+            value = convert_numeric_time_into_string(value, @timestamp_key_format) if value.is_a?(Numeric)
+            strptime.exec(value).to_time
+          }
+        rescue
+          # Can happen if Strptime doesn't recognize the format; or
+          # if strptime couldn't be required (because it's not installed -- it's
+          # ruby 2 only)
+          Proc.new { |value|
+            value = convert_numeric_time_into_string(value, @timestamp_key_format) if value.is_a?(Numeric)
+            DateTime.strptime(value, @timestamp_key_format).to_time
+          }
+        end
+      else
+        Proc.new { |value|
+          value = convert_numeric_time_into_string(value) if value.is_a?(Numeric)
+          DateTime.parse(value).to_time
+        }
+      end
+    end
+
+    def convert_numeric_time_into_string(numeric_time, timestamp_key_format = "%Y-%m-%dT%H:%M:%S.%N%z")
+      numeric_time_parser = Fluent::NumericTimeParser.new(:float)
+      Time.at(numeric_time_parser.parse(numeric_time).to_r).strftime(timestamp_key_format)
+    end
+
+    def parse_time(value, event_time, tag)
+      @timestamp_parser.call(value)
+    rescue => e
+      router.emit_error_event(@timestamp_parse_error_tag, Fluent::Engine.now, {'tag' => tag, 'time' => event_time, 'format' => @timestamp_key_format, 'value' => value}, e)
+      return Time.at(event_time).to_time
     end
 
     def client(host = nil)
@@ -250,6 +299,13 @@ module Fluent::Plugin
 
     def process_events(hit, es)
       event = hit["_source"]
+      time = Fluent::Engine.now
+      if @parse_timestamp
+        if event.has_key?(TIMESTAMP_FIELD)
+          rts = event[TIMESTAMP_FIELD]
+          time = parse_time(rts, time, @tag)
+        end
+      end
       if @docinfo
         docinfo_target = event[@docinfo_target] || {}
 
@@ -263,7 +319,7 @@ module Fluent::Plugin
 
         event[@docinfo_target] = docinfo_target
       end
-      es.add(Fluent::Engine.now, event)
+      es.add(time, event)
     end
   end
 end

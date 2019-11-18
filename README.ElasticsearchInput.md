@@ -7,6 +7,10 @@
   + [port](#port)
   + [hosts](#hosts)
   + [user, password, path, scheme, ssl_verify](#user-password-path-scheme-ssl_verify)
+  + [parse_timestamp](#parse_timestamp)
+  + [timestampkey_format](#timestampkey_format)
+  + [timestamp_key](#timestamp_key)
+  + [timestamp_parse_error_tag](#timestamp_parse_error_tag)
   + [http_backend](#http_backend)
   + [request_timeout](#request_timeout)
   + [reload_connections](#reload_connections)
@@ -102,6 +106,32 @@ password %{@secret}
 ```
 
 Specify `ssl_verify false` to skip ssl verification (defaults to true)
+
+### parse_timestamp
+
+```
+parse_timestamp true # defaults to false
+```
+
+Parse a `@timestamp` field and add parsed time to the event.
+
+### timestamp_key_format
+
+The format of the time stamp field (`@timestamp` or what you specify in Elasticsearch). This parameter only has an effect when [parse_timestamp](#parse_timestamp) is true as it only affects the name of the index we write to. Please see [Time#strftime](http://ruby-doc.org/core-1.9.3/Time.html#method-i-strftime) for information about the value of this format.
+
+Setting this to a known format can vastly improve your log ingestion speed if all most of your logs are in the same format. If there is an error parsing this format the timestamp will default to the ingestion time. If you are on Ruby 2.0 or later you can get a further performance improvement by installing the "strptime" gem: `fluent-gem install strptime`.
+
+For example to parse ISO8601 times with sub-second precision:
+
+```
+timestamp_key_format %Y-%m-%dT%H:%M:%S.%N%z
+```
+
+### timestamp_parse_error_tag
+
+With `parse_timestamp true`, elasticsearch input plugin parses timestamp field for consuming event time. If the consumed record has invalid timestamp value, this plugin emits an error event to `@ERROR` label with `timestamp_parse_error_tag` configured tag.
+
+Default value is `elasticsearch_plugin.input.time.error`.
 
 ### http_backend
 
