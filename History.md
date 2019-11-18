@@ -1,6 +1,11 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+### 3.7.0
+- Tweak for cosmetic change (#671)
+- Fix access to Elasticsearch::Transport::VERSION with explicit top level class path (#670)
+- Implement Elasticsearch Input plugin (#669)
+
 ### 3.6.1
 - retry upsert on recoverable error. (#667)
 - Allow `_index` in chunk_keys (#665)
