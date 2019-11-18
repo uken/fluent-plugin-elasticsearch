@@ -284,7 +284,7 @@ Elasticsearch Input plugin and Elasticsearch output plugin can combine to transf
   host transferred-cluster.local
   port 9200
   index_name ${$.@metadata._index}
-  # type_name ${$.@metadata._type} # This parameter is optional due to Removal of mapping types since ES7.
+  type_name ${$.@metadata._type} # This parameter will be deprecated due to Removal of mapping types since ES7.
   id_key ${$.@metadata._id} # This parameter is needed for prevent duplicated records.
   <buffer tag, $.@metadata._index, $.@metadata._type, $.@metadata._id>
     @type memory # should use file buffer for preventing chunk lost
