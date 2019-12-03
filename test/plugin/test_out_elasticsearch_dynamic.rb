@@ -465,6 +465,40 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_equal(2000, total)
   end
 
+  def test_nested_record_with_flattening_on
+    driver.configure("flatten_hashes true
+                      flatten_hashes_separator |")
+
+    original_hash =  {"foo" => {"bar" => "baz"}, "people" => [
+      {"age" => "25", "height" => "1ft"},
+      {"age" => "30", "height" => "2ft"}
+    ]}
+
+    expected_output = {"foo|bar"=>"baz", "people" => [
+      {"age" => "25", "height" => "1ft"},
+      {"age" => "30", "height" => "2ft"}
+    ]}
+
+    stub_elastic
+    driver.run(default_tag: 'test') do
+      driver.feed(original_hash)
+    end
+    assert_equal expected_output, index_cmds[1]
+  end
+
+  def test_nested_record_with_flattening_off
+    # flattening off by default
+
+    original_hash =  {"foo" => {"bar" => "baz"}}
+    expected_output = {"foo" => {"bar" => "baz"}}
+
+    stub_elastic
+    driver.run(default_tag: 'test') do
+      driver.feed(original_hash)
+    end
+    assert_equal expected_output, index_cmds[1]
+  end
+
   def test_makes_bulk_request
     stub_elastic
     driver.run(default_tag: 'test') do
