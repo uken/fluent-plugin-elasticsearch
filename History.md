@@ -1,6 +1,11 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+### 3.7.1
+- Make conpatible for Fluentd v1.8 (#677)
+- Handle flatten_hashes in elasticsearch_dynamic (#675)
+- Handle empty index_date_pattern parameter (#674)
+
 ### 3.7.0
 - Tweak for cosmetic change (#671)
 - Fix access to Elasticsearch::Transport::VERSION with explicit top level class path (#670)
