@@ -206,7 +206,7 @@ EOC
       end
 
       @alias_indexes = []
-      if !Fluent::Engine.dry_run_mode
+      if !dry_run?
         if @template_name && @template_file
           if @rollover_index
             raise Fluent::ConfigError, "'deflector_alias' must be provided if 'rollover_index' is set true ." if not @deflector_alias
@@ -259,7 +259,7 @@ EOC
       end
 
       @last_seen_major_version =
-        if @verify_es_version_at_startup && !Fluent::Engine.dry_run_mode
+        if @verify_es_version_at_startup && !dry_run?
           retry_operate(@max_retry_get_es_version) do
             detect_es_major_version
           end
@@ -278,7 +278,7 @@ EOC
         @type_name = nil
       end
 
-      if @validate_client_version && !Fluent::Engine.dry_run_mode
+      if @validate_client_version && !dry_run?
         if @last_seen_major_version != client_library_version.to_i
           raise Fluent::ConfigError, <<-EOC
             Detected ES #{@last_seen_major_version} but you use ES client #{client_library_version}.
@@ -340,6 +340,14 @@ EOC
             Please consider to upgrade ES client.
           EOC
         end
+      end
+    end
+
+    def dry_run?
+      if Fluent::Engine.respond_to?(:dry_run_mode)
+        Fluent::Engine.dry_run_mode
+      elsif Fluent::Engine.respond_to?(:supervisor_mode)
+        Fluent::Engine.supervisor_mode
       end
     end
 
