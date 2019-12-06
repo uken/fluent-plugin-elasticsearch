@@ -103,6 +103,7 @@ Current maintainers: @cosmo0920
   + [Random 400 - Rejected by Elasticsearch is occured, why?](#random-400---rejected-by-elasticsearch-is-occured-why)
   + [Fluentd seems to hang if it unable to connect Elasticsearch, why?](#fluentd-seems-to-hang-if-it-unable-to-connect-elasticsearch-why)
   + [Enable Index Lifecycle Management](#enable-index-lifecycle-management)
+  + [How to specify index codec](#how-to-specify-index-codec)
 * [Contact](#contact)
 * [Contributing](#contributing)
 * [Running tests](#running-tests)
@@ -1620,6 +1621,62 @@ customize_template {"<<index_prefix>>": "fluentd"}
 ```
 
 Note: This plugin only creates rollover-enabled indices, which are aliases pointing to them and index templates, and creates an ILM policy if enabled.
+
+### How to specify index codec
+
+Elasticsearch can handle compression methods for stored data such as LZ4 and best_compression.
+fluent-plugin-elasticsearch doesn't provide API which specifies compression method.
+
+Users can specify stored data compression method with template:
+
+Create `compression.json` as follows:
+
+```json
+{
+  "order": 100,
+  "index_patterns": [
+    "YOUR-INDEX-PATTERN"
+  ],
+  "settings": {
+    "index": {
+      "codec": "best_compression"
+    }
+  }
+}
+```
+
+Then, specify the above template in your configuration:
+
+```aconf
+template_name best_compression_tmpl
+template_file compression.json
+```
+
+Elasticsearch will store data with `best_compression`:
+
+```
+% curl -XGET 'http://localhost:9200/logstash-2019.12.06/_settings?pretty'
+```
+
+```json
+{
+  "logstash-2019.12.06" : {
+    "settings" : {
+      "index" : {
+        "codec" : "best_compression",
+        "number_of_shards" : "1",
+        "provided_name" : "logstash-2019.12.06",
+        "creation_date" : "1575622843800",
+        "number_of_replicas" : "1",
+        "uuid" : "THE_AWESOMEUUID",
+        "version" : {
+          "created" : "7040100"
+        }
+      }
+    }
+  }
+}
+```
 
 ## Contact
 
