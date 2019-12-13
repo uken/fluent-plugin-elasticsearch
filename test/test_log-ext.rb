@@ -3,10 +3,8 @@ require 'fluent/log-ext'
 
 class TestFluentLogExtHandler < Test::Unit::TestCase
   def setup
-    @log_device = Fluent::Test::DummyLogDevice.new
-    dl_opts = {:log_level => ServerEngine::DaemonLogger::INFO}
-    logger = ServerEngine::DaemonLogger.new(@log_device, dl_opts)
-    @log = Fluent::Log.new(logger)
+    @log = Fluent::Test::TestLogger.new
+    @log.level = "info"
   end
 
   def test_trace?
