@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 1.18.2
+- Retry upsert on recoverable error. (porting to v0.12) #667 (#684)
+
 ### 1.18.1
 - add new option to suppress doc wrapping (porting to v0.12) (#558)
 
