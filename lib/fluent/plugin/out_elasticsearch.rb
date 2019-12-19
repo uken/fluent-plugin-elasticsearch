@@ -866,7 +866,7 @@ EOC
         log.trace "router.emit_stream for retry stream doing..."
         emit_tag = @retry_tag ? @retry_tag : tag
         # check capacity of buffer space
-        if @buffer.storable?
+        if retry_stream_retryable?
           router.emit_stream(emit_tag, e.retry_stream)
         else
           raise RetryStreamEmitFailure, "buffer is full."
@@ -885,6 +885,10 @@ EOC
         # FIXME: identify unrecoverable errors and raise UnrecoverableRequestFailure instead
         raise RecoverableRequestFailure, "could not push logs to Elasticsearch cluster (#{connection_options_description(info.host)}): #{e.message}" unless ignore
       end
+    end
+
+    def retry_stream_retryable?
+      @buffer.storable?
     end
 
     def is_existing_connection(host)

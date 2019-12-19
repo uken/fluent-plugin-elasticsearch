@@ -3175,6 +3175,82 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal [['retry', 1, sample_record]], driver.events
   end
 
+  class FulfilledBufferRetryStreamTest < self
+    def test_bulk_error_retags_with_error_when_configured_and_fullfilled_buffer
+      def create_driver(conf='', es_version=5, client_version="\"5.0\"")
+        @client_version ||= client_version
+        Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
+          def retry_stream_retryable?
+            false
+          end
+        CODE
+        # For request stub to detect compatibility.
+        @es_version ||= es_version
+        @client_version ||= client_version
+        if @es_version
+          Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
+          def detect_es_major_version
+            #{@es_version}
+          end
+        CODE
+        end
+        Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
+          def client_library_version
+            #{@client_version}
+          end
+        CODE
+        Fluent::Test::Driver::Output.new(Fluent::Plugin::ElasticsearchOutput).configure(conf)
+      end
+      driver = create_driver("retry_tag retry\n")
+      stub_request(:post, 'http://localhost:9200/_bulk')
+        .to_return(lambda do |req|
+                     { :status => 200,
+                       :headers => { 'Content-Type' => 'json' },
+                       :body => %({
+          "took" : 1,
+          "errors" : true,
+          "items" : [
+            {
+              "create" : {
+                "_index" : "foo",
+                "_type"  : "bar",
+                "_id" : "abc1",
+                "status" : 403,
+                "error" : {
+                  "type" : "cluster_block_exception",
+                  "reason":"index [foo] blocked by: [FORBIDDEN/8/index write (api)]"
+                }
+              }
+            },
+            {
+              "create" : {
+                "_index" : "foo",
+                "_type"  : "bar",
+                "_id" : "abc2",
+                "status" : 403,
+                "error" : {
+                  "type" : "cluster_block_exception",
+                  "reason":"index [foo] blocked by: [FORBIDDEN/8/index write (api)]"
+                }
+              }
+            }
+           ]
+        })
+                     }
+                   end)
+
+      # Check buffer fulfillment condition
+      assert_raise(Fluent::Plugin::ElasticsearchOutput::RetryStreamEmitFailure) do
+        driver.run(default_tag: 'test') do
+          driver.feed(1, sample_record)
+          driver.feed(1, sample_record)
+        end
+      end
+
+      assert_equal [], driver.events
+    end
+  end
+
   def test_create_should_write_records_with_ids_and_skip_those_without
     driver.configure("write_operation create\nid_key my_id\n@log_level debug")
     stub_request(:post, 'http://localhost:9200/_bulk')
