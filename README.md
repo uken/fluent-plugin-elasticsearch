@@ -104,6 +104,7 @@ Current maintainers: @cosmo0920
   + [Fluentd seems to hang if it unable to connect Elasticsearch, why?](#fluentd-seems-to-hang-if-it-unable-to-connect-elasticsearch-why)
   + [Enable Index Lifecycle Management](#enable-index-lifecycle-management)
   + [How to specify index codec](#how-to-specify-index-codec)
+  + [Cannot push logs to Elasticsearch with connect_write timeout reached, why?](#cannot-push-logs-to-elasticsearch-with-connect_write-timeout-reached-why)
 * [Contact](#contact)
 * [Contributing](#contributing)
 * [Running tests](#running-tests)
@@ -1677,6 +1678,26 @@ Elasticsearch will store data with `best_compression`:
   }
 }
 ```
+
+### Cannot push logs to Elasticsearch with connect_write timeout reached, why?
+
+It seems that Elasticsearch cluster is exhausted.
+
+Usually, Fluentd complains like the following log:
+
+```log
+2019-12-29 00:23:33 +0000 [warn]: buffer flush took longer time than slow_flush_log_threshold: elapsed_time=27.283766102716327 slow_flush_log_threshold=15.0 plugin_id="object:aaaffaaaaaff"
+2019-12-29 00:23:33 +0000 [warn]: buffer flush took longer time than slow_flush_log_threshold: elapsed_time=26.161768959928304 slow_flush_log_threshold=15.0 plugin_id="object:aaaffaaaaaff"
+2019-12-29 00:23:33 +0000 [warn]: buffer flush took longer time than slow_flush_log_threshold: elapsed_time=28.713624476008117 slow_flush_log_threshold=15.0 plugin_id="object:aaaffaaaaaff"
+2019-12-29 01:39:18 +0000 [warn]: Could not push logs to Elasticsearch, resetting connection and trying again. connect_write timeout reached
+2019-12-29 01:39:18 +0000 [warn]: Could not push logs to Elasticsearch, resetting connection and trying again. connect_write timeout reached
+```
+
+This warnings is usually caused by exhaused Elasticsearch cluster due to resource shortage.
+
+If CPU usage is spiked and Elasticsearch cluster is eating up CPU resource, this issue is caused by CPU resource shortage.
+
+Check your Elasticsearch cluster health status and resource usage.
 
 ## Contact
 
