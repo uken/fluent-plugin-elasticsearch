@@ -33,6 +33,7 @@ module Fluent::Plugin
   class ElasticsearchOutput < Output
     class RecoverableRequestFailure < StandardError; end
     class UnrecoverableRequestFailure < Fluent::UnrecoverableError; end
+    class RetryStreamEmitFailure < StandardError; end
 
     # MissingIdFieldError is raised for records that do not
     # include the field for the unique record identifier
@@ -862,8 +863,15 @@ EOC
           error.handle_error(response, tag, chunk, bulk_message_count, extracted_values)
         end
       rescue RetryStreamError => e
+        log.trace "router.emit_stream for retry stream doing..."
         emit_tag = @retry_tag ? @retry_tag : tag
-        router.emit_stream(emit_tag, e.retry_stream)
+        # check capacity of buffer space
+        if retry_stream_retryable?
+          router.emit_stream(emit_tag, e.retry_stream)
+        else
+          raise RetryStreamEmitFailure, "buffer is full."
+        end
+        log.trace "router.emit_stream for retry stream done."
       rescue => e
         ignore = @ignore_exception_classes.any? { |clazz| e.class <= clazz }
 
@@ -877,6 +885,10 @@ EOC
         # FIXME: identify unrecoverable errors and raise UnrecoverableRequestFailure instead
         raise RecoverableRequestFailure, "could not push logs to Elasticsearch cluster (#{connection_options_description(info.host)}): #{e.message}" unless ignore
       end
+    end
+
+    def retry_stream_retryable?
+      @buffer.storable?
     end
 
     def is_existing_connection(host)
