@@ -33,6 +33,7 @@ module Fluent::Plugin
   class ElasticsearchOutput < Output
     class RecoverableRequestFailure < StandardError; end
     class UnrecoverableRequestFailure < Fluent::UnrecoverableError; end
+    class RetryStreamEmitFailure < StandardError; end
 
     # MissingIdFieldError is raised for records that do not
     # include the field for the unique record identifier
@@ -863,7 +864,12 @@ EOC
         end
       rescue RetryStreamError => e
         emit_tag = @retry_tag ? @retry_tag : tag
-        router.emit_stream(emit_tag, e.retry_stream)
+        # check capacity of buffer space
+        if @buffer.storable?
+          router.emit_stream(emit_tag, e.retry_stream)
+        else
+          raise RetryStreamEmitFailure, "buffer is full."
+        end
       rescue => e
         ignore = @ignore_exception_classes.any? { |clazz| e.class <= clazz }
 
