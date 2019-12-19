@@ -863,6 +863,7 @@ EOC
           error.handle_error(response, tag, chunk, bulk_message_count, extracted_values)
         end
       rescue RetryStreamError => e
+        log.trace "router.emit_stream for retry stream doing..."
         emit_tag = @retry_tag ? @retry_tag : tag
         # check capacity of buffer space
         if @buffer.storable?
@@ -870,6 +871,7 @@ EOC
         else
           raise RetryStreamEmitFailure, "buffer is full."
         end
+        log.trace "router.emit_stream for retry stream done."
       rescue => e
         ignore = @ignore_exception_classes.any? { |clazz| e.class <= clazz }
 
