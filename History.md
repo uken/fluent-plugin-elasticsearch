@@ -1,6 +1,11 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+### 3.8.0
+- Add FAQ for specifying index.codec (#679)
+- Add FAQ for connect_write timeout reached error (#687)
+- Unblocking buffer overflow with block action (#688)
+
 ### 3.7.1
 - Make conpatible for Fluentd v1.8 (#677)
 - Handle flatten_hashes in elasticsearch_dynamic (#675)
