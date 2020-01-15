@@ -2123,6 +2123,58 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal(pipeline, index_cmds.first['index']['pipeline'])
   end
 
+  class PipelinePlaceholdersTest < self
+    def test_writes_to_default_index_with_pipeline_tag_placeholder
+      pipeline = "fluentd-${tag}"
+      driver.configure("pipeline #{pipeline}")
+      stub_elastic
+      driver.run(default_tag: 'test.builtin.placeholder') do
+        driver.feed(sample_record)
+      end
+      assert_equal("fluentd-test.builtin.placeholder", index_cmds.first['index']['pipeline'])
+    end
+
+    def test_writes_to_default_index_with_pipeline_time_placeholder
+      driver.configure(Fluent::Config::Element.new(
+                         'ROOT', '', {
+                           '@type' => 'elasticsearch',
+                           'pipeline' => 'fluentd-%Y%m%d',
+                         }, [
+                           Fluent::Config::Element.new('buffer', 'tag,time', {
+                                                         'chunk_keys' => ['tag', 'time'],
+                                                         'timekey' => 3600,
+                                                       }, [])
+                         ]
+                       ))
+      time = Time.parse Date.today.iso8601
+      pipeline = "fluentd-#{time.getutc.strftime("%Y%m%d")}"
+      stub_elastic
+      driver.run(default_tag: 'test') do
+        driver.feed(time.to_i, sample_record)
+      end
+      assert_equal(pipeline, index_cmds.first['index']['pipeline'])
+    end
+
+    def test_writes_to_default_index_with_pipeline_custom_key_placeholder
+      driver.configure(Fluent::Config::Element.new(
+                         'ROOT', '', {
+                           '@type' => 'elasticsearch',
+                           'pipeline' => 'fluentd-${pipeline_id}',
+                         }, [
+                           Fluent::Config::Element.new('buffer', 'tag,pipeline_id', {}, [])
+                         ]
+                       ))
+      time = Time.parse Date.today.iso8601
+      pipeline_id = "mypipeline"
+      logstash_index = "fluentd-#{pipeline_id}"
+      stub_elastic
+      driver.run(default_tag: 'test') do
+        driver.feed(time.to_i, sample_record.merge({"pipeline_id" => pipeline_id}))
+      end
+      assert_equal(logstash_index, index_cmds.first['index']['pipeline'])
+    end
+  end
+
   def test_writes_to_target_index_key_fallack
     driver.configure("target_index_key @target_index\n")
     stub_elastic
