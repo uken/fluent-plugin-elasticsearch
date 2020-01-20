@@ -379,6 +379,71 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
   end
 
+  sub_test_case "placeholder substitution needed?" do
+    data("host placeholder" => ["host", "host-${tag}.google.com"],
+         "logstash_prefix_placeholder" => ["logstash_prefix", "fluentd-${tag}"],
+         "deflector_alias_placeholder" => ["deflector_alias", "fluentd-${tag}"],
+         "application_name_placeholder" => ["application_name", "fluentd-${tag}"],
+        )
+    test 'tag placeholder' do |data|
+      param, value = data
+      config = Fluent::Config::Element.new(
+        'ROOT', '', {
+          '@type' => 'elasticsearch',
+          param => value
+        }, [
+          Fluent::Config::Element.new('buffer', 'tag', {}, [])
+        ])
+      driver(config)
+
+      assert_true driver.instance.placeholder_substitution_needed_for_template?
+    end
+
+
+    data("host placeholder" => ["host", "host-%Y%m%d.google.com"],
+         "logstash_prefix_placeholder" => ["logstash_prefix", "fluentd-%Y%m%d"],
+         "deflector_alias_placeholder" => ["deflector_alias", "fluentd-%Y%m%d"],
+         "application_name_placeholder" => ["application_name", "fluentd-%Y%m%d"],
+        )
+    test 'time placeholder' do |data|
+      param, value = data
+      config = Fluent::Config::Element.new(
+        'ROOT', '', {
+          '@type' => 'elasticsearch',
+          param => value
+        }, [
+          Fluent::Config::Element.new('buffer', 'time', {
+                                        'timekey' => '1d'
+                                      }, [])
+        ])
+      driver(config)
+
+      assert_true driver.instance.placeholder_substitution_needed_for_template?
+    end
+
+    data("host placeholder" => ["host", "host-${mykey}.google.com"],
+         "logstash_prefix_placeholder" => ["logstash_prefix", "fluentd-${mykey}"],
+         "deflector_alias_placeholder" => ["deflector_alias", "fluentd-${mykey}"],
+         "application_name_placeholder" => ["application_name", "fluentd-${mykey}"],
+        )
+    test 'custom placeholder' do |data|
+      param, value = data
+      config = Fluent::Config::Element.new(
+        'ROOT', '', {
+          '@type' => 'elasticsearch',
+          param => value
+        }, [
+          Fluent::Config::Element.new('buffer', 'mykey', {
+                                        'chunk_keys' => 'mykey',
+                                        'timekey' => '1d',
+                                      }, [])
+        ])
+      driver(config)
+
+      assert_true driver.instance.placeholder_substitution_needed_for_template?
+    end
+  end
+
   sub_test_case 'chunk_keys requirement' do
     test 'tag in chunk_keys' do
       assert_nothing_raised do

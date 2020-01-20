@@ -173,8 +173,12 @@ EOC
       compat_parameters_convert(conf, :buffer)
 
       super
-      raise Fluent::ConfigError, "'tag' or '_index' in chunk_keys is required." if not @buffer_config.chunk_keys.include? "tag" and not @buffer_config.chunk_keys.include? "_index"
-
+      if placeholder_substitution_needed_for_template?
+        # nop.
+      elsif not @buffer_config.chunk_keys.include? "tag" and
+        not @buffer_config.chunk_keys.include? "_index"
+        raise Fluent::ConfigError, "'tag' or '_index' in chunk_keys is required."
+      end
       @time_parser = create_time_parser
       @backend_options = backend_options
 
@@ -363,7 +367,8 @@ EOC
       begin
         placeholder_validate!(name, param)
         true
-      rescue Fluent::ConfigError
+      rescue Fluent::ConfigError => e
+        log.debug("'#{name} #{param}' is tested built-in placeholder(s) but there is no valid placeholder(s). error: #{e}")
         false
       end
     end
@@ -838,10 +843,10 @@ EOC
     end
 
     def placeholder_substitution_needed_for_template?
-      placeholder?(:host_placeholder, @host.to_s) ||
-        placeholder?(:logstash_prefix_placeholder, @logstash_prefix.to_s) ||
-        placeholder?(:deflector_alias_placeholder, @deflector_alias.to_s) ||
-        placeholder?(:application_name_placeholder, @application_name.to_s)
+      placeholder?(:host, @host.to_s) ||
+        placeholder?(:logstash_prefix, @logstash_prefix.to_s) ||
+        placeholder?(:deflector_alias, @deflector_alias.to_s) ||
+        placeholder?(:application_name, @application_name.to_s)
     end
 
     def template_installation(deflector_alias, application_name, info)
