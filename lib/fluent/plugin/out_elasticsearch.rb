@@ -215,6 +215,13 @@ EOC
           if @enable_ilm
             raise Fluent::ConfigError, "'rollover_index' and 'deflector_alias' must be provided if 'enable_ilm' is set true ." if !@deflector_alias &&!@deflector_alias
           end
+          if placeholder_substitution_needed_for_template?
+            class << self
+              alias_method :template_installation, :template_installation_actual
+            end
+          else
+            template_installation_actual(@deflector_alias, @application_name)
+          end
           verify_ilm_working if @enable_ilm
         elsif @templates
           retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
@@ -830,25 +837,40 @@ EOC
       wio.string
     end
 
-    # send_bulk given a specific bulk request, the original tag,
-    # chunk, and bulk_message_count
-    def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, info)
-      _logstash_prefix, _index_name, _type_name, deflector_alias, application_name, _pipeline = extracted_values
+    def placeholder_substitution_needed_for_template?
+      placeholder?(:host_placeholder, @host.to_s) ||
+        placeholder?(:logstash_prefix_placeholder, @logstash_prefix.to_s) ||
+        placeholder?(:deflector_alias_placeholder, @deflector_alias.to_s) ||
+        placeholder?(:application_name_placeholder, @application_name.to_s)
+    end
+
+    def template_installation(deflector_alias, application_name, info)
+      # for safety.
+    end
+
+    def template_installation_actual(deflector_alias, application_name, host=nil)
       if @template_name && @template_file
         if @alias_indexes.include? deflector_alias
           log.debug("Index alias #{deflector_alias} already exists (cached)")
         else
           retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
             if @customize_template
-              template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @enable_ilm, deflector_alias, @ilm_policy_id, info.host)
+              template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @enable_ilm, deflector_alias, @ilm_policy_id, host)
             else
-              template_install(@template_name, @template_file, @template_overwrite, @enable_ilm, deflector_alias, @ilm_policy_id, info.host)
+              template_install(@template_name, @template_file, @template_overwrite, @enable_ilm, deflector_alias, @ilm_policy_id, host)
             end
-            create_rollover_alias(@index_prefix, @rollover_index, deflector_alias, application_name, @index_date_pattern, @index_separator, @enable_ilm, @ilm_policy_id, @ilm_policy, info.host)
+            create_rollover_alias(@index_prefix, @rollover_index, deflector_alias, application_name, @index_date_pattern, @index_separator, @enable_ilm, @ilm_policy_id, @ilm_policy, host)
           end
           @alias_indexes << deflector_alias unless deflector_alias.nil?
         end
       end
+    end
+
+    # send_bulk given a specific bulk request, the original tag,
+    # chunk, and bulk_message_count
+    def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, info)
+      _logstash_prefix, _index_name, _type_name, deflector_alias, application_name, _pipeline = extracted_values
+      template_installation(deflector_alias, application_name, info.host)
 
       begin
 

@@ -584,10 +584,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
-    stub_elastic("https://logs.google.com:777/es//_bulk")
-    driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
-    end
+
     assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
   end
 
@@ -664,12 +661,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
       driver(config)
 
-      elastic_request = stub_elastic("https://logs.google.com:777/es//_bulk")
-      driver.run(default_tag: 'test') do
-        driver.feed(sample_record)
-      end
-
-      assert_requested(elastic_request)
+      assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_deflector", times: 1)
     end
 
     def test_template_create_with_rollover_index_and_default_ilm_with_empty_index_date_pattern
@@ -735,12 +727,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
       driver(config)
 
-      elastic_request = stub_elastic("https://logs.google.com:777/es//_bulk")
-      driver.run(default_tag: 'test') do
-        driver.feed(sample_record)
-      end
-
-      assert_requested(elastic_request)
+      assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_deflector", times: 1)
     end
 
     def test_template_create_with_rollover_index_and_custom_ilm
@@ -808,12 +795,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
       driver(config)
 
-      elastic_request = stub_elastic("https://logs.google.com:777/es//_bulk")
-      driver.run(default_tag: 'test') do
-        driver.feed(sample_record)
-      end
-
-      assert_requested(elastic_request)
+      assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_deflector", times: 1)
     end
 
     def test_template_create_with_rollover_index_and_default_ilm_and_placeholders
@@ -923,11 +905,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     driver(config)
 
-    stub_elastic("https://logs.google.com:777/es//_bulk")
-    driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
-    end
-
     assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
 
@@ -1017,11 +994,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     driver(config)
 
-    stub_elastic("https://logs.google.com:777/es//_bulk")
-    driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
-    end
-
     assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
 
@@ -1102,12 +1074,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
       driver(config)
 
-      elastic_request = stub_elastic("https://logs.google.com:777/es//_bulk")
-      driver.run(default_tag: 'test') do
-        driver.feed(sample_record)
-      end
-
-      assert_requested(elastic_request)
+      assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_deflector", times: 1)
     end
 
     def test_custom_template_with_rollover_index_create_and_default_ilm_and_placeholders
@@ -1258,12 +1225,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
       driver(config)
 
-      elastic_request = stub_elastic("https://logs.google.com:777/es//_bulk")
-      driver.run(default_tag: 'test') do
-        driver.feed(sample_record)
-      end
-
-      assert_requested(elastic_request)
+      assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_deflector", times: 1)
     end
   end
 
@@ -1297,11 +1259,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
-
-    stub_elastic("https://logs.google.com:777/es//_bulk")
-    driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
-    end
 
     assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
   end
@@ -1337,11 +1294,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
-
-    stub_elastic("https://logs.google.com:777/es//_bulk")
-    driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
-    end
 
     assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
@@ -1394,11 +1346,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     driver(config)
 
-    stub_elastic("https://logs.google.com:777/es//_bulk")
-    driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
-    end
-
     assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
 
@@ -1423,13 +1370,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
       with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
 
-    driver(config)
 
-    stub_elastic("https://logs.google.com:777/es//_bulk")
     assert_raise(RuntimeError) {
-      driver.run(default_tag: 'test') do
-        driver.feed(sample_record)
-      end
+      driver(config)
     }
   end
 
@@ -1497,11 +1440,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
       raise Faraday::ConnectionFailed, "Test message"
     end
 
-    driver(config)
-
-    stub_elastic("https://logs.google.com:777/es//_bulk")
-    driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
+    assert_raise(Fluent::Plugin::ElasticsearchError::RetryableOperationExhaustedFailure) do
+      driver(config)
     end
 
     assert_equal(4, connection_resets)
@@ -1533,11 +1473,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
 
     driver(config)
-
-    stub_elastic("https://logs.google.com:778/es//_bulk")
-    driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
-    end
 
     assert_equal(4, connection_resets)
   end
@@ -1673,11 +1608,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
-
-    stub_elastic("https://logs.google.com:777/es//_bulk")
-    driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
-    end
 
     assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
 
