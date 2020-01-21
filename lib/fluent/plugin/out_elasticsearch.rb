@@ -651,7 +651,12 @@ EOC
       else
         application_name = nil
       end
-      return logstash_prefix, index_name, type_name, deflector_alias, application_name
+      if @pipeline
+        pipeline = extract_placeholders(@pipeline, chunk)
+      else
+        pipeline = nil
+      end
+      return logstash_prefix, index_name, type_name, deflector_alias, application_name, pipeline
     end
 
     def multi_workers_ready?
@@ -725,7 +730,7 @@ EOC
     end
 
     def process_message(tag, meta, header, time, record, extracted_values)
-      logstash_prefix, index_name, type_name, deflector_alias, application_name = extracted_values
+      logstash_prefix, index_name, type_name, _deflector_alias, _application_name, pipeline = extracted_values
 
       if @flatten_hashes
         record = flatten_record(record)
@@ -793,7 +798,7 @@ EOC
       meta["_type".freeze] = target_type unless @last_seen_major_version >= 8
 
       if @pipeline
-        meta["pipeline".freeze] = @pipeline
+        meta["pipeline".freeze] = pipeline
       end
 
       @meta_config_map.each do |record_accessor, meta_key|
@@ -828,7 +833,7 @@ EOC
     # send_bulk given a specific bulk request, the original tag,
     # chunk, and bulk_message_count
     def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, info)
-      logstash_prefix, index_name, type_name, deflector_alias, application_name = extracted_values
+      _logstash_prefix, _index_name, _type_name, deflector_alias, application_name, _pipeline = extracted_values
       if @template_name && @template_file
         if @alias_indexes.include? deflector_alias
           log.debug("Index alias #{deflector_alias} already exists (cached)")
