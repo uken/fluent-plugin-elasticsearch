@@ -435,15 +435,14 @@ Specify this to override the index date pattern for creating a rollover index. T
 for example: <logstash-default-{now/d}-000001>. Overriding this changes the rollover time period. Setting
 "now/w{xxxx.ww}" would create weekly rollover indexes instead of daily.
 
-This setting only takes effect when combined with the [rollover_index](#rollover_index) setting.
+This setting only takes effect when combined with the [enable_ilm](#enable_ilm) setting.
 
-And rollover\_index is also used in Lifecycle Index Management(ILM) feature.
 ```
 index_date_pattern "now/w{xxxx.ww}" # defaults to "now/d"
 ```
 
 If empty string(`""`) is specified in `index_date_pattern`, index date pattern is not used.
-Elasticsearch plugin just creates <`index_prefix`-`application_name`-000001> rollover index instead of <`index_prefix`-`application_name`-`{index_date_pattern}`-000001>.
+Elasticsearch plugin just creates <`target_index`-`application_name`-000001> rollover index instead of <`target_index`-`application_name`-`{index_date_pattern}`-000001>.
 
 If [customize_template](#customize_template) is set, then this parameter will be in effect otherwise ignored.
 
@@ -458,12 +457,9 @@ If [rollover_index](#rollover_index) is set, then this parameter will be in effe
 
 ### index_prefix
 
-Specify the index prefix for the rollover index to be created.
-```
-index_prefix mylogs # defaults to "logstash"
-```
-
-If [rollover_index](#rollover_index) is set, then this parameter will be in effect otherwise ignored.
+This parameter is marked as obsoleted.
+Consider to use [index_name](#index_name) for specify ILM target index when not using with logstash_format.
+When specifying `logstash_format` as true, consider to use [logstash_prefix](#logstash_prefix) to specify ILM target index prefix.
 
 ### application_name
 
@@ -472,7 +468,7 @@ Specify the application name for the rollover index to be created.
 application_name default # defaults to "default"
 ```
 
-If [rollover_index](#rollover_index) is set, then this parameter will be in effect otherwise ignored.
+If [enable_ilm](#enable_ilm is set, then this parameter will be in effect otherwise ignored.
 
 ### template_overwrite
 
@@ -1593,13 +1589,19 @@ Index lifecycle management is template based index management feature.
 
 Main ILM feature parameters are:
 
-* `rollover_index`
-* `deflector_alias`
+* `index_name` (when logstash_format as false)
+* `logstash_prefix` (when logstash_format as true)
 * `enable_ilm`
 * `ilm_policy_id`
 * `ilm_policy`
 
 They are not all mandatory parameters but they are used for ILM feature in effect.
+
+ILM target index alias is created with `index_name` or an index which is calculated from `logstash_prefix`.
+
+From Elasticsearch plugin v4.0.0, ILM target index will be calculated from `index_name` (normal mode) or `logstash_prefix` (using with `logstash_format`as true).
+
+When using `deflectoe_alias` parameter, Elasticsearch plugin will create ILM target indices alias with `deflector_alias` instead of `index_name` or an index which is calculated from `logstash_prefix`. This behavior should be kept due to backward ILM feature compatibility.
 
 And also, ILM feature users should specify their Elasticsearch template for ILM enabled indices.
 Because ILM settings are injected into their Elasticsearch templates.
@@ -1607,9 +1609,6 @@ Because ILM settings are injected into their Elasticsearch templates.
 ```aconf
 index_name fluentd-${tag}
 # Should specify rollover_index as true
-rollover_index true
-deflector_alias fluentd-${tag} # Should specify as same index_name
-index_prefix fluentd
 application_name ${tag}
 index_date_pattern "now/d"
 enable_ilm true
