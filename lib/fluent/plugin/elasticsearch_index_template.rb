@@ -128,7 +128,8 @@ module Fluent::ElasticsearchIndexTemplate
   end
 
   def create_rollover_alias(index_prefix, rollover_index, deflector_alias_name, app_name, index_date_pattern, index_separator, enable_ilm, ilm_policy_id, ilm_policy, host)
-    if rollover_index
+     # ILM request to create alias.
+    if rollover_index || enable_ilm
       if !client.indices.exists_alias(:name => deflector_alias_name)
         if index_date_pattern.empty?
           index_name_temp='<'+index_prefix.downcase+index_separator+app_name.downcase+'-000001>'

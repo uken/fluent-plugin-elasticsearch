@@ -214,11 +214,7 @@ EOC
       @alias_indexes = []
       if !dry_run?
         if @template_name && @template_file
-          if @rollover_index
-            raise Fluent::ConfigError, "'deflector_alias' or 'logstash_format' as true must be provided if 'rollover_index' is set true ." if not @deflector_alias and not @logstash_format
-          end
           if @enable_ilm
-            raise Fluent::ConfigError, "'rollover_index' and 'deflector_alias' or 'logstash_format' as true must be provided if 'enable_ilm' is set true." if !@rollover_index && !(@deflector_alias || @logstash_format)
             raise Fluent::ConfigError, "deflector_alias is prohibited to use with 'logstash_format at same time." if @logstash_format and @deflector_alias
           end
           if @logstash_format || placeholder_substitution_needed_for_template?
@@ -226,7 +222,7 @@ EOC
               alias_method :template_installation, :template_installation_actual
             end
           else
-            template_installation_actual(@deflector_alias, @application_name, @index_name)
+            template_installation_actual(@deflector_alias ? @deflector_alias : @index_name, @application_name, @index_name)
           end
           verify_ilm_working if @enable_ilm
         elsif @templates

@@ -307,7 +307,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
   end
 
-  test 'invalid configuration of index lifecycle management' do
+  test 'valid configuration of index lifecycle management' do
     cwd = File.dirname(__FILE__)
     template_file = File.join(cwd, 'test_template.json')
 
@@ -316,7 +316,25 @@ class ElasticsearchOutput < Test::Unit::TestCase
       template_name logstash
       template_file #{template_file}
     }
-    assert_raise(Fluent::ConfigError) {
+    stub_request(:get, "http://localhost:9200/_template/fluentd").
+      to_return(status: 200, body: "", headers: {})
+    stub_request(:head, "http://localhost:9200/_alias/fluentd").
+      to_return(status: 404, body: "", headers: {})
+    stub_request(:put, "http://localhost:9200/%3Cfluentd-default-%7Bnow%2Fd%7D-000001%3E/_alias/fluentd").
+      with(body: "{\"aliases\":{\"fluentd\":{\"is_write_index\":true}}}").
+      to_return(status: 200, body: "", headers: {})
+    stub_request(:put, "http://localhost:9200/%3Cfluentd-default-%7Bnow%2Fd%7D-000001%3E").
+      to_return(status: 200, body: "", headers: {})
+    stub_request(:get, "http://localhost:9200/_xpack").
+      to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}',
+                :headers => {"Content-Type"=> "application/json"})
+    stub_request(:get, "http://localhost:9200/_ilm/policy/logstash-policy").
+      to_return(status: 404, body: "", headers: {})
+    stub_request(:put, "http://localhost:9200/_ilm/policy/logstash-policy").
+      with(body: "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}").
+      to_return(status: 200, body: "", headers: {})
+
+    assert_nothing_raised {
       driver(config)
     }
   end
@@ -676,7 +694,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
         password        doe
         template_name   logstash
         template_file   #{template_file}
-        rollover_index  true
         index_date_pattern now/w{xxxx.ww}
         deflector_alias myapp_deflector
         index_name      logstash
@@ -743,7 +760,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
         password        doe
         template_name   logstash
         template_file   #{template_file}
-        rollover_index  true
         index_date_pattern ""
         deflector_alias myapp_deflector
         index_name      logstash
@@ -810,7 +826,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
         password        doe
         template_name   logstash
         template_file   #{template_file}
-        rollover_index  true
         index_date_pattern now/w{xxxx.ww}
         deflector_alias myapp_deflector
         ilm_policy_id   fluentd-policy
@@ -879,7 +894,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
         password        doe
         template_name   logstash
         template_file   #{template_file}
-        rollover_index  true
         index_date_pattern now/w{xxxx.ww}
         index_name logstash-${tag}
         deflector_alias myapp_deflector-${tag}
@@ -1145,7 +1159,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
         template_name   myapp_alias_template
         template_file   #{template_file}
         customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
-        rollover_index  true
         index_date_pattern now/w{xxxx.ww}
         deflector_alias myapp_deflector
         index_name    mylogs
@@ -1216,7 +1229,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
         template_name   myapp_alias_template
         template_file   #{template_file}
         customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
-        rollover_index  true
         index_date_pattern now/w{xxxx.ww}
         index_name mylogs-${tag}
         deflector_alias myapp_deflector-${tag}
@@ -1295,7 +1307,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
         template_name   myapp_alias_template
         template_file   #{template_file}
         customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
-        rollover_index  true
         index_date_pattern now/w{xxxx.ww}
         deflector_alias myapp_deflector
         index_name    mylogs
