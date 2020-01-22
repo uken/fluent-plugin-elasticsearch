@@ -49,7 +49,7 @@ module Fluent::Plugin
       end
     end
 
-    RequestInfo = Struct.new(:host, :index)
+    RequestInfo = Struct.new(:host, :index, :ilm_index)
 
     attr_reader :alias_indexes
 
@@ -117,7 +117,8 @@ EOC
     config_param :index_date_pattern, :string, :default => "now/d"
     config_param :index_separator, :string, :default => "-"
     config_param :deflector_alias, :string, :default => nil
-    config_param :index_prefix, :string, :default => "logstash"
+    config_param :index_prefix, :string, :default => "logstash",
+                 obsoleted: "This parameter shouldn't be used in 4.0.0 or later. Specify ILM target index with using `index_name' w/o `logstash_format' or 'logstash_prefix' w/ `logstash_format' instead."
     config_param :application_name, :string, :default => "default"
     config_param :templates, :hash, :default => nil
     config_param :max_retry_putting_template, :integer, :default => 10
@@ -214,17 +215,18 @@ EOC
       if !dry_run?
         if @template_name && @template_file
           if @rollover_index
-            raise Fluent::ConfigError, "'deflector_alias' must be provided if 'rollover_index' is set true ." if not @deflector_alias
+            raise Fluent::ConfigError, "'deflector_alias' or 'logstash_format' as true must be provided if 'rollover_index' is set true ." if not @deflector_alias and not @logstash_format
           end
           if @enable_ilm
-            raise Fluent::ConfigError, "'rollover_index' and 'deflector_alias' must be provided if 'enable_ilm' is set true ." if !@deflector_alias &&!@deflector_alias
+            raise Fluent::ConfigError, "'rollover_index' and 'deflector_alias' or 'logstash_format' as true must be provided if 'enable_ilm' is set true." if !@rollover_index && !(@deflector_alias || @logstash_format)
+            raise Fluent::ConfigError, "deflector_alias is prohibited to use with 'logstash_format at same time." if @logstash_format and @deflector_alias
           end
-          if placeholder_substitution_needed_for_template?
+          if @logstash_format || placeholder_substitution_needed_for_template?
             class << self
               alias_method :template_installation, :template_installation_actual
             end
           else
-            template_installation_actual(@deflector_alias, @application_name)
+            template_installation_actual(@deflector_alias, @application_name, @index_name)
           end
           verify_ilm_working if @enable_ilm
         elsif @templates
@@ -694,9 +696,9 @@ EOC
         begin
           meta, header, record = process_message(tag, meta, header, time, record, extracted_values)
           info = if @include_index_in_url
-                   RequestInfo.new(host, meta.delete("_index".freeze))
+                   RequestInfo.new(host, meta.delete("_index".freeze), meta["_index".freeze])
                  else
-                   RequestInfo.new(host, nil)
+                   RequestInfo.new(host, nil, meta["_index".freeze])
                  end
 
           if split_request?(bulk_message, info)
@@ -849,11 +851,11 @@ EOC
         placeholder?(:application_name, @application_name.to_s)
     end
 
-    def template_installation(deflector_alias, application_name, info)
+    def template_installation(deflector_alias, application_name, target_index, host)
       # for safety.
     end
 
-    def template_installation_actual(deflector_alias, application_name, host=nil)
+    def template_installation_actual(deflector_alias, application_name, target_index, host=nil)
       if @template_name && @template_file
         if @alias_indexes.include? deflector_alias
           log.debug("Index alias #{deflector_alias} already exists (cached)")
@@ -864,7 +866,7 @@ EOC
             else
               template_install(@template_name, @template_file, @template_overwrite, @enable_ilm, deflector_alias, @ilm_policy_id, host)
             end
-            create_rollover_alias(@index_prefix, @rollover_index, deflector_alias, application_name, @index_date_pattern, @index_separator, @enable_ilm, @ilm_policy_id, @ilm_policy, host)
+            create_rollover_alias(target_index, @rollover_index, deflector_alias, application_name, @index_date_pattern, @index_separator, @enable_ilm, @ilm_policy_id, @ilm_policy, host)
           end
           @alias_indexes << deflector_alias unless deflector_alias.nil?
         end
@@ -874,8 +876,12 @@ EOC
     # send_bulk given a specific bulk request, the original tag,
     # chunk, and bulk_message_count
     def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, info)
-      _logstash_prefix, _index_name, _type_name, deflector_alias, application_name, _pipeline = extracted_values
-      template_installation(deflector_alias, application_name, info.host)
+      logstash_prefix, index_name, _type_name, deflector_alias, application_name, _pipeline = extracted_values
+      if deflector_alias
+        template_installation(deflector_alias, application_name, index_name, info.host)
+      else
+        template_installation(info.ilm_index, application_name, @logstash_format ? logstash_prefix : index_name, info.host)
+      end
 
       begin
 
