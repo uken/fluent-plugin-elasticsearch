@@ -1606,9 +1606,10 @@ When using `deflectoe_alias` parameter, Elasticsearch plugin will create ILM tar
 And also, ILM feature users should specify their Elasticsearch template for ILM enabled indices.
 Because ILM settings are injected into their Elasticsearch templates.
 
+#### Example ILM settings
+
 ```aconf
 index_name fluentd-${tag}
-# Should specify rollover_index as true
 application_name ${tag}
 index_date_pattern "now/d"
 enable_ilm true
@@ -1617,10 +1618,43 @@ ilm_policy_id fluentd-policy
 # ilm_policy {} # Use default policy
 template_name your-fluentd-template
 template_file /path/to/fluentd-template.json
-customize_template {"<<index_prefix>>": "fluentd"}
+# customize_template {"<<index_prefix>>": "fluentd"}
 ```
 
 Note: This plugin only creates rollover-enabled indices, which are aliases pointing to them and index templates, and creates an ILM policy if enabled.
+
+#### Create ILM indices in each day
+
+If you want to create new index in each day, you should use `logstash_format` style configuration:
+
+```aconf
+logstash_prefix fluentd
+application_name default
+index_date_pattern "now/d"
+enable_ilm true
+# Policy configurations
+ilm_policy_id fluentd-policy
+# ilm_policy {} # Use default policy
+template_name your-fluentd-template
+template_file /path/to/fluentd-template.json
+```
+
+#### Fixed ILM indices
+
+Also, users can use fixed ILM indices configuration.
+If `index_date_pattern` is set as `""`(empty string), Elasticsearch plugin won't attach date pattern in ILM indices:
+
+```aconf
+index_name fluentd
+application_name default
+index_date_pattern ""
+enable_ilm true
+# Policy configurations
+ilm_policy_id fluentd-policy
+# ilm_policy {} # Use default policy
+template_name your-fluentd-template
+template_file /path/to/fluentd-template.json
+```
 
 ### How to specify index codec
 
