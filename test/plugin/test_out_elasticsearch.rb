@@ -307,7 +307,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
   end
 
-  test 'invalid configuration of index lifecycle management' do
+  test 'valid configuration of index lifecycle management' do
     cwd = File.dirname(__FILE__)
     template_file = File.join(cwd, 'test_template.json')
 
@@ -316,7 +316,25 @@ class ElasticsearchOutput < Test::Unit::TestCase
       template_name logstash
       template_file #{template_file}
     }
-    assert_raise(Fluent::ConfigError) {
+    stub_request(:get, "http://localhost:9200/_template/fluentd").
+      to_return(status: 200, body: "", headers: {})
+    stub_request(:head, "http://localhost:9200/_alias/fluentd").
+      to_return(status: 404, body: "", headers: {})
+    stub_request(:put, "http://localhost:9200/%3Cfluentd-default-%7Bnow%2Fd%7D-000001%3E/_alias/fluentd").
+      with(body: "{\"aliases\":{\"fluentd\":{\"is_write_index\":true}}}").
+      to_return(status: 200, body: "", headers: {})
+    stub_request(:put, "http://localhost:9200/%3Cfluentd-default-%7Bnow%2Fd%7D-000001%3E").
+      to_return(status: 200, body: "", headers: {})
+    stub_request(:get, "http://localhost:9200/_xpack").
+      to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}',
+                :headers => {"Content-Type"=> "application/json"})
+    stub_request(:get, "http://localhost:9200/_ilm/policy/logstash-policy").
+      to_return(status: 404, body: "", headers: {})
+    stub_request(:put, "http://localhost:9200/_ilm/policy/logstash-policy").
+      with(body: "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}").
+      to_return(status: 200, body: "", headers: {})
+
+    assert_nothing_raised {
       driver(config)
     }
   end
@@ -376,6 +394,71 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
     assert_raise_message(/Detected ES 7 but you use ES client 5.0/) do
       driver(config, 7, "\"5.0.5\"")
+    end
+  end
+
+  sub_test_case "placeholder substitution needed?" do
+    data("host placeholder" => ["host", "host-${tag}.google.com"],
+         "logstash_prefix_placeholder" => ["logstash_prefix", "fluentd-${tag}"],
+         "deflector_alias_placeholder" => ["deflector_alias", "fluentd-${tag}"],
+         "application_name_placeholder" => ["application_name", "fluentd-${tag}"],
+        )
+    test 'tag placeholder' do |data|
+      param, value = data
+      config = Fluent::Config::Element.new(
+        'ROOT', '', {
+          '@type' => 'elasticsearch',
+          param => value
+        }, [
+          Fluent::Config::Element.new('buffer', 'tag', {}, [])
+        ])
+      driver(config)
+
+      assert_true driver.instance.placeholder_substitution_needed_for_template?
+    end
+
+
+    data("host placeholder" => ["host", "host-%Y%m%d.google.com"],
+         "logstash_prefix_placeholder" => ["logstash_prefix", "fluentd-%Y%m%d"],
+         "deflector_alias_placeholder" => ["deflector_alias", "fluentd-%Y%m%d"],
+         "application_name_placeholder" => ["application_name", "fluentd-%Y%m%d"],
+        )
+    test 'time placeholder' do |data|
+      param, value = data
+      config = Fluent::Config::Element.new(
+        'ROOT', '', {
+          '@type' => 'elasticsearch',
+          param => value
+        }, [
+          Fluent::Config::Element.new('buffer', 'time', {
+                                        'timekey' => '1d'
+                                      }, [])
+        ])
+      driver(config)
+
+      assert_true driver.instance.placeholder_substitution_needed_for_template?
+    end
+
+    data("host placeholder" => ["host", "host-${mykey}.google.com"],
+         "logstash_prefix_placeholder" => ["logstash_prefix", "fluentd-${mykey}"],
+         "deflector_alias_placeholder" => ["deflector_alias", "fluentd-${mykey}"],
+         "application_name_placeholder" => ["application_name", "fluentd-${mykey}"],
+        )
+    test 'custom placeholder' do |data|
+      param, value = data
+      config = Fluent::Config::Element.new(
+        'ROOT', '', {
+          '@type' => 'elasticsearch',
+          param => value
+        }, [
+          Fluent::Config::Element.new('buffer', 'mykey', {
+                                        'chunk_keys' => 'mykey',
+                                        'timekey' => '1d',
+                                      }, [])
+        ])
+      driver(config)
+
+      assert_true driver.instance.placeholder_substitution_needed_for_template?
     end
   end
 
@@ -584,10 +667,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
-    stub_elastic("https://logs.google.com:777/es//_bulk")
-    driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
-    end
+
     assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
   end
 
@@ -599,7 +679,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
         omit "ILM testcase needs elasticsearch-xpack gem."
       end
     end
-
 
     def test_template_create_with_rollover_index_and_default_ilm
       cwd = File.dirname(__FILE__)
@@ -614,9 +693,74 @@ class ElasticsearchOutput < Test::Unit::TestCase
         password        doe
         template_name   logstash
         template_file   #{template_file}
-        rollover_index  true
+        index_date_pattern now/w{xxxx.ww}
+        index_name      logstash
+        enable_ilm      true
+      }
+
+      # connection start
+      stub_request(:head, "https://logs.google.com:777/es//").
+        with(basic_auth: ['john', 'doe']).
+        to_return(:status => 200, :body => "", :headers => {})
+      # check if template exists
+      stub_request(:get, "https://logs.google.com:777/es//_template/logstash").
+        with(basic_auth: ['john', 'doe']).
+        to_return(:status => 404, :body => "", :headers => {})
+      # creation
+      stub_request(:put, "https://logs.google.com:777/es//_template/logstash").
+        with(basic_auth: ['john', 'doe']).
+        to_return(:status => 200, :body => "", :headers => {})
+      # check if alias exists
+      stub_request(:head, "https://logs.google.com:777/es//_alias/logstash").
+        with(basic_auth: ['john', 'doe']).
+        to_return(:status => 404, :body => "", :headers => {})
+      stub_request(:get, "https://logs.google.com:777/es//_template/logstash").
+        with(basic_auth: ['john', 'doe']).
+        to_return(status: 404, body: "", headers: {})
+      stub_request(:put, "https://logs.google.com:777/es//_template/logstash").
+        with(basic_auth: ['john', 'doe'],
+             body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"logstash-*\",\"order\":51}").
+        to_return(status: 200, body: "", headers: {})
+      # put the alias for the index
+      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
+        with(basic_auth: ['john', 'doe']).
+        to_return(:status => 200, :body => "", :headers => {})
+      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/logstash").
+        with(basic_auth: ['john', 'doe'],
+             :body => "{\"aliases\":{\"logstash\":{\"is_write_index\":true}}}").
+        to_return(:status => 200, :body => "", :headers => {})
+      stub_request(:get, "https://logs.google.com:777/es//_xpack").
+        with(basic_auth: ['john', 'doe']).
+        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
+      stub_request(:get, "https://logs.google.com:777/es//_ilm/policy/logstash-policy").
+        with(basic_auth: ['john', 'doe']).
+        to_return(:status => 404, :body => "", :headers => {})
+      stub_request(:put, "https://logs.google.com:777/es//_ilm/policy/logstash-policy").
+        with(basic_auth: ['john', 'doe'],
+             :body => "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}").
+        to_return(:status => 200, :body => "", :headers => {})
+
+      driver(config)
+
+      assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
+    end
+
+    def test_template_create_with_rollover_index_and_default_ilm_with_deflector_alias
+      cwd = File.dirname(__FILE__)
+      template_file = File.join(cwd, 'test_template.json')
+
+      config = %{
+        host            logs.google.com
+        port            777
+        scheme          https
+        path            /es/
+        user            john
+        password        doe
+        template_name   logstash
+        template_file   #{template_file}
         index_date_pattern now/w{xxxx.ww}
         deflector_alias myapp_deflector
+        index_name      logstash
         enable_ilm      true
       }
 
@@ -664,12 +808,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
       driver(config)
 
-      elastic_request = stub_elastic("https://logs.google.com:777/es//_bulk")
-      driver.run(default_tag: 'test') do
-        driver.feed(sample_record)
-      end
-
-      assert_requested(elastic_request)
+      assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_deflector", times: 1)
     end
 
     def test_template_create_with_rollover_index_and_default_ilm_with_empty_index_date_pattern
@@ -685,9 +824,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
         password        doe
         template_name   logstash
         template_file   #{template_file}
-        rollover_index  true
         index_date_pattern ""
-        deflector_alias myapp_deflector
+        index_name      logstash
         enable_ilm      true
       }
 
@@ -704,23 +842,23 @@ class ElasticsearchOutput < Test::Unit::TestCase
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 200, :body => "", :headers => {})
       # check if alias exists
-      stub_request(:head, "https://logs.google.com:777/es//_alias/myapp_deflector").
+      stub_request(:head, "https://logs.google.com:777/es//_alias/logstash").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 404, :body => "", :headers => {})
-      stub_request(:get, "https://logs.google.com:777/es//_template/myapp_deflector").
+      stub_request(:get, "https://logs.google.com:777/es//_template/logstash").
         with(basic_auth: ['john', 'doe']).
         to_return(status: 404, body: "", headers: {})
       stub_request(:put, "https://logs.google.com:777/es//_template/myapp_deflector").
         with(basic_auth: ['john', 'doe'],
-             body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"myapp_deflector\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"myapp_deflector-*\",\"order\":51}").
+             body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"logstash-*\",\"order\":51}").
         to_return(status: 200, body: "", headers: {})
       # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-000001%3E").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 200, :body => "", :headers => {})
-      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-000001%3E/_alias/myapp_deflector").
+      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-000001%3E/_alias/logstash").
         with(basic_auth: ['john', 'doe'],
-             :body => "{\"aliases\":{\"myapp_deflector\":{\"is_write_index\":true}}}").
+             :body => "{\"aliases\":{\"logstash\":{\"is_write_index\":true}}}").
         to_return(:status => 200, :body => "", :headers => {})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
@@ -735,12 +873,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
       driver(config)
 
-      elastic_request = stub_elastic("https://logs.google.com:777/es//_bulk")
-      driver.run(default_tag: 'test') do
-        driver.feed(sample_record)
-      end
-
-      assert_requested(elastic_request)
+      assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
     end
 
     def test_template_create_with_rollover_index_and_custom_ilm
@@ -756,11 +889,10 @@ class ElasticsearchOutput < Test::Unit::TestCase
         password        doe
         template_name   logstash
         template_file   #{template_file}
-        rollover_index  true
         index_date_pattern now/w{xxxx.ww}
-        deflector_alias myapp_deflector
         ilm_policy_id   fluentd-policy
         enable_ilm      true
+        index_name      logstash
         ilm_policy      {"policy":{"phases":{"hot":{"actions":{"rollover":{"max_size":"70gb", "max_age":"30d"}}}}}}
       }
 
@@ -777,24 +909,23 @@ class ElasticsearchOutput < Test::Unit::TestCase
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 200, :body => "", :headers => {})
       # check if alias exists
-      stub_request(:head, "https://logs.google.com:777/es//_alias/myapp_deflector").
+      stub_request(:head, "https://logs.google.com:777/es//_alias/logstash").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 404, :body => "", :headers => {})
-      stub_request(:get, "https://logs.google.com:777/es//_template/myapp_deflector").
+      stub_request(:get, "https://logs.google.com:777/es//_template/logstash").
         with(basic_auth: ['john', 'doe']).
         to_return(status: 404, body: "", headers: {})
-      stub_request(:put, "https://logs.google.com:777/es//_template/myapp_deflector").
+      stub_request(:put, "https://logs.google.com:777/es//_template/logstash").
         with(basic_auth: ['john', 'doe'],
-             body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"myapp_deflector\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"myapp_deflector-*\",\"order\":51}").
+             body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"myalogs\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"mylogs-*\",\"order\":51}").
         to_return(status: 200, body: "", headers: {})
       # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 200, :body => "", :headers => {})
-      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/myapp_deflector").
-        with(basic_auth: ['john', 'doe'],
-             :body => "{\"aliases\":{\"myapp_deflector\":{\"is_write_index\":true}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/logstash").
+        with(body: "{\"aliases\":{\"logstash\":{\"is_write_index\":true}}}").
+        to_return(status: 200, body: "", headers: {})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
@@ -808,12 +939,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
       driver(config)
 
-      elastic_request = stub_elastic("https://logs.google.com:777/es//_bulk")
-      driver.run(default_tag: 'test') do
-        driver.feed(sample_record)
-      end
-
-      assert_requested(elastic_request)
+      assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
     end
 
     def test_template_create_with_rollover_index_and_default_ilm_and_placeholders
@@ -829,10 +955,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
         password        doe
         template_name   logstash
         template_file   #{template_file}
-        rollover_index  true
         index_date_pattern now/w{xxxx.ww}
-        index_name fluentd-${tag}
-        deflector_alias myapp_deflector-${tag}
+        index_name logstash-${tag}
         enable_ilm      true
       }
 
@@ -849,23 +973,23 @@ class ElasticsearchOutput < Test::Unit::TestCase
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 200, :body => "", :headers => {})
       # check if alias exists
-      stub_request(:head, "https://logs.google.com:777/es//_alias/myapp_deflector-test").
+      stub_request(:head, "https://logs.google.com:777/es//_alias/logstash-test").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 404, :body => "", :headers => {})
-      stub_request(:get, "https://logs.google.com:777/es//_template/myapp_deflector-test").
+      stub_request(:get, "https://logs.google.com:777/es//_template/logstash-test").
         with(basic_auth: ['john', 'doe']).
         to_return(status: 404, body: "", headers: {})
-      stub_request(:put, "https://logs.google.com:777/es//_template/myapp_deflector-test").
+      stub_request(:put, "https://logs.google.com:777/es//_template/logstash-test").
         with(basic_auth: ['john', 'doe'],
-             body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"myapp_deflector-test\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"myapp_deflector-test-*\",\"order\":52}").
+             body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash-test\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"logstash-test-*\",\"order\":52}").
         to_return(status: 200, body: "", headers: {})
       # put the alias for the index
-      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
+      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-test-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 200, :body => "", :headers => {})
-      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/myapp_deflector-test").
+      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-test-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/logstash-test").
         with(basic_auth: ['john', 'doe'],
-             :body => "{\"aliases\":{\"myapp_deflector-test\":{\"is_write_index\":true}}}").
+             :body => "{\"aliases\":{\"logstash-test\":{\"is_write_index\":true}}}").
         to_return(:status => 200, :body => "", :headers => {})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
@@ -884,9 +1008,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.run(default_tag: 'test') do
         driver.feed(sample_record)
       end
-      assert_equal('fluentd-test', index_cmds.first['index']['_index'])
+      assert_equal('logstash-test', index_cmds.first['index']['_index'])
 
-      assert_equal ["myapp_deflector-test"], driver.instance.alias_indexes
+      assert_equal ["logstash-test"], driver.instance.alias_indexes
 
       assert_requested(elastic_request)
     end
@@ -922,11 +1046,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
-
-    stub_elastic("https://logs.google.com:777/es//_bulk")
-    driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
-    end
 
     assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
@@ -985,8 +1104,58 @@ class ElasticsearchOutput < Test::Unit::TestCase
       customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
       rollover_index  true
       index_date_pattern now/w{xxxx.ww}
+      index_name    mylogs
+      application_name myapp
+    }
+
+    # connection start
+    stub_request(:head, "https://logs.google.com:777/es//").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 200, :body => "", :headers => {})
+    # check if template exists
+    stub_request(:get, "https://logs.google.com:777/es//_template/myapp_alias_template").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 404, :body => "", :headers => {})
+    # creation
+    stub_request(:put, "https://logs.google.com:777/es//_template/myapp_alias_template").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 200, :body => "", :headers => {})
+    # creation of index which can rollover
+    stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 200, :body => "", :headers => {})
+    # check if alias exists
+    stub_request(:head, "https://logs.google.com:777/es//_alias/mylogs").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 404, :body => "", :headers => {})
+    # put the alias for the index
+    stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/mylogs").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 200, :body => "", :headers => {})
+
+    driver(config)
+
+    assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
+  end
+
+    def test_custom_template_with_rollover_index_create_and_deflector_alias
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_alias_template.json')
+
+    config = %{
+      host            logs.google.com
+      port            777
+      scheme          https
+      path            /es/
+      user            john
+      password        doe
+      template_name   myapp_alias_template
+      template_file   #{template_file}
+      customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
+      rollover_index  true
+      index_date_pattern now/w{xxxx.ww}
       deflector_alias myapp_deflector
-      index_prefix    mylogs
+      index_name    mylogs
       application_name myapp
     }
 
@@ -1017,12 +1186,63 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     driver(config)
 
-    stub_elastic("https://logs.google.com:777/es//_bulk")
-    driver.run(default_tag: 'test') do
+    assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
+  end
+
+  def test_custom_template_with_rollover_index_create_with_logstash_format
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_alias_template.json')
+
+    config = %{
+      host            logs.google.com
+      port            777
+      scheme          https
+      path            /es/
+      user            john
+      password        doe
+      template_name   myapp_alias_template
+      template_file   #{template_file}
+      customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
+      rollover_index  true
+      index_date_pattern now/w{xxxx.ww}
+      logstash_format true
+      logstash_prefix mylogs
+      application_name myapp
+    }
+
+    # connection start
+    stub_request(:head, "https://logs.google.com:777/es//").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 200, :body => "", :headers => {})
+    # check if template exists
+    stub_request(:get, "https://logs.google.com:777/es//_template/myapp_alias_template").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 404, :body => "", :headers => {})
+    # creation
+    stub_request(:put, "https://logs.google.com:777/es//_template/myapp_alias_template").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 200, :body => "", :headers => {})
+    # creation of index which can rollover
+    stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 200, :body => "", :headers => {})
+    # check if alias exists
+    timestr = Time.now.strftime("%Y.%m.%d")
+    stub_request(:head, "https://logs.google.com:777/es//_alias/mylogs-#{timestr}").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 404, :body => "", :headers => {})
+    # put the alias for the index
+    stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/mylogs-#{timestr}").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 200, :body => "", :headers => {})
+
+    driver(config)
+
+    elastic_request = stub_elastic("https://logs.google.com:777/es//_bulk")
+    driver.run(default_tag: 'custom-test') do
       driver.feed(sample_record)
     end
-
-    assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
+    assert_requested(elastic_request)
   end
 
   class CustomTemplateIndexLifecycleManagementTest < self
@@ -1048,10 +1268,78 @@ class ElasticsearchOutput < Test::Unit::TestCase
         template_name   myapp_alias_template
         template_file   #{template_file}
         customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
-        rollover_index  true
+        index_date_pattern now/w{xxxx.ww}
+        index_name    mylogs
+        application_name myapp
+        ilm_policy_id   fluentd-policy
+        enable_ilm      true
+      }
+
+      # connection start
+      stub_request(:head, "https://logs.google.com:777/es//").
+        with(basic_auth: ['john', 'doe']).
+        to_return(:status => 200, :body => "", :headers => {})
+      # check if template exists
+      stub_request(:get, "https://logs.google.com:777/es//_template/myapp_alias_template").
+        with(basic_auth: ['john', 'doe']).
+        to_return(:status => 404, :body => "", :headers => {})
+      # creation
+      stub_request(:put, "https://logs.google.com:777/es//_template/myapp_alias_template").
+        with(basic_auth: ['john', 'doe']).
+        to_return(:status => 200, :body => "", :headers => {})
+      # creation of index which can rollover
+      stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
+        with(basic_auth: ['john', 'doe']).
+        to_return(:status => 200, :body => "", :headers => {})
+      # check if alias exists
+      stub_request(:head, "https://logs.google.com:777/es//_alias/mylogs").
+        with(basic_auth: ['john', 'doe']).
+        to_return(:status => 404, :body => "", :headers => {})
+      stub_request(:get, "https://logs.google.com:777/es//_template/mylogs").
+        with(basic_auth: ['john', 'doe']).
+        to_return(status: 404, body: "", headers: {})
+      stub_request(:put, "https://logs.google.com:777/es//_template/mylogs").
+        with(basic_auth: ['john', 'doe'],
+             body: "{\"order\":6,\"settings\":{\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"mylogs\"},\"mappings\":{},\"aliases\":{\"myapp-logs-alias\":{}},\"index_patterns\":\"mylogs-*\"}").
+        to_return(status: 200, body: "", headers: {})
+      # put the alias for the index
+      stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/mylogs").
+        with(basic_auth: ['john', 'doe'],
+             :body => "{\"aliases\":{\"mylogs\":{\"is_write_index\":true}}}").
+        to_return(:status => 200, :body => "", :headers => {})
+      stub_request(:get, "https://logs.google.com:777/es//_xpack").
+        with(basic_auth: ['john', 'doe']).
+        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
+      stub_request(:get, "https://logs.google.com:777/es//_ilm/policy/fluentd-policy").
+        with(basic_auth: ['john', 'doe']).
+        to_return(:status => 404, :body => "", :headers => {})
+      stub_request(:put, "https://logs.google.com:777/es//_ilm/policy/fluentd-policy").
+        with(basic_auth: ['john', 'doe'],
+             :body => "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}").
+        to_return(:status => 200, :body => "", :headers => {})
+
+      driver(config)
+
+      assert_requested(:put, "https://logs.google.com:777/es//_template/mylogs", times: 1)
+    end
+
+    def test_custom_template_with_rollover_index_create_and_default_ilm_with_deflector_alias
+      cwd = File.dirname(__FILE__)
+      template_file = File.join(cwd, 'test_alias_template.json')
+
+      config = %{
+        host            logs.google.com
+        port            777
+        scheme          https
+        path            /es/
+        user            john
+        password        doe
+        template_name   myapp_alias_template
+        template_file   #{template_file}
+        customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
         index_date_pattern now/w{xxxx.ww}
         deflector_alias myapp_deflector
-        index_prefix    mylogs
+        index_name    mylogs
         application_name myapp
         ilm_policy_id   fluentd-policy
         enable_ilm      true
@@ -1102,12 +1390,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
       driver(config)
 
-      elastic_request = stub_elastic("https://logs.google.com:777/es//_bulk")
-      driver.run(default_tag: 'test') do
-        driver.feed(sample_record)
-      end
-
-      assert_requested(elastic_request)
+      assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_deflector", times: 1)
     end
 
     def test_custom_template_with_rollover_index_create_and_default_ilm_and_placeholders
@@ -1124,11 +1407,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
         template_name   myapp_alias_template
         template_file   #{template_file}
         customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
-        rollover_index  true
         index_date_pattern now/w{xxxx.ww}
-        index_name fluentd-${tag}
-        deflector_alias myapp_deflector-${tag}
-        index_prefix    mylogs
+        index_name mylogs-${tag}
         application_name myapp
         ilm_policy_id   fluentd-policy
         enable_ilm      true
@@ -1147,24 +1427,24 @@ class ElasticsearchOutput < Test::Unit::TestCase
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 200, :body => "", :headers => {})
       # creation of index which can rollover
-      stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
+      stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-custom-test-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 200, :body => "", :headers => {})
       # check if alias exists
-      stub_request(:head, "https://logs.google.com:777/es//_alias/myapp_deflector-custom-test").
+      stub_request(:head, "https://logs.google.com:777/es//_alias/mylogs-custom-test").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 404, :body => "", :headers => {})
-      stub_request(:get, "https://logs.google.com:777/es//_template/myapp_deflector-custom-test").
+      stub_request(:get, "https://logs.google.com:777/es//_template/mylogs-custom-test").
         with(basic_auth: ['john', 'doe']).
         to_return(status: 404, body: "", headers: {})
-      stub_request(:put, "https://logs.google.com:777/es//_template/myapp_deflector-custom-test").
+      stub_request(:put, "https://logs.google.com:777/es//_template/mylogs-custom-test").
         with(basic_auth: ['john', 'doe'],
-             body: "{\"order\":8,\"settings\":{\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"myapp_deflector-custom-test\"},\"mappings\":{},\"aliases\":{\"myapp-logs-alias\":{}},\"index_patterns\":\"myapp_deflector-custom-test-*\"}").
+             body: "{\"order\":8,\"settings\":{\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"mylogs-custom-test\"},\"mappings\":{},\"aliases\":{\"myapp-logs-alias\":{}},\"index_patterns\":\"mylogs-custom-test-*\"}").
         to_return(status: 200, body: "", headers: {})
       # put the alias for the index
-      stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/myapp_deflector-custom-test").
+      stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-custom-test-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/mylogs-custom-test").
         with(basic_auth: ['john', 'doe'],
-             :body => "{\"aliases\":{\"myapp_deflector-custom-test\":{\"is_write_index\":true}}}").
+             :body => "{\"aliases\":{\"mylogs-custom-test\":{\"is_write_index\":true}}}").
         to_return(:status => 200, :body => "", :headers => {})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
@@ -1183,9 +1463,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
       driver.run(default_tag: 'custom-test') do
         driver.feed(sample_record)
       end
-      assert_equal('fluentd-custom-test', index_cmds.first['index']['_index'])
+      assert_equal('mylogs-custom-test', index_cmds.first['index']['_index'])
 
-      assert_equal ["myapp_deflector-custom-test"], driver.instance.alias_indexes
+      assert_equal ["mylogs-custom-test"], driver.instance.alias_indexes
 
       assert_requested(elastic_request)
     end
@@ -1204,10 +1484,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
         template_name   myapp_alias_template
         template_file   #{template_file}
         customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
-        rollover_index  true
         index_date_pattern now/w{xxxx.ww}
-        deflector_alias myapp_deflector
-        index_prefix    mylogs
+        index_name    mylogs
         application_name myapp
         ilm_policy_id   fluentd-policy
         enable_ilm      true
@@ -1231,19 +1509,19 @@ class ElasticsearchOutput < Test::Unit::TestCase
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 200, :body => "", :headers => {})
       # check if alias exists
-      stub_request(:head, "https://logs.google.com:777/es//_alias/myapp_deflector").
+      stub_request(:head, "https://logs.google.com:777/es//_alias/mylogs").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 404, :body => "", :headers => {})
-      stub_request(:get, "https://logs.google.com:777/es//_template/myapp_deflector").
+      stub_request(:get, "https://logs.google.com:777/es//_template/mylogs").
         with(basic_auth: ['john', 'doe']).
         to_return(status: 404, body: "", headers: {})
-      stub_request(:put, "https://logs.google.com:777/es//_template/myapp_deflector").
+      stub_request(:put, "https://logs.google.com:777/es//_template/mylogs").
         with(basic_auth: ['john', 'doe']).
         to_return(status: 200, body: "", headers: {})
       # put the alias for the index
-      stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/myapp_deflector").
+      stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/mylogs").
         with(basic_auth: ['john', 'doe'],
-             :body => "{\"aliases\":{\"myapp_deflector\":{\"is_write_index\":true}}}").
+             :body => "{\"aliases\":{\"mylogs\":{\"is_write_index\":true}}}").
         to_return(:status => 200, :body => "", :headers => {})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
@@ -1258,12 +1536,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
       driver(config)
 
-      elastic_request = stub_elastic("https://logs.google.com:777/es//_bulk")
-      driver.run(default_tag: 'test') do
-        driver.feed(sample_record)
-      end
-
-      assert_requested(elastic_request)
+      assert_requested(:put, "https://logs.google.com:777/es//_template/mylogs", times: 1)
     end
   end
 
@@ -1297,11 +1570,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
-
-    stub_elastic("https://logs.google.com:777/es//_bulk")
-    driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
-    end
 
     assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
   end
@@ -1338,11 +1606,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     driver(config)
 
-    stub_elastic("https://logs.google.com:777/es//_bulk")
-    driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
-    end
-
     assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
 
@@ -1363,7 +1626,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       customize_template {"--appid--": "myapp-logs","--index_prefix--":"mylogs"}
       deflector_alias myapp_deflector
       rollover_index  true
-      index_prefix    mylogs
+      index_name    mylogs
       application_name myapp
     }
 
@@ -1394,11 +1657,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
     driver(config)
 
-    stub_elastic("https://logs.google.com:777/es//_bulk")
-    driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
-    end
-
     assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
 
@@ -1423,13 +1681,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
       with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
 
-    driver(config)
 
-    stub_elastic("https://logs.google.com:777/es//_bulk")
     assert_raise(RuntimeError) {
-      driver.run(default_tag: 'test') do
-        driver.feed(sample_record)
-      end
+      driver(config)
     }
   end
 
@@ -1497,11 +1751,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
       raise Faraday::ConnectionFailed, "Test message"
     end
 
-    driver(config)
-
-    stub_elastic("https://logs.google.com:777/es//_bulk")
-    driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
+    assert_raise(Fluent::Plugin::ElasticsearchError::RetryableOperationExhaustedFailure) do
+      driver(config)
     end
 
     assert_equal(4, connection_resets)
@@ -1533,11 +1784,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
 
     driver(config)
-
-    stub_elastic("https://logs.google.com:778/es//_bulk")
-    driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
-    end
 
     assert_equal(4, connection_resets)
   end
@@ -1673,11 +1919,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
-
-    stub_elastic("https://logs.google.com:777/es//_bulk")
-    driver.run(default_tag: 'test') do
-      driver.feed(sample_record)
-    end
 
     assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
 

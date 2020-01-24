@@ -49,7 +49,7 @@ module Fluent::Plugin
       end
     end
 
-    RequestInfo = Struct.new(:host, :index)
+    RequestInfo = Struct.new(:host, :index, :ilm_index)
 
     attr_reader :alias_indexes
 
@@ -117,7 +117,8 @@ EOC
     config_param :index_date_pattern, :string, :default => "now/d"
     config_param :index_separator, :string, :default => "-"
     config_param :deflector_alias, :string, :default => nil
-    config_param :index_prefix, :string, :default => "logstash"
+    config_param :index_prefix, :string, :default => "logstash",
+                 obsoleted: "This parameter shouldn't be used in 4.0.0 or later. Specify ILM target index with using `index_name' w/o `logstash_format' or 'logstash_prefix' w/ `logstash_format' instead."
     config_param :application_name, :string, :default => "default"
     config_param :templates, :hash, :default => nil
     config_param :max_retry_putting_template, :integer, :default => 10
@@ -173,8 +174,12 @@ EOC
       compat_parameters_convert(conf, :buffer)
 
       super
-      raise Fluent::ConfigError, "'tag' or '_index' in chunk_keys is required." if not @buffer_config.chunk_keys.include? "tag" and not @buffer_config.chunk_keys.include? "_index"
-
+      if placeholder_substitution_needed_for_template?
+        # nop.
+      elsif not @buffer_config.chunk_keys.include? "tag" and
+        not @buffer_config.chunk_keys.include? "_index"
+        raise Fluent::ConfigError, "'tag' or '_index' in chunk_keys is required."
+      end
       @time_parser = create_time_parser
       @backend_options = backend_options
 
@@ -209,11 +214,15 @@ EOC
       @alias_indexes = []
       if !dry_run?
         if @template_name && @template_file
-          if @rollover_index
-            raise Fluent::ConfigError, "'deflector_alias' must be provided if 'rollover_index' is set true ." if not @deflector_alias
-          end
           if @enable_ilm
-            raise Fluent::ConfigError, "'rollover_index' and 'deflector_alias' must be provided if 'enable_ilm' is set true ." if !@deflector_alias &&!@deflector_alias
+            raise Fluent::ConfigError, "deflector_alias is prohibited to use with 'logstash_format at same time." if @logstash_format and @deflector_alias
+          end
+          if @logstash_format || placeholder_substitution_needed_for_template?
+            class << self
+              alias_method :template_installation, :template_installation_actual
+            end
+          else
+            template_installation_actual(@deflector_alias ? @deflector_alias : @index_name, @application_name, @index_name)
           end
           verify_ilm_working if @enable_ilm
         elsif @templates
@@ -356,7 +365,8 @@ EOC
       begin
         placeholder_validate!(name, param)
         true
-      rescue Fluent::ConfigError
+      rescue Fluent::ConfigError => e
+        log.debug("'#{name} #{param}' is tested built-in placeholder(s) but there is no valid placeholder(s). error: #{e}")
         false
       end
     end
@@ -682,9 +692,9 @@ EOC
         begin
           meta, header, record = process_message(tag, meta, header, time, record, extracted_values)
           info = if @include_index_in_url
-                   RequestInfo.new(host, meta.delete("_index".freeze))
+                   RequestInfo.new(host, meta.delete("_index".freeze), meta["_index".freeze])
                  else
-                   RequestInfo.new(host, nil)
+                   RequestInfo.new(host, nil, meta["_index".freeze])
                  end
 
           if split_request?(bulk_message, info)
@@ -830,24 +840,44 @@ EOC
       wio.string
     end
 
-    # send_bulk given a specific bulk request, the original tag,
-    # chunk, and bulk_message_count
-    def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, info)
-      _logstash_prefix, _index_name, _type_name, deflector_alias, application_name, _pipeline = extracted_values
+    def placeholder_substitution_needed_for_template?
+      placeholder?(:host, @host.to_s) ||
+        placeholder?(:index_name, @index_name.to_s) ||
+        placeholder?(:logstash_prefix, @logstash_prefix.to_s) ||
+        placeholder?(:deflector_alias, @deflector_alias.to_s) ||
+        placeholder?(:application_name, @application_name.to_s)
+    end
+
+    def template_installation(deflector_alias, application_name, target_index, host)
+      # for safety.
+    end
+
+    def template_installation_actual(deflector_alias, application_name, target_index, host=nil)
       if @template_name && @template_file
         if @alias_indexes.include? deflector_alias
           log.debug("Index alias #{deflector_alias} already exists (cached)")
         else
           retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
             if @customize_template
-              template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @enable_ilm, deflector_alias, @ilm_policy_id, info.host)
+              template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @enable_ilm, deflector_alias, @ilm_policy_id, host)
             else
-              template_install(@template_name, @template_file, @template_overwrite, @enable_ilm, deflector_alias, @ilm_policy_id, info.host)
+              template_install(@template_name, @template_file, @template_overwrite, @enable_ilm, deflector_alias, @ilm_policy_id, host)
             end
-            create_rollover_alias(@index_prefix, @rollover_index, deflector_alias, application_name, @index_date_pattern, @index_separator, @enable_ilm, @ilm_policy_id, @ilm_policy, info.host)
+            create_rollover_alias(target_index, @rollover_index, deflector_alias, application_name, @index_date_pattern, @index_separator, @enable_ilm, @ilm_policy_id, @ilm_policy, host)
           end
           @alias_indexes << deflector_alias unless deflector_alias.nil?
         end
+      end
+    end
+
+    # send_bulk given a specific bulk request, the original tag,
+    # chunk, and bulk_message_count
+    def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, info)
+      logstash_prefix, index_name, _type_name, deflector_alias, application_name, _pipeline = extracted_values
+      if deflector_alias
+        template_installation(deflector_alias, application_name, index_name, info.host)
+      else
+        template_installation(info.ilm_index, application_name, @logstash_format ? logstash_prefix : index_name, info.host)
       end
 
       begin
