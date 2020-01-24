@@ -74,7 +74,7 @@ module Fluent::ElasticsearchIndexTemplate
                                                                 get_template(template_file)) :
                      get_template(template_file), host)
 
-      log.info("Template '#{inject_template_name}' overwritten with #{template_file}.")
+      log.debug("Template '#{inject_template_name}' overwritten with #{template_file}.")
       return
     end
     if !template_exists?(inject_template_name, host)
