@@ -1096,6 +1096,45 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
 
+  def test_custom_template_create_with_placeholders
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_alias_template.json')
+
+    config = %{
+      host            logs.google.com
+      port            777
+      scheme          https
+      path            /es/
+      user            john
+      password        doe
+      template_name   myapp_alias_template
+      template_file   #{template_file}
+      customize_template {"--appid--": "${tag}-logs","--index_prefix--":"${tag}"}
+    }
+
+    # connection start
+    stub_request(:head, "https://logs.google.com:777/es//").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 200, :body => "", :headers => {})
+    # check if template exists
+    stub_request(:get, "https://logs.google.com:777/es//_template/myapp_alias_template").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 404, :body => "", :headers => {})
+    # creation
+    stub_request(:put, "https://logs.google.com:777/es//_template/myapp_alias_template").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 200, :body => "", :headers => {})
+
+    driver(config)
+
+    stub_elastic("https://logs.google.com:777/es//_bulk")
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+
+    assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
+  end
+
   def test_custom_template_installation_for_host_placeholder
     cwd = File.dirname(__FILE__)
     template_file = File.join(cwd, 'test_template.json')
