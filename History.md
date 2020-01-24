@@ -1,6 +1,13 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+
+### 4.0.0
+- Restructuring ILM related features (#701)
+- Extract placeholders in pipeline parameter (#695)
+- fix typo in `README.md` (#698)
+- Reduce log noise when not using rollover_index (#692)
+
 ### 3.8.0
 - Add FAQ for specifying index.codec (#679)
 - Add FAQ for connect_write timeout reached error (#687)
