@@ -307,10 +307,6 @@ EOC
         end
       end
 
-      if @buffer_config.flush_thread_count < 2
-        log.warn "To prevent events traffic jam, you should specify 2 or more 'flush_thread_count'."
-      end
-
       # Consider missing the prefix of "$." in nested key specifiers.
       @id_key = convert_compat_id_key(@id_key) if @id_key
       @parent_key = convert_compat_id_key(@parent_key) if @parent_key
