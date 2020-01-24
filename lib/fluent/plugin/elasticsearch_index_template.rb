@@ -153,7 +153,7 @@ module Fluent::ElasticsearchIndexTemplate
         log.debug("The alias '#{deflector_alias_name}' is already present")
       end
     else
-      log.debug("No index and alias creation action performed because rollover_index is set to '#{rollover_index}'")
+      log.debug("No index and alias creation action performed because rollover_index or enable_ilm is set to: '#{rollover_index}', '#{enable_ilm}'")
     end
   end
 
