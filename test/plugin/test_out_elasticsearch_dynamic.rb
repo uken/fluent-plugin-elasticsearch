@@ -169,27 +169,6 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_equal '_doc', instance.type_name
   end
 
-  sub_test_case 'connection exceptions' do
-    test 'default connection exception' do
-      driver(Fluent::Config::Element.new(
-               'ROOT', '', {
-                 '@type' => 'elasticsearch',
-                 'host' => 'log.google.com',
-                 'port' => 777,
-                 'scheme' => 'https',
-                 'path' => '/es/',
-                 'user' => 'john',
-                 'password' => 'doe',
-               }, [
-                 Fluent::Config::Element.new('buffer', 'tag', {
-                                             }, [])
-               ]
-             ))
-      logs = driver.logs
-      assert_logs_include(logs, /you should specify 2 or more 'flush_thread_count'/, 1)
-    end
-  end
-
   def test_defaults
     config = %{
       host     logs.google.com
