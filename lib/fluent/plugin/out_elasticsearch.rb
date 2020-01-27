@@ -151,7 +151,7 @@ EOC
     config_param :ignore_exceptions, :array, :default => [], value_type: :string, :desc => "Ignorable exception list"
     config_param :exception_backup, :bool, :default => true, :desc => "Chunk backup flag when ignore exception occured"
     config_param :bulk_message_request_threshold, :size, :default => TARGET_BULK_BYTES
-    config_param :compression_level, :enum, {list: [:no_compression, :best_speed, :best_compression, :default_compression], :default => :no_compression}
+    config_param :compression_level, :enum, list: [:no_compression, :best_speed, :best_compression, :default_compression], :default => :no_compression
     config_param :enable_ilm, :bool, :default => false
     config_param :ilm_policy_id, :string, :default => DEFAULT_POLICY_ID
     config_param :ilm_policy, :hash, :default => {}
