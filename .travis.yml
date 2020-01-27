@@ -10,6 +10,8 @@ matrix:
       gemfile: gemfiles/Gemfile.ilm
     - rvm: 2.6.3
       gemfile: Gemfile
+    - rvm: 2.7.0
+      gemfile: Gemfile
 
 gemfile:
  - Gemfile
