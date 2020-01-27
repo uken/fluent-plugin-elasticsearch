@@ -246,7 +246,7 @@ module Fluent::Plugin
       # check for '${ ... }'
       #   yes => `eval`
       #   no  => return param
-      return param if (param =~ /\${.+}/).nil?
+      return param if (param.to_s =~ /\${.+}/).nil?
 
       # check for 'tag_parts[]'
         # separated by a delimiter (default '.')
