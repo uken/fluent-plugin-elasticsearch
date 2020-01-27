@@ -151,7 +151,7 @@ EOC
     config_param :ignore_exceptions, :array, :default => [], value_type: :string, :desc => "Ignorable exception list"
     config_param :exception_backup, :bool, :default => true, :desc => "Chunk backup flag when ignore exception occured"
     config_param :bulk_message_request_threshold, :size, :default => TARGET_BULK_BYTES
-    config_param :compression_level, :enum, {list: [:no_compression, :best_speed, :best_compression, :default_compression], :default => :no_compression}
+    config_param :compression_level, :enum, list: [:no_compression, :best_speed, :best_compression, :default_compression], :default => :no_compression
     config_param :enable_ilm, :bool, :default => false
     config_param :ilm_policy_id, :string, :default => DEFAULT_POLICY_ID
     config_param :ilm_policy, :hash, :default => {}
@@ -305,10 +305,6 @@ EOC
                       You might have to specify `ssl_version TLSv1_2` in configuration."
           end
         end
-      end
-
-      if @buffer_config.flush_thread_count < 2
-        log.warn "To prevent events traffic jam, you should specify 2 or more 'flush_thread_count'."
       end
 
       # Consider missing the prefix of "$." in nested key specifiers.

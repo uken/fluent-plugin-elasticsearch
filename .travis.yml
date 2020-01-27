@@ -2,12 +2,6 @@ language: ruby
 
 matrix:
   include:
-    - rvm: 2.1
-      gemfile: Gemfile
-    - rvm: 2.2
-      gemfile: Gemfile
-    - rvm: 2.3
-      gemfile: Gemfile
     - rvm: 2.4.6
       gemfile: Gemfile
     - rvm: 2.5.5
@@ -15,6 +9,8 @@ matrix:
     - rvm: 2.6.3
       gemfile: gemfiles/Gemfile.ilm
     - rvm: 2.6.3
+      gemfile: Gemfile
+    - rvm: 2.7.0
       gemfile: Gemfile
 
 gemfile:
