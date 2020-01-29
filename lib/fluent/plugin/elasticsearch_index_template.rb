@@ -137,8 +137,7 @@ module Fluent::ElasticsearchIndexTemplate
           index_name_temp='<'+index_prefix.downcase+index_separator+app_name.downcase+'-{'+index_date_pattern+'}-000001>'
         end
         indexcreation(index_name_temp, host)
-        body = {}
-        body = rollover_alias_payload(deflector_alias_name) if enable_ilm
+        body = rollover_alias_payload(deflector_alias_name)
         client.indices.put_alias(:index => index_name_temp, :name => deflector_alias_name,
                                  :body => body)
         log.info("The alias '#{deflector_alias_name}' is created for the index '#{index_name_temp}'")
