@@ -127,7 +127,7 @@ module Fluent::ElasticsearchIndexTemplate
     template
   end
 
-  def create_rollover_alias(index_prefix, rollover_index, deflector_alias_name, app_name, index_date_pattern, index_separator, enable_ilm, ilm_policy_id, ilm_policy, host)
+  def create_rollover_alias(index_prefix, rollover_index, deflector_alias_name, app_name, index_date_pattern, index_separator, enable_ilm, ilm_policy_id, ilm_policy, ilm_policy_overwrite, host)
      # ILM request to create alias.
     if rollover_index || enable_ilm
       if !client.indices.exists_alias(:name => deflector_alias_name)
@@ -146,7 +146,7 @@ module Fluent::ElasticsearchIndexTemplate
           if ilm_policy.empty?
             setup_ilm(enable_ilm, ilm_policy_id)
           else
-            setup_ilm(enable_ilm, ilm_policy_id, ilm_policy)
+            setup_ilm(enable_ilm, ilm_policy_id, ilm_policy, ilm_policy_overwrite)
           end
         end
       else
