@@ -849,13 +849,15 @@ EOC
     end
 
     def placeholder_substitution_needed_for_template?
-      placeholder?(:host, @host.to_s) ||
+      need_substitution = placeholder?(:host, @host.to_s) ||
         placeholder?(:index_name, @index_name.to_s) ||
         placeholder?(:template_name, @template_name.to_s) ||
         @customize_template.values.any? { |value| placeholder?(:customize_template, value.to_s) } ||
         placeholder?(:logstash_prefix, @logstash_prefix.to_s) ||
         placeholder?(:deflector_alias, @deflector_alias.to_s) ||
         placeholder?(:application_name, @application_name.to_s)
+      log.debug("Need substitution: #{need_substitution}")
+      true
     end
 
     def template_installation(deflector_alias, template_name, customize_template, application_name, target_index, host)
