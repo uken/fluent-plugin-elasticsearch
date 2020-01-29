@@ -218,6 +218,9 @@ EOC
           if @enable_ilm
             raise Fluent::ConfigError, "deflector_alias is prohibited to use with 'logstash_format at same time." if @logstash_format and @deflector_alias
           end
+          if @ilm_policy.empty? && @ilm_policy_overwrite
+            raise Fluent::ConfigError, "ilm_policy_overwrite can work with non empty ilm_policy. Specify non-empty ilm policy into ilm_policy. "
+          end
           if @logstash_format || placeholder_substitution_needed_for_template?
             class << self
               alias_method :template_installation, :template_installation_actual

@@ -321,10 +321,10 @@ class ElasticsearchOutput < Test::Unit::TestCase
       template_file = File.join(cwd, 'test_template.json')
 
       config = %{
-      enable_ilm    true
-      template_name logstash
-      template_file #{template_file}
-    }
+        enable_ilm    true
+        template_name logstash
+        template_file #{template_file}
+      }
       stub_request(:get, "http://localhost:9200/_template/fluentd").
         to_return(status: 200, body: "", headers: {})
       stub_request(:head, "http://localhost:9200/_alias/fluentd").
@@ -344,6 +344,56 @@ class ElasticsearchOutput < Test::Unit::TestCase
         to_return(status: 200, body: "", headers: {})
 
       assert_nothing_raised {
+        driver(config)
+      }
+    end
+
+    test 'valid configuration of overwriting ilm_policy' do
+      cwd = File.dirname(__FILE__)
+      template_file = File.join(cwd, 'test_template.json')
+
+      config = %{
+        enable_ilm    true
+        template_name logstash
+        template_file #{template_file}
+        ilm_policy_overwrite true
+        ilm_policy {"policy":{"phases":{"hot":{"actions":{"rollover":{"max_size":"75gb","max_age": "50d"}}}}}}
+      }
+      stub_request(:get, "http://localhost:9200/_template/fluentd").
+        to_return(status: 200, body: "", headers: {})
+      stub_request(:head, "http://localhost:9200/_alias/fluentd").
+        to_return(status: 404, body: "", headers: {})
+      stub_request(:put, "http://localhost:9200/%3Cfluentd-default-%7Bnow%2Fd%7D-000001%3E/_alias/fluentd").
+        with(body: "{\"aliases\":{\"fluentd\":{\"is_write_index\":true}}}").
+        to_return(status: 200, body: "", headers: {})
+      stub_request(:put, "http://localhost:9200/%3Cfluentd-default-%7Bnow%2Fd%7D-000001%3E").
+        to_return(status: 200, body: "", headers: {})
+      stub_request(:get, "http://localhost:9200/_xpack").
+        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}',
+                  :headers => {"Content-Type"=> "application/json"})
+      stub_request(:get, "http://localhost:9200/_ilm/policy/logstash-policy").
+        to_return(status: 200, body: "", headers: {})
+      stub_request(:put, "http://localhost:9200/_ilm/policy/logstash-policy").
+        with(body: "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"75gb\",\"max_age\":\"50d\"}}}}}}").
+        to_return(status: 200, body: "", headers: {})
+
+      assert_nothing_raised {
+        driver(config)
+      }
+    end
+
+    test 'invalid configuration of overwriting ilm_policy' do
+      cwd = File.dirname(__FILE__)
+      template_file = File.join(cwd, 'test_template.json')
+
+      config = %{
+        enable_ilm    true
+        template_name logstash
+        template_file #{template_file}
+        ilm_policy_overwrite true
+      }
+
+      assert_raise(Fluent::ConfigError) {
         driver(config)
       }
     end
