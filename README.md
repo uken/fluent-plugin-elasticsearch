@@ -91,6 +91,7 @@ Current maintainers: @cosmo0920
   + [enable_ilm](#enable_ilm)
   + [ilm_policy_id](#ilm_policy_id)
   + [ilm_policy](#ilm_policy)
+  + [ilm_policy_overwrite](#ilm_policy_overwrite)
 * [Configuration - Elasticsearch Input](#configuration---elasticsearch-input)
 * [Troubleshooting](#troubleshooting)
   + [Cannot send events to elasticsearch](#cannot-send-events-to-elasticsearch)
@@ -1159,6 +1160,14 @@ Default value is `logstash-policy`.
 Specify ILM policy contents as Hash.
 
 Default value is `{}`.
+
+**NOTE:** This parameter requests to install elasticsearch-xpack gem.
+
+## ilm_policy_overwrite
+
+Specify whether overwriting ilm policy or not.
+
+Default value is `false`.
 
 **NOTE:** This parameter requests to install elasticsearch-xpack gem.
 
