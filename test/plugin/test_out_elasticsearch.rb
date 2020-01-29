@@ -307,36 +307,46 @@ class ElasticsearchOutput < Test::Unit::TestCase
     }
   end
 
-  test 'valid configuration of index lifecycle management' do
-    cwd = File.dirname(__FILE__)
-    template_file = File.join(cwd, 'test_template.json')
+  sub_test_case 'ILM default config' do
+    setup do
+      begin
+        require "elasticsearch/xpack"
+      rescue LoadError
+        omit "ILM testcase needs elasticsearch-xpack gem."
+      end
+    end
 
-    config = %{
+    test 'valid configuration of index lifecycle management' do
+      cwd = File.dirname(__FILE__)
+      template_file = File.join(cwd, 'test_template.json')
+
+      config = %{
       enable_ilm    true
       template_name logstash
       template_file #{template_file}
     }
-    stub_request(:get, "http://localhost:9200/_template/fluentd").
-      to_return(status: 200, body: "", headers: {})
-    stub_request(:head, "http://localhost:9200/_alias/fluentd").
-      to_return(status: 404, body: "", headers: {})
-    stub_request(:put, "http://localhost:9200/%3Cfluentd-default-%7Bnow%2Fd%7D-000001%3E/_alias/fluentd").
-      with(body: "{\"aliases\":{\"fluentd\":{\"is_write_index\":true}}}").
-      to_return(status: 200, body: "", headers: {})
-    stub_request(:put, "http://localhost:9200/%3Cfluentd-default-%7Bnow%2Fd%7D-000001%3E").
-      to_return(status: 200, body: "", headers: {})
-    stub_request(:get, "http://localhost:9200/_xpack").
-      to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}',
-                :headers => {"Content-Type"=> "application/json"})
-    stub_request(:get, "http://localhost:9200/_ilm/policy/logstash-policy").
-      to_return(status: 404, body: "", headers: {})
-    stub_request(:put, "http://localhost:9200/_ilm/policy/logstash-policy").
-      with(body: "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}").
-      to_return(status: 200, body: "", headers: {})
+      stub_request(:get, "http://localhost:9200/_template/fluentd").
+        to_return(status: 200, body: "", headers: {})
+      stub_request(:head, "http://localhost:9200/_alias/fluentd").
+        to_return(status: 404, body: "", headers: {})
+      stub_request(:put, "http://localhost:9200/%3Cfluentd-default-%7Bnow%2Fd%7D-000001%3E/_alias/fluentd").
+        with(body: "{\"aliases\":{\"fluentd\":{\"is_write_index\":true}}}").
+        to_return(status: 200, body: "", headers: {})
+      stub_request(:put, "http://localhost:9200/%3Cfluentd-default-%7Bnow%2Fd%7D-000001%3E").
+        to_return(status: 200, body: "", headers: {})
+      stub_request(:get, "http://localhost:9200/_xpack").
+        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}',
+                  :headers => {"Content-Type"=> "application/json"})
+      stub_request(:get, "http://localhost:9200/_ilm/policy/logstash-policy").
+        to_return(status: 404, body: "", headers: {})
+      stub_request(:put, "http://localhost:9200/_ilm/policy/logstash-policy").
+        with(body: "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}").
+        to_return(status: 200, body: "", headers: {})
 
-    assert_nothing_raised {
-      driver(config)
-    }
+      assert_nothing_raised {
+        driver(config)
+      }
+    end
   end
 
   test 'Detected Elasticsearch 7' do
