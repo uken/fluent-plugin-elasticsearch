@@ -660,6 +660,63 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
   end
 
+  def test_template_create_with_rollover_index_and_placeholders
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_template.json')
+   config = %{
+      host               logs.google.com
+      port               777
+      scheme             https
+      path               /es/
+      user               john
+      password           doe
+      template_name      logstash-${tag}
+      template_file      #{template_file}
+      rollover_index     true
+      index_date_pattern ""
+      index_name         fluentd-${tag}
+      deflector_alias    myapp_deflector-${tag}
+    }
+
+    # connection start
+    stub_request(:head, "https://logs.google.com:777/es//").
+      with(basic_auth: ['john', 'doe']).
+    to_return(:status => 200, :body => "", :headers => {})
+    # check if template exists
+    stub_request(:get, "https://logs.google.com:777/es//_template/logstash-test").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 404, :body => "", :headers => {})
+    # create template
+    stub_request(:put, "https://logs.google.com:777/es//_template/logstash-test").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 200, :body => "", :headers => {})
+    # check if alias exists
+    stub_request(:head, "https://logs.google.com:777/es//_alias/myapp_deflector-test").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 404, :body => "", :headers => {})
+    # put the alias for the index
+    stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-000001%3E").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 200, :body => "", :headers => {})
+    stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-000001%3E/_alias/myapp_deflector-test").
+      with(basic_auth: ['john', 'doe'],
+           :body => "{\"aliases\":{\"myapp_deflector-test\":{\"is_write_index\":true}}}").
+      to_return(:status => 200, :body => "", :headers => {})
+
+    driver(config)
+
+    elastic_request = stub_elastic("https://logs.google.com:777/es//_bulk")
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+    assert_equal('fluentd-test', index_cmds.first['index']['_index'])
+
+    assert_equal ["myapp_deflector-test"], driver.instance.alias_indexes
+    assert_equal ["logstash-test"], driver.instance.template_names
+
+    assert_requested(elastic_request)
+  end
+
   class TemplateIndexLifecycleManagementTest < self
     def setup
       begin
