@@ -1,10 +1,10 @@
 module Fluent::Plugin::ElasticsearchIndexLifecycleManagement
   ILM_DEFAULT_POLICY_PATH = "default-ilm-policy.json"
 
-  def setup_ilm(enable_ilm, policy_id, ilm_policy = default_policy_payload)
+  def setup_ilm(enable_ilm, policy_id, ilm_policy = default_policy_payload, overwrite = false)
     return unless enable_ilm
 
-    create_ilm_policy(policy_id, ilm_policy)
+    create_ilm_policy(policy_id, ilm_policy, overwrite)
   end
 
   def verify_ilm_working
@@ -26,8 +26,8 @@ module Fluent::Plugin::ElasticsearchIndexLifecycleManagement
     end
   end
 
-  def create_ilm_policy(policy_id, ilm_policy = default_policy_payload)
-    if !ilm_policy_exists?(policy_id)
+  def create_ilm_policy(policy_id, ilm_policy = default_policy_payload, overwrite = false)
+    if overwrite || !ilm_policy_exists?(policy_id)
       ilm_policy_put(policy_id, ilm_policy)
     end
   end
