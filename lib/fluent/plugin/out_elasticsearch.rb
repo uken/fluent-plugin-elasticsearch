@@ -360,13 +360,17 @@ EOC
     end
 
     def placeholder?(name, param)
-      begin
-        placeholder_validate!(name, param)
-        true
-      rescue Fluent::ConfigError => e
-        log.debug("'#{name} #{param}' is tested built-in placeholder(s) but there is no valid placeholder(s). error: #{e}")
-        false
+      placeholder_validities = []
+      placeholder_validators(name, param).each do |v|
+        begin
+          v.validate!
+          placeholder_validities << true
+        rescue Fluent::ConfigError => e
+          log.debug("'#{name} #{param}' is tested built-in placeholder(s) but there is no valid placeholder(s). error: #{e}")
+          placeholder_validities << false
+        end
       end
+      placeholder_validities.include?(true)
     end
 
     def compression
@@ -857,7 +861,7 @@ EOC
         placeholder?(:deflector_alias, @deflector_alias.to_s) ||
         placeholder?(:application_name, @application_name.to_s)
       log.debug("Need substitution: #{need_substitution}")
-      true
+      need_substitution
     end
 
     def template_installation(deflector_alias, template_name, customize_template, application_name, target_index, host)
