@@ -20,7 +20,7 @@ Gem::Specification.new do |s|
     s.metadata["changelog_uri"] = "https://github.com/uken/fluent-plugin-elasticsearch/blob/master/History.md"
   end
 
-  s.required_ruby_version = Gem::Requirement.new(">= 2.0".freeze)
+  s.required_ruby_version = Gem::Requirement.new(">= 2.3".freeze)
 
   s.add_runtime_dependency 'fluentd', '>= 0.14.22'
   s.add_runtime_dependency 'excon', '>= 0'
