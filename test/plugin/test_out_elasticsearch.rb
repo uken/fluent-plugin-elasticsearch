@@ -409,6 +409,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   sub_test_case "placeholder substitution needed?" do
     data("host placeholder" => ["host", "host-${tag}.google.com"],
+         "index_name_placeholder" => ["index_name", "logstash-${tag}"],
+         "template_name_placeholder" => ["template_name", "logstash-${tag}"],
+         "customize_template" => ["customize_template", '{"<<TAG>>":"${tag}"}'],
          "logstash_prefix_placeholder" => ["logstash_prefix", "fluentd-${tag}"],
          "deflector_alias_placeholder" => ["deflector_alias", "fluentd-${tag}"],
          "application_name_placeholder" => ["application_name", "fluentd-${tag}"],
@@ -429,6 +432,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
 
     data("host placeholder" => ["host", "host-%Y%m%d.google.com"],
+         "index_name_placeholder" => ["index_name", "logstash-%Y%m%d"],
+         "template_name_placeholder" => ["template_name", "logstash-%Y%m%d"],
+         "customize_template" => ["customize_template", '{"<<TAG>>":"fluentd-%Y%m%d"}'],
          "logstash_prefix_placeholder" => ["logstash_prefix", "fluentd-%Y%m%d"],
          "deflector_alias_placeholder" => ["deflector_alias", "fluentd-%Y%m%d"],
          "application_name_placeholder" => ["application_name", "fluentd-%Y%m%d"],
@@ -450,6 +456,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
 
     data("host placeholder" => ["host", "host-${mykey}.google.com"],
+         "index_name_placeholder" => ["index_name", "logstash-${mykey}"],
+         "template_name_placeholder" => ["template_name", "logstash-${mykey}"],
+         "customize_template" => ["customize_template", '{"<<TAG>>":"${mykey}"}'],
          "logstash_prefix_placeholder" => ["logstash_prefix", "fluentd-${mykey}"],
          "deflector_alias_placeholder" => ["deflector_alias", "fluentd-${mykey}"],
          "application_name_placeholder" => ["application_name", "fluentd-${mykey}"],
@@ -463,6 +472,31 @@ class ElasticsearchOutput < Test::Unit::TestCase
         }, [
           Fluent::Config::Element.new('buffer', 'mykey', {
                                         'chunk_keys' => 'mykey',
+                                        'timekey' => '1d',
+                                      }, [])
+        ])
+      driver(config)
+
+      assert_true driver.instance.placeholder_substitution_needed_for_template?
+    end
+
+    data("host placeholder" => ["host", "host-${tag}.google.com"],
+         "index_name_placeholder" => ["index_name", "logstash-${es_index}-%Y%m%d"],
+         "template_name_placeholder" => ["template_name", "logstash-${tag}-%Y%m%d"],
+         "customize_template" => ["customize_template", '{"<<TAG>>":"${es_index}"}'],
+         "logstash_prefix_placeholder" => ["logstash_prefix", "fluentd-${es_index}-%Y%m%d"],
+         "deflector_alias_placeholder" => ["deflector_alias", "fluentd-%Y%m%d"],
+         "application_name_placeholder" => ["application_name", "fluentd-${tag}-${es_index}-%Y%m%d"],
+        )
+    test 'mixed placeholder' do |data|
+      param, value = data
+      config = Fluent::Config::Element.new(
+        'ROOT', '', {
+          '@type' => 'elasticsearch',
+          param => value
+        }, [
+          Fluent::Config::Element.new('buffer', 'tag,time,es_index', {
+                                        'chunk_keys' => 'es_index',
                                         'timekey' => '1d',
                                       }, [])
         ])
