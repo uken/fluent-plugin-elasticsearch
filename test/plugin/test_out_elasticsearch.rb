@@ -660,7 +660,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
   end
 
-  def test_template_create_with_rollover_index_and_placeholders
+  def test_template_create_with_rollover_index_and_template_related_placeholders
     cwd = File.dirname(__FILE__)
     template_file = File.join(cwd, 'test_template.json')
    config = %{
@@ -683,36 +683,36 @@ class ElasticsearchOutput < Test::Unit::TestCase
       with(basic_auth: ['john', 'doe']).
     to_return(:status => 200, :body => "", :headers => {})
     # check if template exists
-    stub_request(:get, "https://logs.google.com:777/es//_template/logstash-test").
+    stub_request(:get, "https://logs.google.com:777/es//_template/logstash-test.template").
       with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
     # create template
-    stub_request(:put, "https://logs.google.com:777/es//_template/logstash-test").
+    stub_request(:put, "https://logs.google.com:777/es//_template/logstash-test.template").
       with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
     # check if alias exists
-    stub_request(:head, "https://logs.google.com:777/es//_alias/myapp_deflector-test").
+    stub_request(:head, "https://logs.google.com:777/es//_alias/myapp_deflector-test.template").
       with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
     # put the alias for the index
-    stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-000001%3E").
+    stub_request(:put, "https://logs.google.com:777/es//%3Cfluentd-test.template-default-000001%3E").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
-    stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-000001%3E/_alias/myapp_deflector-test").
+      to_return(status: 200, body: "", headers: {})
+    stub_request(:put, "https://logs.google.com:777/es//%3Cfluentd-test.template-default-000001%3E/_alias/myapp_deflector-test.template").
       with(basic_auth: ['john', 'doe'],
-           :body => "{\"aliases\":{\"myapp_deflector-test\":{\"is_write_index\":true}}}").
+           body: "{\"aliases\":{\"myapp_deflector-test.template\":{\"is_write_index\":true}}}").
       to_return(:status => 200, :body => "", :headers => {})
 
     driver(config)
 
     elastic_request = stub_elastic("https://logs.google.com:777/es//_bulk")
-    driver.run(default_tag: 'test') do
+    driver.run(default_tag: 'test.template') do
       driver.feed(sample_record)
     end
-    assert_equal('fluentd-test', index_cmds.first['index']['_index'])
+    assert_equal('fluentd-test.template', index_cmds.first['index']['_index'])
 
-    assert_equal ["myapp_deflector-test"], driver.instance.alias_indexes
-    assert_equal ["logstash-test"], driver.instance.template_names
+    assert_equal ["myapp_deflector-test.template"], driver.instance.alias_indexes
+    assert_equal ["logstash-test.template"], driver.instance.template_names
 
     assert_requested(elastic_request)
   end
@@ -1096,7 +1096,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
 
-  def test_custom_template_create_with_placeholders
+  def test_custom_template_create_with_customize_template_related_placeholders
     cwd = File.dirname(__FILE__)
     template_file = File.join(cwd, 'test_alias_template.json')
 
@@ -1107,7 +1107,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       path            /es/
       user            john
       password        doe
-      template_name   myapp_alias_template
+      template_name   myapp_alias_template-${tag}
       template_file   #{template_file}
       customize_template {"--appid--": "${tag}-logs","--index_prefix--":"${tag}"}
     }
@@ -1117,22 +1117,25 @@ class ElasticsearchOutput < Test::Unit::TestCase
       with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
     # check if template exists
-    stub_request(:get, "https://logs.google.com:777/es//_template/myapp_alias_template").
+    stub_request(:get, "https://logs.google.com:777/es//_template/myapp_alias_template-test.template").
       with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
     # creation
-    stub_request(:put, "https://logs.google.com:777/es//_template/myapp_alias_template").
+    stub_request(:put, "https://logs.google.com:777/es//_template/myapp_alias_template-test.template").
       with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
+
+    stub_request(:put, "https://logs.google.com:777/es//%3Cfluentd-test-default-000001%3E").
+      to_return(status: 200, body: "", headers: {})
 
     driver(config)
 
     stub_elastic("https://logs.google.com:777/es//_bulk")
-    driver.run(default_tag: 'test') do
+    driver.run(default_tag: 'test.template') do
       driver.feed(sample_record)
     end
 
-    assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
+    assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template-test.template", times: 1)
   end
 
   def test_custom_template_installation_for_host_placeholder
