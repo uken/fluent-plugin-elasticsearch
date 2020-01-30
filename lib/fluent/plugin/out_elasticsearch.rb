@@ -852,7 +852,7 @@ EOC
       need_substitution = placeholder?(:host, @host.to_s) ||
         placeholder?(:index_name, @index_name.to_s) ||
         placeholder?(:template_name, @template_name.to_s) ||
-        @customize_template.values.any? { |value| placeholder?(:customize_template, value.to_s) } ||
+        @customize_template&.values&.any? { |value| placeholder?(:customize_template, value.to_s) } ||
         placeholder?(:logstash_prefix, @logstash_prefix.to_s) ||
         placeholder?(:deflector_alias, @deflector_alias.to_s) ||
         placeholder?(:application_name, @application_name.to_s)
