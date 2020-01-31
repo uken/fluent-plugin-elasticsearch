@@ -1,6 +1,10 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+### 4.0.1
+- Placeholders for template name and customize template (#708)
+- Add overwriting ilm policy config parameter (#707)
+- Fix a failing ILM config testcase (#706)
 
 ### 4.0.0
 - Restructuring ILM related features (#701)
