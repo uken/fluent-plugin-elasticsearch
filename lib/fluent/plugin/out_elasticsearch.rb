@@ -52,6 +52,7 @@ module Fluent::Plugin
     RequestInfo = Struct.new(:host, :index, :ilm_index)
 
     attr_reader :alias_indexes
+    attr_reader :template_names
 
     helpers :event_emitter, :compat_parameters, :record_accessor
 
@@ -213,6 +214,7 @@ EOC
       end
 
       @alias_indexes = []
+      @template_names = []
       if !dry_run?
         if @template_name && @template_file
           if @enable_ilm
@@ -226,7 +228,7 @@ EOC
               alias_method :template_installation, :template_installation_actual
             end
           else
-            template_installation_actual(@deflector_alias ? @deflector_alias : @index_name, @application_name, @index_name)
+            template_installation_actual(@deflector_alias ? @deflector_alias : @index_name, @template_name, @customize_template, @application_name, @index_name)
           end
           verify_ilm_working if @enable_ilm
         elsif @templates
@@ -362,13 +364,17 @@ EOC
     end
 
     def placeholder?(name, param)
-      begin
-        placeholder_validate!(name, param)
-        true
-      rescue Fluent::ConfigError => e
-        log.debug("'#{name} #{param}' is tested built-in placeholder(s) but there is no valid placeholder(s). error: #{e}")
-        false
+      placeholder_validities = []
+      placeholder_validators(name, param).each do |v|
+        begin
+          v.validate!
+          placeholder_validities << true
+        rescue Fluent::ConfigError => e
+          log.debug("'#{name} #{param}' is tested built-in placeholder(s) but there is no valid placeholder(s). error: #{e}")
+          placeholder_validities << false
+        end
       end
+      placeholder_validities.include?(true)
     end
 
     def compression
@@ -651,6 +657,16 @@ EOC
       else
         type_name = nil
       end
+      if @template_name
+        template_name = extract_placeholders(@template_name, chunk)
+      else
+        template_name = nil
+      end
+      if @customize_template
+        customize_template = @customize_template.each_with_object({}) { |(key, value), hash| hash[key] = extract_placeholders(value, chunk) }
+      else
+        customize_template = nil
+      end
       if @deflector_alias
         deflector_alias = extract_placeholders(@deflector_alias, chunk)
       else
@@ -666,7 +682,7 @@ EOC
       else
         pipeline = nil
       end
-      return logstash_prefix, index_name, type_name, deflector_alias, application_name, pipeline
+      return logstash_prefix, index_name, type_name, template_name, customize_template, deflector_alias, application_name, pipeline
     end
 
     def multi_workers_ready?
@@ -740,7 +756,7 @@ EOC
     end
 
     def process_message(tag, meta, header, time, record, extracted_values)
-      logstash_prefix, index_name, type_name, _deflector_alias, _application_name, pipeline = extracted_values
+      logstash_prefix, index_name, type_name, _template_name, _customize_template, _deflector_alias, _application_name, pipeline = extracted_values
 
       if @flatten_hashes
         record = flatten_record(record)
@@ -841,31 +857,38 @@ EOC
     end
 
     def placeholder_substitution_needed_for_template?
-      placeholder?(:host, @host.to_s) ||
+      need_substitution = placeholder?(:host, @host.to_s) ||
         placeholder?(:index_name, @index_name.to_s) ||
+        placeholder?(:template_name, @template_name.to_s) ||
+        @customize_template&.values&.any? { |value| placeholder?(:customize_template, value.to_s) } ||
         placeholder?(:logstash_prefix, @logstash_prefix.to_s) ||
         placeholder?(:deflector_alias, @deflector_alias.to_s) ||
         placeholder?(:application_name, @application_name.to_s)
+      log.debug("Need substitution: #{need_substitution}")
+      need_substitution
     end
 
-    def template_installation(deflector_alias, application_name, target_index, host)
+    def template_installation(deflector_alias, template_name, customize_template, application_name, target_index, host)
       # for safety.
     end
 
-    def template_installation_actual(deflector_alias, application_name, target_index, host=nil)
-      if @template_name && @template_file
+    def template_installation_actual(deflector_alias, template_name, customize_template, application_name, target_index, host=nil)
+      if template_name && @template_file
         if @alias_indexes.include? deflector_alias
           log.debug("Index alias #{deflector_alias} already exists (cached)")
+        elsif @template_names.include? template_name
+          log.debug("Template name #{template_name} already exists (cached)")
         else
           retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
-            if @customize_template
-              template_custom_install(@template_name, @template_file, @template_overwrite, @customize_template, @enable_ilm, deflector_alias, @ilm_policy_id, host)
+            if customize_template
+              template_custom_install(template_name, @template_file, @template_overwrite, customize_template, @enable_ilm, deflector_alias, @ilm_policy_id, host)
             else
-              template_install(@template_name, @template_file, @template_overwrite, @enable_ilm, deflector_alias, @ilm_policy_id, host)
+              template_install(template_name, @template_file, @template_overwrite, @enable_ilm, deflector_alias, @ilm_policy_id, host)
             end
             create_rollover_alias(target_index, @rollover_index, deflector_alias, application_name, @index_date_pattern, @index_separator, @enable_ilm, @ilm_policy_id, @ilm_policy, @ilm_policy_overwrite, host)
           end
           @alias_indexes << deflector_alias unless deflector_alias.nil?
+          @template_names << template_name unless template_name.nil?
         end
       end
     end
@@ -873,11 +896,11 @@ EOC
     # send_bulk given a specific bulk request, the original tag,
     # chunk, and bulk_message_count
     def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, info)
-      logstash_prefix, index_name, _type_name, deflector_alias, application_name, _pipeline = extracted_values
+      logstash_prefix, index_name, _type_name, template_name, customize_template, deflector_alias, application_name, _pipeline = extracted_values
       if deflector_alias
-        template_installation(deflector_alias, application_name, index_name, info.host)
+        template_installation(deflector_alias, template_name, customize_template, application_name, index_name, info.host)
       else
-        template_installation(info.ilm_index, application_name, @logstash_format ? logstash_prefix : index_name, info.host)
+        template_installation(info.ilm_index, template_name, customize_template, application_name, @logstash_format ? logstash_prefix : index_name, info.host)
       end
 
       begin

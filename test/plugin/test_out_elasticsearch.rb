@@ -459,6 +459,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   sub_test_case "placeholder substitution needed?" do
     data("host placeholder" => ["host", "host-${tag}.google.com"],
+         "index_name_placeholder" => ["index_name", "logstash-${tag}"],
+         "template_name_placeholder" => ["template_name", "logstash-${tag}"],
+         "customize_template" => ["customize_template", '{"<<TAG>>":"${tag}"}'],
          "logstash_prefix_placeholder" => ["logstash_prefix", "fluentd-${tag}"],
          "deflector_alias_placeholder" => ["deflector_alias", "fluentd-${tag}"],
          "application_name_placeholder" => ["application_name", "fluentd-${tag}"],
@@ -479,6 +482,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
 
     data("host placeholder" => ["host", "host-%Y%m%d.google.com"],
+         "index_name_placeholder" => ["index_name", "logstash-%Y%m%d"],
+         "template_name_placeholder" => ["template_name", "logstash-%Y%m%d"],
+         "customize_template" => ["customize_template", '{"<<TAG>>":"fluentd-%Y%m%d"}'],
          "logstash_prefix_placeholder" => ["logstash_prefix", "fluentd-%Y%m%d"],
          "deflector_alias_placeholder" => ["deflector_alias", "fluentd-%Y%m%d"],
          "application_name_placeholder" => ["application_name", "fluentd-%Y%m%d"],
@@ -500,6 +506,9 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
 
     data("host placeholder" => ["host", "host-${mykey}.google.com"],
+         "index_name_placeholder" => ["index_name", "logstash-${mykey}"],
+         "template_name_placeholder" => ["template_name", "logstash-${mykey}"],
+         "customize_template" => ["customize_template", '{"<<TAG>>":"${mykey}"}'],
          "logstash_prefix_placeholder" => ["logstash_prefix", "fluentd-${mykey}"],
          "deflector_alias_placeholder" => ["deflector_alias", "fluentd-${mykey}"],
          "application_name_placeholder" => ["application_name", "fluentd-${mykey}"],
@@ -513,6 +522,31 @@ class ElasticsearchOutput < Test::Unit::TestCase
         }, [
           Fluent::Config::Element.new('buffer', 'mykey', {
                                         'chunk_keys' => 'mykey',
+                                        'timekey' => '1d',
+                                      }, [])
+        ])
+      driver(config)
+
+      assert_true driver.instance.placeholder_substitution_needed_for_template?
+    end
+
+    data("host placeholder" => ["host", "host-${tag}.google.com"],
+         "index_name_placeholder" => ["index_name", "logstash-${es_index}-%Y%m%d"],
+         "template_name_placeholder" => ["template_name", "logstash-${tag}-%Y%m%d"],
+         "customize_template" => ["customize_template", '{"<<TAG>>":"${es_index}"}'],
+         "logstash_prefix_placeholder" => ["logstash_prefix", "fluentd-${es_index}-%Y%m%d"],
+         "deflector_alias_placeholder" => ["deflector_alias", "fluentd-%Y%m%d"],
+         "application_name_placeholder" => ["application_name", "fluentd-${tag}-${es_index}-%Y%m%d"],
+        )
+    test 'mixed placeholder' do |data|
+      param, value = data
+      config = Fluent::Config::Element.new(
+        'ROOT', '', {
+          '@type' => 'elasticsearch',
+          param => value
+        }, [
+          Fluent::Config::Element.new('buffer', 'tag,time,es_index', {
+                                        'chunk_keys' => 'es_index',
                                         'timekey' => '1d',
                                       }, [])
         ])
@@ -708,6 +742,63 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver(config)
 
     assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
+  end
+
+  def test_template_create_with_rollover_index_and_template_related_placeholders
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_template.json')
+   config = %{
+      host               logs.google.com
+      port               777
+      scheme             https
+      path               /es/
+      user               john
+      password           doe
+      template_name      logstash-${tag}
+      template_file      #{template_file}
+      rollover_index     true
+      index_date_pattern ""
+      index_name         fluentd-${tag}
+      deflector_alias    myapp_deflector-${tag}
+    }
+
+    # connection start
+    stub_request(:head, "https://logs.google.com:777/es//").
+      with(basic_auth: ['john', 'doe']).
+    to_return(:status => 200, :body => "", :headers => {})
+    # check if template exists
+    stub_request(:get, "https://logs.google.com:777/es//_template/logstash-test.template").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 404, :body => "", :headers => {})
+    # create template
+    stub_request(:put, "https://logs.google.com:777/es//_template/logstash-test.template").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 200, :body => "", :headers => {})
+    # check if alias exists
+    stub_request(:head, "https://logs.google.com:777/es//_alias/myapp_deflector-test.template").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 404, :body => "", :headers => {})
+    # put the alias for the index
+    stub_request(:put, "https://logs.google.com:777/es//%3Cfluentd-test.template-default-000001%3E").
+      with(basic_auth: ['john', 'doe']).
+      to_return(status: 200, body: "", headers: {})
+    stub_request(:put, "https://logs.google.com:777/es//%3Cfluentd-test.template-default-000001%3E/_alias/myapp_deflector-test.template").
+      with(basic_auth: ['john', 'doe'],
+           body: "{\"aliases\":{\"myapp_deflector-test.template\":{\"is_write_index\":true}}}").
+      to_return(:status => 200, :body => "", :headers => {})
+
+    driver(config)
+
+    elastic_request = stub_elastic("https://logs.google.com:777/es//_bulk")
+    driver.run(default_tag: 'test.template') do
+      driver.feed(sample_record)
+    end
+    assert_equal('fluentd-test.template', index_cmds.first['index']['_index'])
+
+    assert_equal ["myapp_deflector-test.template"], driver.instance.alias_indexes
+    assert_equal ["logstash-test.template"], driver.instance.template_names
+
+    assert_requested(elastic_request)
   end
 
   class TemplateIndexLifecycleManagementTest < self
@@ -1154,6 +1245,48 @@ class ElasticsearchOutput < Test::Unit::TestCase
     driver(config)
 
     assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
+  end
+
+  def test_custom_template_create_with_customize_template_related_placeholders
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_alias_template.json')
+
+    config = %{
+      host            logs.google.com
+      port            777
+      scheme          https
+      path            /es/
+      user            john
+      password        doe
+      template_name   myapp_alias_template-${tag}
+      template_file   #{template_file}
+      customize_template {"--appid--": "${tag}-logs","--index_prefix--":"${tag}"}
+    }
+
+    # connection start
+    stub_request(:head, "https://logs.google.com:777/es//").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 200, :body => "", :headers => {})
+    # check if template exists
+    stub_request(:get, "https://logs.google.com:777/es//_template/myapp_alias_template-test.template").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 404, :body => "", :headers => {})
+    # creation
+    stub_request(:put, "https://logs.google.com:777/es//_template/myapp_alias_template-test.template").
+      with(basic_auth: ['john', 'doe']).
+      to_return(:status => 200, :body => "", :headers => {})
+
+    stub_request(:put, "https://logs.google.com:777/es//%3Cfluentd-test-default-000001%3E").
+      to_return(status: 200, body: "", headers: {})
+
+    driver(config)
+
+    stub_elastic("https://logs.google.com:777/es//_bulk")
+    driver.run(default_tag: 'test.template') do
+      driver.feed(sample_record)
+    end
+
+    assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template-test.template", times: 1)
   end
 
   def test_custom_template_installation_for_host_placeholder
