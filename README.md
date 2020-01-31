@@ -838,6 +838,18 @@ ssl_version TLSv1_2 # or [SSLv23, TLSv1, TLSv1_1]
 
 :warning: If SSL/TLS enabled, it might have to be required to set ssl\_version.
 
+In Elasticsearch plugin v4.0.2 with Ruby 2.5 or later combination, Elasticsearch plugin also support `ssl_max_version` and `ssl_min_version`.
+
+```
+ssl_max_version TLSv1_3
+ssl_min_version TLSv1_2
+```
+
+Elasticsearch plugin will use TLSv1.2 as minimum ssl version and TLSv1.3 as maximum ssl version on transportation with TLS. Note that when they are used in Elastissearch plugin configuration, *`ssl_version` is not used* to set up TLS version.
+
+If they are *not* specified in the Elasticsearch plugin configuration, the value of `ssl_version` will be *used in `ssl_max_version` and `ssl_min_version`*.
+
+
 ### Proxy Support
 
 Starting with version 0.8.0, this gem uses excon, which supports proxy with environment variables - https://github.com/excon/excon#proxy-support
@@ -1231,6 +1243,13 @@ If you want to use TLS v1.2, please use `ssl_version` parameter like as:
 ssl_version TLSv1_2
 ```
 
+or, in v4.0.2 or later with Ruby 2.5 or later combination, the following congiuration is also valid:
+
+```
+ssl_max_version TLSv1_2
+ssl_min_version TLSv1_2
+```
+
 ### Cannot connect TLS enabled reverse Proxy
 
 A common cause of failure is that you are trying to connect to an Elasticsearch instance behind nginx reverse proxy which uses an incompatible ssl protocol version.
@@ -1320,6 +1339,13 @@ If you want to use TLS v1.2, please use `ssl_version` parameter like as:
 
 ```
 ssl_version TLSv1_2
+```
+
+or, in v4.0.2 or later with Ruby 2.5 or later combination, the following congiuration is also valid:
+
+```
+ssl_max_version TLSv1_2
+ssl_min_version TLSv1_2
 ```
 
 ### Declined logs are resubmitted forever, why?
