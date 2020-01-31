@@ -35,6 +35,12 @@ class TestElasticsearchTLS < Test::Unit::TestCase
                               rescue NameError
                                 false
                               end
+    @enabled_tlsv1_3 = begin
+                         map = {TLSv1_3: OpenSSL::SSL::TLS1_3_VERSION}
+                         true
+                       rescue NameError
+                         false
+                       end
   end
 
   def driver(conf='')
@@ -116,7 +122,7 @@ class TestElasticsearchTLS < Test::Unit::TestCase
     end
 
     test 'TLSv1.3' do
-      omit "openssl gem does not support TLSv1.3" unless @use_tls_minmax_version
+      omit "openssl gem does not support TLSv1.3" unless @enabled_tlsv1_3
       config = %{
         ssl_max_version TLSv1_3
         ssl_min_version TLSv1_2
