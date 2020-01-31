@@ -218,7 +218,16 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_equal '/es/', instance.path
     assert_equal 'john', instance.user
     assert_equal 'doe', instance.password
-    assert_equal :TLSv1, instance.ssl_version
+    assert_equal Fluent::Plugin::ElasticsearchTLS::DEFAULT_VERSION, instance.ssl_version
+    assert_nil instance.ssl_max_version
+    assert_nil instance.ssl_min_version
+    if Fluent::Plugin::ElasticsearchTLS::USE_TLS_MINMAX_VERSION
+      assert_equal({max_version: OpenSSL::SSL::TLS1_VERSION, min_version: OpenSSL::SSL::TLS1_VERSION},
+                   instance.ssl_version_options)
+    else
+      assert_equal({version: Fluent::Plugin::ElasticsearchTLS::DEFAULT_VERSION},
+                   instance.ssl_version_options)
+    end
     assert_nil instance.client_key
     assert_nil instance.client_cert
     assert_nil instance.client_key_pass

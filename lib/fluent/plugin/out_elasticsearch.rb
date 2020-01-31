@@ -24,6 +24,7 @@ require_relative 'elasticsearch_error'
 require_relative 'elasticsearch_error_handler'
 require_relative 'elasticsearch_index_template'
 require_relative 'elasticsearch_index_lifecycle_management'
+require_relative 'elasticsearch_tls'
 begin
   require_relative 'oj_serializer'
 rescue LoadError
@@ -53,6 +54,7 @@ module Fluent::Plugin
 
     attr_reader :alias_indexes
     attr_reader :template_names
+    attr_reader :ssl_version_options
 
     helpers :event_emitter, :compat_parameters, :record_accessor
 
@@ -104,7 +106,6 @@ EOC
     config_param :client_cert, :string, :default => nil
     config_param :client_key_pass, :string, :default => nil, :secret => true
     config_param :ca_file, :string, :default => nil
-    config_param :ssl_version, :enum, list: [:SSLv23, :TLSv1, :TLSv1_1, :TLSv1_2], :default => :TLSv1
     config_param :remove_keys, :string, :default => nil
     config_param :remove_keys_on_update, :string, :default => ""
     config_param :remove_keys_on_update_key, :string, :default => nil
@@ -167,6 +168,7 @@ EOC
     include Fluent::ElasticsearchIndexTemplate
     include Fluent::Plugin::ElasticsearchConstants
     include Fluent::Plugin::ElasticsearchIndexLifecycleManagement
+    include Fluent::Plugin::ElasticsearchTLS
 
     def initialize
       super
@@ -184,6 +186,7 @@ EOC
       end
       @time_parser = create_time_parser
       @backend_options = backend_options
+      @ssl_version_options = set_tls_minmax_version_config(@ssl_version, @ssl_max_version, @ssl_min_version)
 
       if @remove_keys
         @remove_keys = @remove_keys.split(/\s*,\s*/)
@@ -501,6 +504,7 @@ EOC
                          {}
                        end
         headers = { 'Content-Type' => @content_type.to_s }.merge(@custom_headers).merge(gzip_headers)
+        ssl_options = { verify: @ssl_verify, ca_file: @ca_file}.merge(@ssl_version_options)
 
         transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(connection_options.merge(
                                                                             options: {
@@ -511,7 +515,7 @@ EOC
                                                                               transport_options: {
                                                                                 headers: headers,
                                                                                 request: { timeout: @request_timeout },
-                                                                                ssl: { verify: @ssl_verify, ca_file: @ca_file, version: @ssl_version }
+                                                                                ssl: ssl_options,
                                                                               },
                                                                               http: {
                                                                                 user: @user,
