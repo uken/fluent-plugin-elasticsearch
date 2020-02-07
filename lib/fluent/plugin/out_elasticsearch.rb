@@ -519,7 +519,8 @@ EOC
                                                                               },
                                                                               http: {
                                                                                 user: @user,
-                                                                                password: @password
+                                                                                password: @password,
+                                                                                scheme: @scheme
                                                                               },
                                                                               sniffer_class: @sniffer_class,
                                                                               serializer_class: @serializer_class,
