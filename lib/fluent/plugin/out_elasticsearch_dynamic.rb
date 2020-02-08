@@ -64,7 +64,8 @@ module Fluent::Plugin
                                                                               },
                                                                               http: {
                                                                                 user: @user,
-                                                                                password: @password
+                                                                                password: @password,
+                                                                                scheme: @scheme
                                                                               },
                                                                               compression: compression,
                                                                             }), &adapter_conf)
