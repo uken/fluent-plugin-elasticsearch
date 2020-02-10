@@ -1,6 +1,10 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+
+### 4.0.3
+-  Use http.scheme settings for persisent scheme setup (#713)
+
 ### 4.0.2
 - Support TLSv1.3 (#710)
 
