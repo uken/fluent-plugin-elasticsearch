@@ -656,6 +656,7 @@ EOC
 
     def expand_placeholders(chunk)
       logstash_prefix = extract_placeholders(@logstash_prefix, chunk)
+      logstash_dateformat = extract_placeholders(@logstash_dateformat, chunk)
       index_name = extract_placeholders(@index_name, chunk)
       if @type_name
         type_name = extract_placeholders(@type_name, chunk)
@@ -687,7 +688,7 @@ EOC
       else
         pipeline = nil
       end
-      return logstash_prefix, index_name, type_name, template_name, customize_template, deflector_alias, application_name, pipeline
+      return logstash_prefix, logstash_dateformat, index_name, type_name, template_name, customize_template, deflector_alias, application_name, pipeline
     end
 
     def multi_workers_ready?
@@ -761,7 +762,7 @@ EOC
     end
 
     def process_message(tag, meta, header, time, record, extracted_values)
-      logstash_prefix, index_name, type_name, _template_name, _customize_template, _deflector_alias, _application_name, pipeline = extracted_values
+      logstash_prefix, logstash_dateformat, index_name, type_name, _template_name, _customize_template, _deflector_alias, _application_name, pipeline = extracted_values
 
       if @flatten_hashes
         record = flatten_record(record)
@@ -787,7 +788,7 @@ EOC
         target_index = target_index_parent.delete(target_index_child_key)
       elsif @logstash_format
         dt = dt.new_offset(0) if @utc_index
-        target_index = "#{logstash_prefix}#{@logstash_prefix_separator}#{dt.strftime(@logstash_dateformat)}"
+        target_index = "#{logstash_prefix}#{@logstash_prefix_separator}#{dt.strftime(logstash_dateformat)}"
       else
         target_index = index_name
       end
