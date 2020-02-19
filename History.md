@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 4.0.4
+- Provide clearing caches timer (#719)
+
 ### 4.0.3
 -  Use http.scheme settings for persisent scheme setup (#713)
 
