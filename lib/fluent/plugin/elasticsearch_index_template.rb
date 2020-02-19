@@ -141,15 +141,16 @@ module Fluent::ElasticsearchIndexTemplate
         client.indices.put_alias(:index => index_name_temp, :name => deflector_alias_name,
                                  :body => body)
         log.info("The alias '#{deflector_alias_name}' is created for the index '#{index_name_temp}'")
-        if enable_ilm
-          if ilm_policy.empty?
-            setup_ilm(enable_ilm, ilm_policy_id)
-          else
-            setup_ilm(enable_ilm, ilm_policy_id, ilm_policy, ilm_policy_overwrite)
-          end
-        end
       else
         log.debug("The alias '#{deflector_alias_name}' is already present")
+      end
+      # Create ILM policy if rollover indices exist.
+      if enable_ilm
+        if ilm_policy.empty?
+          setup_ilm(enable_ilm, ilm_policy_id)
+        else
+          setup_ilm(enable_ilm, ilm_policy_id, ilm_policy, ilm_policy_overwrite)
+        end
       end
     else
       log.debug("No index and alias creation action performed because rollover_index or enable_ilm is set to: '#{rollover_index}', '#{enable_ilm}'")

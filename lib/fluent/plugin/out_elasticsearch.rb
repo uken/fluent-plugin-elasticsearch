@@ -56,7 +56,7 @@ module Fluent::Plugin
     attr_reader :template_names
     attr_reader :ssl_version_options
 
-    helpers :event_emitter, :compat_parameters, :record_accessor
+    helpers :event_emitter, :compat_parameters, :record_accessor, :timer
 
     Fluent::Plugin.register_output('elasticsearch', self)
 
@@ -158,6 +158,7 @@ EOC
     config_param :ilm_policy_id, :string, :default => DEFAULT_POLICY_ID
     config_param :ilm_policy, :hash, :default => {}
     config_param :ilm_policy_overwrite, :bool, :default => false
+    config_param :truncate_caches_interval, :time, :default => nil
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE
@@ -238,6 +239,18 @@ EOC
           retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
             templates_hash_install(@templates, @template_overwrite)
           end
+        end
+      end
+
+      @truncate_mutex = Mutex.new
+      if @truncate_caches_interval
+        timer_execute(:out_elasticsearch_truncate_caches, @truncate_caches_interval) do
+          log.info('Clean up the indices and template names cache')
+
+          @truncate_mutex.synchronize {
+            @alias_indexes.clear
+            @template_names.clear
+          }
         end
       end
 
