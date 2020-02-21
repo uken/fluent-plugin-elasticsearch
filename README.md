@@ -1639,16 +1639,30 @@ Main ILM feature parameters are:
 * `ilm_policy_id`
 * `ilm_policy`
 
+* Advanced usage parameters
+  * `application_name`
+  * `index_separator`
+
 They are not all mandatory parameters but they are used for ILM feature in effect.
 
 ILM target index alias is created with `index_name` or an index which is calculated from `logstash_prefix`.
 
 From Elasticsearch plugin v4.0.0, ILM target index will be calculated from `index_name` (normal mode) or `logstash_prefix` (using with `logstash_format`as true).
 
-When using `deflectoe_alias` parameter, Elasticsearch plugin will create ILM target indices alias with `deflector_alias` instead of `index_name` or an index which is calculated from `logstash_prefix`. This behavior should be kept due to backward ILM feature compatibility.
+When using `deflector_alias` parameter, Elasticsearch plugin will create ILM target indices alias with `deflector_alias` instead of `index_name` or an index which is calculated from `logstash_prefix`. This behavior should be kept due to backward ILM feature compatibility.
 
 And also, ILM feature users should specify their Elasticsearch template for ILM enabled indices.
 Because ILM settings are injected into their Elasticsearch templates.
+
+`application_name` and `index_separator` also affect alias index names.
+
+But this parameter is prepared for advanced usage.
+
+It usually should be used with default value which is `default`.
+
+Then, ILM parameters are used in alias index like as:
+
+`<index_name/logstash_prefix><index_separator><application_name>-000001`.
 
 #### Example ILM settings
 
