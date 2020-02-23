@@ -7,3 +7,4 @@ gem 'simplecov', require: false
 gem 'coveralls', require: false
 gem 'strptime', require: false if RUBY_ENGINE == "ruby" && RUBY_VERSION =~ /^2/
 gem "irb" if RUBY_ENGINE == "ruby" && RUBY_VERSION >= "2.6"
+gem "oj"
