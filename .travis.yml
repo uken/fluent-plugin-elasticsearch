@@ -9,6 +9,8 @@ matrix:
     - rvm: 2.6.3
       gemfile: gemfiles/Gemfile.ilm
     - rvm: 2.6.3
+      gemfile: gemfiles/Gemfile.elasticsearch.v6
+    - rvm: 2.6.3
       gemfile: Gemfile
     - rvm: 2.7.0
       gemfile: Gemfile
