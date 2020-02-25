@@ -202,7 +202,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   def alias_endpoint
-    if Gem::Version.create(Elasticsearch::VERSION) >= Gem::Version.create("7.5.0-pre")
+    if Gem::Version.create(::Elasticsearch::VERSION) >= Gem::Version.create("7.5.0-pre")
       "_aliases"
     else
       "_alias"
@@ -254,6 +254,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   test 'configure compression' do
+    omit "elastisearch-ruby v7.2.0 or later is needed." if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.2.0")
+
     config = %{
       compression_level best_compression
     }
@@ -263,6 +265,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   test 'check compression strategy' do
+    omit "elastisearch-ruby v7.2.0 or later is needed." if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.2.0")
+
     config = %{
       compression_level best_speed
     }
@@ -272,6 +276,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   test 'check content-encoding header with compression' do
+    omit "elastisearch-ruby v7.2.0 or later is needed." if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.2.0")
+
     config = %{
       compression_level best_compression
     }
@@ -281,6 +287,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
   end
 
   test 'check compression option is passed to transport' do
+    omit "elastisearch-ruby v7.2.0 or later is needed." if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.2.0")
+
     config = %{
       compression_level best_compression
     }
@@ -2556,6 +2564,8 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
 
   def test_writes_to_default_index_with_compression
+    omit "elastisearch-ruby v7.2.0 or later is needed." if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.2.0")
+
     config = %[
       compression_level default_compression
     ]
