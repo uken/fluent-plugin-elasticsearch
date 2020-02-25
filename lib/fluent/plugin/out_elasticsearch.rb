@@ -358,9 +358,7 @@ EOC
         end
       end
 
-      version_arr = ::Elasticsearch::Transport::VERSION.split('.')
-
-      if (version_arr[0].to_i < 7) || (version_arr[0].to_i == 7 && version_arr[1].to_i < 2)
+      if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.2.0")
         if compression
           raise Fluent::ConfigError, <<-EOC
             Cannot use compression with elasticsearch-transport plugin version < 7.2.0
