@@ -201,6 +201,14 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_compare(exp_matches, operator, matches.length, "Logs do not contain '#{msg}' '#{logs}'")
   end
 
+  def alias_endpoint
+    if Gem::Version.create(Elasticsearch::VERSION) >= Gem::Version.create("7.5.0-pre")
+      "_aliases"
+    else
+      "_alias"
+    end
+  end
+
   def test_configure
     config = %{
       host     logs.google.com
@@ -338,7 +346,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
         to_return(status: 200, body: "", headers: {})
       stub_request(:head, "http://localhost:9200/_alias/fluentd").
         to_return(status: 404, body: "", headers: {})
-      stub_request(:put, "http://localhost:9200/%3Cfluentd-default-%7Bnow%2Fd%7D-000001%3E/_alias/fluentd").
+      stub_request(:put, "http://localhost:9200/%3Cfluentd-default-%7Bnow%2Fd%7D-000001%3E/#{alias_endpoint}/fluentd").
         with(body: "{\"aliases\":{\"fluentd\":{\"is_write_index\":true}}}").
         to_return(status: 200, body: "", headers: {})
       stub_request(:put, "http://localhost:9200/%3Cfluentd-default-%7Bnow%2Fd%7D-000001%3E").
@@ -372,7 +380,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
         to_return(status: 200, body: "", headers: {})
       stub_request(:head, "http://localhost:9200/_alias/fluentd").
         to_return(status: 404, body: "", headers: {})
-      stub_request(:put, "http://localhost:9200/%3Cfluentd-default-%7Bnow%2Fd%7D-000001%3E/_alias/fluentd").
+      stub_request(:put, "http://localhost:9200/%3Cfluentd-default-%7Bnow%2Fd%7D-000001%3E/#{alias_endpoint}/fluentd").
         with(body: "{\"aliases\":{\"fluentd\":{\"is_write_index\":true}}}").
         to_return(status: 200, body: "", headers: {})
       stub_request(:put, "http://localhost:9200/%3Cfluentd-default-%7Bnow%2Fd%7D-000001%3E").
@@ -791,7 +799,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_request(:put, "https://logs.google.com:777/es//%3Cfluentd-test.template-default-000001%3E").
       with(basic_auth: ['john', 'doe']).
       to_return(status: 200, body: "", headers: {})
-    stub_request(:put, "https://logs.google.com:777/es//%3Cfluentd-test.template-default-000001%3E/_alias/myapp_deflector-test.template").
+    stub_request(:put, "https://logs.google.com:777/es//%3Cfluentd-test.template-default-000001%3E/#{alias_endpoint}/myapp_deflector-test.template").
       with(basic_auth: ['john', 'doe'],
            body: "{\"aliases\":{\"myapp_deflector-test.template\":{\"is_write_index\":true}}}").
       to_return(:status => 200, :body => "", :headers => {})
@@ -849,7 +857,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     stub_request(:put, "https://logs.google.com:777/es//%3Cfluentd-test.template-default-000001%3E").
       with(basic_auth: ['john', 'doe']).
       to_return(status: 200, body: "", headers: {})
-    stub_request(:put, "https://logs.google.com:777/es//%3Cfluentd-test.template-default-000001%3E/_alias/myapp_deflector-test.template").
+    stub_request(:put, "https://logs.google.com:777/es//%3Cfluentd-test.template-default-000001%3E/#{alias_endpoint}/myapp_deflector-test.template").
       with(basic_auth: ['john', 'doe'],
            body: "{\"aliases\":{\"myapp_deflector-test.template\":{\"is_write_index\":true}}}").
       to_return(:status => 200, :body => "", :headers => {})
@@ -928,7 +936,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 200, :body => "", :headers => {})
-      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/logstash").
+      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/logstash").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"logstash\":{\"is_write_index\":true}}}").
         to_return(:status => 200, :body => "", :headers => {})
@@ -995,7 +1003,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 200, :body => "", :headers => {})
-      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/logstash").
+      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/logstash").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"logstash\":{\"is_write_index\":true}}}").
         to_return(:status => 200, :body => "", :headers => {})
@@ -1061,7 +1069,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 200, :body => "", :headers => {})
-      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/myapp_deflector").
+      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/myapp_deflector").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"myapp_deflector\":{\"is_write_index\":true}}}").
         to_return(:status => 200, :body => "", :headers => {})
@@ -1126,7 +1134,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-000001%3E").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 200, :body => "", :headers => {})
-      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-000001%3E/_alias/logstash").
+      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-000001%3E/#{alias_endpoint}/logstash").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"logstash\":{\"is_write_index\":true}}}").
         to_return(:status => 200, :body => "", :headers => {})
@@ -1193,7 +1201,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 200, :body => "", :headers => {})
-      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/logstash").
+      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/logstash").
         with(body: "{\"aliases\":{\"logstash\":{\"is_write_index\":true}}}").
         to_return(status: 200, body: "", headers: {})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
@@ -1257,7 +1265,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-test-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 200, :body => "", :headers => {})
-      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-test-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/logstash-test").
+      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-test-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/logstash-test").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"logstash-test\":{\"is_write_index\":true}}}").
         to_return(:status => 200, :body => "", :headers => {})
@@ -1441,7 +1449,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
     # put the alias for the index
-    stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/mylogs").
+    stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/mylogs").
       with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
 
@@ -1450,7 +1458,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
     assert_requested(:put, "https://logs.google.com:777/es//_template/myapp_alias_template", times: 1)
   end
 
-    def test_custom_template_with_rollover_index_create_and_deflector_alias
+  def test_custom_template_with_rollover_index_create_and_deflector_alias
     cwd = File.dirname(__FILE__)
     template_file = File.join(cwd, 'test_alias_template.json')
 
@@ -1492,7 +1500,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
     # put the alias for the index
-    stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/myapp_deflector").
+    stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/myapp_deflector").
       with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
 
@@ -1544,7 +1552,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
     # put the alias for the index
-    stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/mylogs-#{timestr}").
+    stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/mylogs-#{timestr}").
       with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
 
@@ -1615,7 +1623,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
              body: "{\"order\":6,\"settings\":{\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"mylogs\"},\"mappings\":{},\"aliases\":{\"myapp-logs-alias\":{}},\"index_patterns\":\"mylogs-*\"}").
         to_return(status: 200, body: "", headers: {})
       # put the alias for the index
-      stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/mylogs").
+      stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/mylogs").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"mylogs\":{\"is_write_index\":true}}}").
         to_return(:status => 200, :body => "", :headers => {})
@@ -1686,7 +1694,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
              body: "{\"order\":6,\"settings\":{\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"mylogs\"},\"mappings\":{},\"aliases\":{\"myapp-logs-alias\":{}},\"index_patterns\":\"mylogs-*\"}").
         to_return(status: 200, body: "", headers: {})
       # put the alias for the index
-      stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/mylogs").
+      stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/mylogs").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"mylogs\":{\"is_write_index\":true}}}").
         to_return(:status => 200, :body => "", :headers => {})
@@ -1756,7 +1764,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
              body: "{\"order\":6,\"settings\":{\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"myapp_deflector\"},\"mappings\":{},\"aliases\":{\"myapp-logs-alias\":{}},\"index_patterns\":\"myapp_deflector-*\"}").
         to_return(status: 200, body: "", headers: {})
       # put the alias for the index
-      stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/myapp_deflector").
+      stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/myapp_deflector").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"myapp_deflector\":{\"is_write_index\":true}}}").
         to_return(:status => 200, :body => "", :headers => {})
@@ -1825,7 +1833,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
              body: "{\"order\":8,\"settings\":{\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"mylogs-custom-test\"},\"mappings\":{},\"aliases\":{\"myapp-logs-alias\":{}},\"index_patterns\":\"mylogs-custom-test-*\"}").
         to_return(status: 200, body: "", headers: {})
       # put the alias for the index
-      stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-custom-test-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/mylogs-custom-test").
+      stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-custom-test-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/mylogs-custom-test").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"mylogs-custom-test\":{\"is_write_index\":true}}}").
         to_return(:status => 200, :body => "", :headers => {})
@@ -1902,7 +1910,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
         with(basic_auth: ['john', 'doe']).
         to_return(status: 200, body: "", headers: {})
       # put the alias for the index
-      stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/_alias/mylogs").
+      stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/mylogs").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"mylogs\":{\"is_write_index\":true}}}").
         to_return(:status => 200, :body => "", :headers => {})
@@ -2034,7 +2042,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
       with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
     # put the alias for the index
-    stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E/_alias/myapp_deflector").
+    stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E/#{alias_endpoint}/myapp_deflector").
       with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
 
