@@ -5,24 +5,35 @@ jobs:
     - rvm: 2.4.6
       gemfile: Gemfile
       os: linux
+      arch: amd64
     - rvm: 2.5.5
       gemfile: Gemfile
       os: linux
+      arch: amd64
     - rvm: 2.6.3
       gemfile: gemfiles/Gemfile.ilm
       os: linux
+      arch: amd64
     - rvm: 2.6.3
       gemfile: gemfiles/Gemfile.elasticsearch.v6
       os: linux
+      arch: amd64
     - rvm: 2.6.3
       gemfile: Gemfile
       os: linux
+      arch: amd64
+    - rvm: 2.6.3
+      gemfile: Gemfile
+      os: linux
+      arch: arm64
     - rvm: 2.6.3
       gemfile: Gemfile
       os: osx
+      osx_image: xcode11.3
     - rvm: 2.7.0
       gemfile: Gemfile
       os: linux
+      arch: amd64
 
 gemfile:
  - Gemfile
