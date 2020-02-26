@@ -1,19 +1,28 @@
 language: ruby
 
-matrix:
+jobs:
   include:
     - rvm: 2.4.6
       gemfile: Gemfile
+      os: linux
     - rvm: 2.5.5
       gemfile: Gemfile
+      os: linux
     - rvm: 2.6.3
       gemfile: gemfiles/Gemfile.ilm
+      os: linux
     - rvm: 2.6.3
       gemfile: gemfiles/Gemfile.elasticsearch.v6
+      os: linux
     - rvm: 2.6.3
       gemfile: Gemfile
+      os: linux
+    - rvm: 2.6.3
+      gemfile: Gemfile
+      os: osx
     - rvm: 2.7.0
       gemfile: Gemfile
+      os: linux
 
 gemfile:
  - Gemfile
@@ -22,4 +31,3 @@ before_install:
   - gem update --system=2.7.8
 
 script: bundle exec rake test
-sudo: false
