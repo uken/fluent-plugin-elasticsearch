@@ -902,7 +902,7 @@ EOC
     # send_bulk given a specific bulk request, the original tag,
     # chunk, and bulk_message_count
     def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, info)
-      logstash_prefix, index_name, _type_name, template_name, customize_template, deflector_alias, application_name, _pipeline = extracted_values
+      logstash_prefix, _logstash_dateformat, index_name, _type_name, template_name, customize_template, deflector_alias, application_name, _pipeline = extracted_values
       if deflector_alias
         template_installation(deflector_alias, template_name, customize_template, application_name, index_name, info.host)
       else
