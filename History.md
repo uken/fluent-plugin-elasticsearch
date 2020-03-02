@@ -2,6 +2,13 @@
 
 ### [Unreleased]
 
+### 4.0.5
+-  add logstash_dateformat as placeholder (#718)
+- Tweak travis.yml for suppressing validator warnings and add CI for Linux Arm64 architecture and macOS 10.14 (#724)
+- Elasticsearch ruby v7.5 (#723)
+- Add Oj serializer testcases for all job (#722)
+- Update documentation for ILM (#721)
+
 ### 4.0.4
 - Provide clearing caches timer (#719)
 
