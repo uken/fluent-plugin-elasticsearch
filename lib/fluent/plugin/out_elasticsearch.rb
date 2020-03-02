@@ -667,6 +667,7 @@ EOC
 
     def expand_placeholders(chunk)
       logstash_prefix = extract_placeholders(@logstash_prefix, chunk)
+      logstash_dateformat = extract_placeholders(@logstash_dateformat, chunk)
       index_name = extract_placeholders(@index_name, chunk)
       if @type_name
         type_name = extract_placeholders(@type_name, chunk)
@@ -698,7 +699,7 @@ EOC
       else
         pipeline = nil
       end
-      return logstash_prefix, index_name, type_name, template_name, customize_template, deflector_alias, application_name, pipeline
+      return logstash_prefix, logstash_dateformat, index_name, type_name, template_name, customize_template, deflector_alias, application_name, pipeline
     end
 
     def multi_workers_ready?
@@ -772,7 +773,7 @@ EOC
     end
 
     def process_message(tag, meta, header, time, record, extracted_values)
-      logstash_prefix, index_name, type_name, _template_name, _customize_template, _deflector_alias, _application_name, pipeline = extracted_values
+      logstash_prefix, logstash_dateformat, index_name, type_name, _template_name, _customize_template, _deflector_alias, _application_name, pipeline = extracted_values
 
       if @flatten_hashes
         record = flatten_record(record)
@@ -798,7 +799,7 @@ EOC
         target_index = target_index_parent.delete(target_index_child_key)
       elsif @logstash_format
         dt = dt.new_offset(0) if @utc_index
-        target_index = "#{logstash_prefix}#{@logstash_prefix_separator}#{dt.strftime(@logstash_dateformat)}"
+        target_index = "#{logstash_prefix}#{@logstash_prefix_separator}#{dt.strftime(logstash_dateformat)}"
       else
         target_index = index_name
       end
@@ -878,6 +879,7 @@ EOC
         placeholder?(:template_name, @template_name.to_s) ||
         @customize_template&.values&.any? { |value| placeholder?(:customize_template, value.to_s) } ||
         placeholder?(:logstash_prefix, @logstash_prefix.to_s) ||
+        placeholder?(:logstash_dateformat, @logstash_dateformat.to_s) ||
         placeholder?(:deflector_alias, @deflector_alias.to_s) ||
         placeholder?(:application_name, @application_name.to_s)
       log.debug("Need substitution: #{need_substitution}")
@@ -912,7 +914,7 @@ EOC
     # send_bulk given a specific bulk request, the original tag,
     # chunk, and bulk_message_count
     def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, info)
-      logstash_prefix, index_name, _type_name, template_name, customize_template, deflector_alias, application_name, _pipeline = extracted_values
+      logstash_prefix, _logstash_dateformat, index_name, _type_name, template_name, customize_template, deflector_alias, application_name, _pipeline = extracted_values
       if deflector_alias
         template_installation(deflector_alias, template_name, customize_template, application_name, index_name, info.host)
       else
