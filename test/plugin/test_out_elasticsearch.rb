@@ -3057,6 +3057,54 @@ class ElasticsearchOutput < Test::Unit::TestCase
     end
   end
 
+  class LogStashDateformatPlaceholdersTest < self
+    def test_writes_to_logstash_index_with_specified_prefix_and_dateformat_placeholder_pattern_1
+      driver.configure(Fluent::Config::Element.new(
+                         'ROOT', '', {
+                           '@type' => 'elasticsearch',
+                           'logstash_format' => true,
+                           'logstash_dateformat' => '${indexformat}',
+                           'logstash_prefix' => 'myprefix',
+                         }, [
+                           Fluent::Config::Element.new('buffer', 'tag,time,indexformat', {
+                                                         'chunk_keys' => ['tag', 'time', 'indexformat'],
+                                                         'timekey' => 3600,
+                                                       }, [])
+                         ]
+                       ))
+      time = Time.parse Date.today.iso8601
+      logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m.%d")}"
+      stub_elastic
+      driver.run(default_tag: 'test') do
+        driver.feed(time.to_i, sample_record.merge('indexformat' => '%Y.%m.%d'))
+      end
+      assert_equal(logstash_index, index_cmds.first['index']['_index'])
+    end
+
+    def test_writes_to_logstash_index_with_specified_prefix_and_dateformat_placeholder_pattern_2
+      driver.configure(Fluent::Config::Element.new(
+                         'ROOT', '', {
+                           '@type' => 'elasticsearch',
+                           'logstash_format' => true,
+                           'logstash_dateformat' => '${indexformat}',
+                           'logstash_prefix' => 'myprefix',
+                         }, [
+                           Fluent::Config::Element.new('buffer', 'tag,time,indexformat', {
+                                                         'chunk_keys' => ['tag', 'time', 'indexformat'],
+                                                         'timekey' => 3600,
+                                                       }, [])
+                         ]
+                       ))
+      time = Time.parse Date.today.iso8601
+      logstash_index = "myprefix-#{time.getutc.strftime("%Y.%m")}"
+      stub_elastic
+      driver.run(default_tag: 'test') do
+        driver.feed(time.to_i, sample_record.merge('indexformat' => '%Y.%m'))
+      end
+      assert_equal(logstash_index, index_cmds.first['index']['_index'])
+    end
+  end
+
   class HostnamePlaceholders < self
     def test_writes_to_extracted_host
       driver.configure("host ${tag}\n")
