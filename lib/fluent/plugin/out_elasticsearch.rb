@@ -868,6 +868,7 @@ EOC
         placeholder?(:template_name, @template_name.to_s) ||
         @customize_template&.values&.any? { |value| placeholder?(:customize_template, value.to_s) } ||
         placeholder?(:logstash_prefix, @logstash_prefix.to_s) ||
+        placeholder?(:logstash_dateformat, @logstash_dateformat.to_s) ||
         placeholder?(:deflector_alias, @deflector_alias.to_s) ||
         placeholder?(:application_name, @application_name.to_s)
       log.debug("Need substitution: #{need_substitution}")
