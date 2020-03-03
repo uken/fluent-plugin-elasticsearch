@@ -11,7 +11,7 @@ jobs:
       os: linux
       arch: amd64
     - rvm: 2.6.3
-      gemfile: gemfiles/Gemfile.ilm
+      gemfile: gemfiles/Gemfile.without.ilm
       os: linux
       arch: amd64
     - rvm: 2.6.3
