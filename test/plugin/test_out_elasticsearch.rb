@@ -535,6 +535,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
          "template_name_placeholder" => ["template_name", "logstash-${mykey}"],
          "customize_template" => ["customize_template", '{"<<TAG>>":"${mykey}"}'],
          "logstash_prefix_placeholder" => ["logstash_prefix", "fluentd-${mykey}"],
+         "logstash_dateformat_placeholder" => ["logstash_dateformat", "${mykey}"],
          "deflector_alias_placeholder" => ["deflector_alias", "fluentd-${mykey}"],
          "application_name_placeholder" => ["application_name", "fluentd-${mykey}"],
         )
@@ -560,6 +561,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
          "template_name_placeholder" => ["template_name", "logstash-${tag}-%Y%m%d"],
          "customize_template" => ["customize_template", '{"<<TAG>>":"${es_index}"}'],
          "logstash_prefix_placeholder" => ["logstash_prefix", "fluentd-${es_index}-%Y%m%d"],
+         "logstash_dataformat_placeholder" => ["logstash_dateformat", "${es_index}"],
          "deflector_alias_placeholder" => ["deflector_alias", "fluentd-%Y%m%d"],
          "application_name_placeholder" => ["application_name", "fluentd-${tag}-${es_index}-%Y%m%d"],
         )
