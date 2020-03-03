@@ -4,6 +4,7 @@ require 'fluent/test/helpers'
 require 'json'
 require 'fluent/test/driver/input'
 require 'flexmock/test_unit'
+require 'fluent/plugin/in_elasticsearch'
 
 class ElasticsearchInputTest < Test::Unit::TestCase
   include FlexMock::TestCase
@@ -16,7 +17,6 @@ class ElasticsearchInputTest < Test::Unit::TestCase
 
   def setup
     Fluent::Test.setup
-    require 'fluent/plugin/in_elasticsearch'
     @driver = nil
     log = Fluent::Engine.log
     log.out.logs.slice!(0, log.out.logs.length)

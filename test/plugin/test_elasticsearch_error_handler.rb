@@ -1,4 +1,4 @@
-require 'helper'
+require_relative '../helper'
 require 'fluent/plugin/out_elasticsearch'
 require 'fluent/plugin/elasticsearch_error_handler'
 require 'json'

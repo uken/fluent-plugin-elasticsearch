@@ -1,4 +1,4 @@
-require 'helper'
+require_relative '../helper'
 require 'elasticsearch'
 require 'fluent/plugin/elasticsearch_index_lifecycle_management'
 
