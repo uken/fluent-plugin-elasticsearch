@@ -1,8 +1,9 @@
-require 'helper'
+require_relative '../helper'
 require 'date'
 require 'fluent/test/helpers'
 require 'fluent/test/driver/output'
 require 'flexmock/test_unit'
+require 'fluent/plugin/out_elasticsearch_dynamic'
 
 class ElasticsearchOutputDynamic < Test::Unit::TestCase
   include FlexMock::TestCase
@@ -12,7 +13,6 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
 
   def setup
     Fluent::Test.setup
-    require 'fluent/plugin/out_elasticsearch_dynamic'
     @driver = nil
   end
 

@@ -1,11 +1,12 @@
-require 'helper'
+require_relative '../helper'
 require 'date'
 require 'fluent/test/helpers'
 require 'json'
 require 'fluent/test/driver/output'
 require 'flexmock/test_unit'
+require 'fluent/plugin/out_elasticsearch'
 
-class ElasticsearchOutput < Test::Unit::TestCase
+class ElasticsearchOutputTest < Test::Unit::TestCase
   include FlexMock::TestCase
   include Fluent::Test::Helpers
 
@@ -13,7 +14,6 @@ class ElasticsearchOutput < Test::Unit::TestCase
 
   def setup
     Fluent::Test.setup
-    require 'fluent/plugin/out_elasticsearch'
     @driver = nil
     log = Fluent::Engine.log
     log.out.logs.slice!(0, log.out.logs.length)
@@ -535,6 +535,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
          "template_name_placeholder" => ["template_name", "logstash-${mykey}"],
          "customize_template" => ["customize_template", '{"<<TAG>>":"${mykey}"}'],
          "logstash_prefix_placeholder" => ["logstash_prefix", "fluentd-${mykey}"],
+         "logstash_dateformat_placeholder" => ["logstash_dateformat", "${mykey}"],
          "deflector_alias_placeholder" => ["deflector_alias", "fluentd-${mykey}"],
          "application_name_placeholder" => ["application_name", "fluentd-${mykey}"],
         )
@@ -560,6 +561,7 @@ class ElasticsearchOutput < Test::Unit::TestCase
          "template_name_placeholder" => ["template_name", "logstash-${tag}-%Y%m%d"],
          "customize_template" => ["customize_template", '{"<<TAG>>":"${es_index}"}'],
          "logstash_prefix_placeholder" => ["logstash_prefix", "fluentd-${es_index}-%Y%m%d"],
+         "logstash_dataformat_placeholder" => ["logstash_dateformat", "${es_index}"],
          "deflector_alias_placeholder" => ["deflector_alias", "fluentd-%Y%m%d"],
          "application_name_placeholder" => ["application_name", "fluentd-${tag}-${es_index}-%Y%m%d"],
         )

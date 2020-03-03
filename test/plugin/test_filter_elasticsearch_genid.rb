@@ -1,4 +1,4 @@
-require 'helper'
+require_relative '../helper'
 require 'date'
 require 'fluent/test/helpers'
 require 'json'
