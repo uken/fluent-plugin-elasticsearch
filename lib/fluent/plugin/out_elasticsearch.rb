@@ -125,6 +125,7 @@ EOC
     config_param :templates, :hash, :default => nil
     config_param :max_retry_putting_template, :integer, :default => 10
     config_param :fail_on_putting_template_retry_exceed, :bool, :default => true
+    config_param :fail_on_detecting_es_version_retry_exceed, :bool, :default => true
     config_param :max_retry_get_es_version, :integer, :default => 15
     config_param :include_tag_key, :bool, :default => false
     config_param :tag_key, :string, :default => 'tag'
@@ -290,14 +291,11 @@ EOC
         raise Fluent::ConfigError, "Could not load sniffer class #{@sniffer_class_name}: #{ex}"
       end
 
-      @last_seen_major_version =
-        if @verify_es_version_at_startup && !dry_run?
-          retry_operate(@max_retry_get_es_version) do
-            detect_es_major_version
-          end
-        else
-          @default_elasticsearch_version
-        end
+      @last_seen_major_version = if major_version = handle_last_seen_es_major_version
+                                   major_version
+                                 else
+                                   @default_elasticsearch_version
+                                 end
       if @last_seen_major_version == 6 && @type_name != DEFAULT_TYPE_NAME_ES_7x
         log.info "Detected ES 6.x: ES 7.x will only accept `_doc` in type_name."
       end
@@ -419,6 +417,16 @@ EOC
     rescue LoadError => ex
       log.error_backtrace(ex.backtrace)
       raise Fluent::ConfigError, "You must install #{@http_backend} gem. Exception: #{ex}"
+    end
+
+    def handle_last_seen_es_major_version
+      if @verify_es_version_at_startup && !dry_run?
+        retry_operate(@max_retry_get_es_version, @fail_on_detecting_es_version_retry_exceed) do
+          detect_es_major_version
+        end
+      else
+        nil
+      end
     end
 
     def detect_es_major_version

@@ -712,6 +712,60 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     end
   end
 
+  class GetElasticsearchVersionWithFallbackTest < self
+    def create_driver(conf='', client_version="\"5.0\"")
+      # For request stub to detect compatibility.
+      @client_version ||= client_version
+      # Ensure original implementation existence.
+      Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
+        def detect_es_major_version
+          @_es_info ||= client.info
+          @_es_info["version"]["number"].to_i
+        end
+      CODE
+      Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
+        def client_library_version
+          #{@client_version}
+        end
+      CODE
+      Fluent::Test::Driver::Output.new(Fluent::Plugin::ElasticsearchOutput).configure(conf)
+    end
+
+    data("Elasticsearch 5" => ["5.0", 5],
+         "Elasticsearch 6" => ["6.0", 6],
+         "Elasticsearch 7" => ["7.0", 7],
+         "Elasticsearch 8" => ["8.0", 8])
+    def test_retry_get_es_version_without_fail_on_detecting_es_version_retry_exceeded(data)
+      client_version, es_major_version = data
+      config = %{
+        host            logs.google.com
+        port            778
+        scheme          https
+        path            /es/
+        user            john
+        password        doe
+        verify_es_version_at_startup true
+        max_retry_get_es_version 2
+        fail_on_detecting_es_version_retry_exceed false
+        default_elasticsearch_version #{es_major_version}
+        @log_level info
+      }
+
+      connection_resets = 0
+      stub_request(:get, "https://logs.google.com:778/es//").
+        with(basic_auth: ['john', 'doe']) do |req|
+        connection_resets += 1
+        raise Faraday::ConnectionFailed, "Test message"
+      end
+
+      d = create_driver(config, client_version)
+
+      assert_equal es_major_version, d.instance.default_elasticsearch_version
+      assert_equal 3, connection_resets
+      assert_equal es_major_version, d.instance.instance_variable_get(:@last_seen_major_version)
+    end
+  end
+
   def test_template_already_present
     config = %{
       host            logs.google.com
