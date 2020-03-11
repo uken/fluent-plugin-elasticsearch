@@ -45,6 +45,7 @@ Current maintainers: @cosmo0920
   + [templates](#templates)
   + [max_retry_putting_template](#max_retry_putting_template)
   + [fail_on_putting_template_retry_exceed](#fail_on_putting_template_retry_exceed)
+  + [fail_on_detecting_es_version_retry_exceed](#fail_on_detecting_es_version_retry_exceed)
   + [max_retry_get_es_version](#max_retry_get_es_version)
   + [request_timeout](#request_timeout)
   + [reload_connections](#reload_connections)
@@ -500,6 +501,23 @@ If you have multiple output plugin, you could use this property to do not fail o
 
 ```
 fail_on_putting_template_retry_exceed false # defaults to true
+```
+
+### fail_on_detecting_es_version_retry_exceed
+
+Indicates whether to fail when `max_retry_get_es_version` is exceeded.
+If you want to use fallback mechanism for obtaining ELasticsearch version, you could use this property to do not fail on fluentd statup.
+
+```
+fail_on_detecting_es_version_retry_exceed false
+```
+
+And the following parameters should be working with:
+
+```
+verify_es_version_at_startup true
+max_retry_get_es_version 2 # greater than 0.
+default_elasticsearch_version 7 # This version is used when occurring fallback.
 ```
 
 ### max_retry_get_es_version
