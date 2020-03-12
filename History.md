@@ -2,6 +2,12 @@
 
 ### [Unreleased]
 
+### 4.0.6
+- Add fallback mechanism for handling to detect es version (#730)
+- Remove needless section (#728)
+- Handle exception if index already exists (#727)
+- Tweak test cases (#726)
+
 ### 4.0.5
 -  add logstash_dateformat as placeholder (#718)
 - Tweak travis.yml for suppressing validator warnings and add CI for Linux Arm64 architecture and macOS 10.14 (#724)
