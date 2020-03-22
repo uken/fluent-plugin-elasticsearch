@@ -66,6 +66,7 @@ Current maintainers: @cosmo0920
   + [content_type](#content_type)
   + [include_index_in_url](#include_index_in_url)
   + [http_backend](#http_backend)
+  + [http_backend_excon_nonblock](#http_backend_excon_nonblock)
   + [prefer_oj_serializer](#prefer_oj_serializer)
   + [compression_level](#compression_level)
   + [Client/host certificate options](#clienthost-certificate-options)
@@ -814,6 +815,21 @@ Default value is `excon` which is default http_backend of elasticsearch plugin.
 
 ```
 http_backend typhoeus
+```
+
+### http_backend_excon_nonblock
+
+With `http_backend_excon_nonblock false`, elasticsearch plugin use excon with nonblock=false.
+If you use elasticsearch plugin with jRuby for https, you may need to consider to set `false` to avoid follwoing problems.
+- https://github.com/geemus/excon/issues/106
+- https://github.com/jruby/jruby-ossl/issues/19
+
+But for all other case, it strongly reccomend to set `true` to avoid process hangin problem reported in https://github.com/uken/fluent-plugin-elasticsearch/issues/732
+
+Default value is `true`.
+
+```
+http_backend_excon_nonblock false
 ```
 
 ### compression_level
