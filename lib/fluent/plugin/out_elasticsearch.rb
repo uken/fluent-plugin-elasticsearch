@@ -143,6 +143,7 @@ see: https://github.com/elastic/elasticsearch-ruby/pull/514
 EOC
     config_param :include_index_in_url, :bool, :default => false
     config_param :http_backend, :enum, list: [:excon, :typhoeus], :default => :excon
+    config_param :http_backend_excon_nonblock, :bool, :default => true
     config_param :validate_client_version, :bool, :default => false
     config_param :prefer_oj_serializer, :bool, :default => false
     config_param :unrecoverable_error_types, :array, :default => ["out_of_memory_error", "es_rejected_execution_exception"]
@@ -409,7 +410,7 @@ EOC
     def backend_options
       case @http_backend
       when :excon
-        { client_key: @client_key, client_cert: @client_cert, client_key_pass: @client_key_pass }
+        { client_key: @client_key, client_cert: @client_cert, client_key_pass: @client_key_pass, nonblock: @http_backend_excon_nonblock }
       when :typhoeus
         require 'typhoeus'
         { sslkey: @client_key, sslcert: @client_cert, keypasswd: @client_key_pass }
