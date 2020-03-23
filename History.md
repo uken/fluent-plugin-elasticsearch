@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 4.0.7
+- Added http_backend_excon_nonblock config in out_elasticsearch (#733)
+
 ### 4.0.6
 - Add fallback mechanism for handling to detect es version (#730)
 - Remove needless section (#728)
