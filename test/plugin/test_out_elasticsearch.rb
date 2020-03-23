@@ -251,6 +251,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     assert_equal 20 * 1024 * 1024, Fluent::Plugin::ElasticsearchOutput::TARGET_BULK_BYTES
     assert_false instance.compression
     assert_equal :no_compression, instance.compression_level
+    assert_true instance.http_backend_excon_nonblock
   end
 
   test 'configure compression' do
@@ -330,6 +331,20 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     assert_raise(Fluent::ConfigError) {
       driver(config)
     }
+  end
+
+  sub_test_case 'Check TLS handshake stuck warning log' do
+    test 'warning TLS log' do
+      config = %{
+        scheme https
+        http_backend_excon_nonblock false
+        ssl_version TLSv1_2
+        @log_level info
+      }
+      driver(config)
+      logs = driver.logs
+      assert_logs_include(logs, /TLS handshake will be stucked with block connection.\n                    Consider to set `http_backend_excon_nonblock` as true\n/)
+    end
   end
 
   sub_test_case 'ILM default config' do
