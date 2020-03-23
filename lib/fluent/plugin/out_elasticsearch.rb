@@ -328,6 +328,13 @@ EOC
         end
       end
 
+      if @ssl_version && @scheme == :https
+        if !@http_backend_excon_nonblock
+          log.warn "TLS handshake will be stucked with block connection.
+                    Consider to set `http_backend_excon_nonblock` as true"
+        end
+      end
+
       # Consider missing the prefix of "$." in nested key specifiers.
       @id_key = convert_compat_id_key(@id_key) if @id_key
       @parent_key = convert_compat_id_key(@parent_key) if @parent_key

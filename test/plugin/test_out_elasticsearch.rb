@@ -333,6 +333,20 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     }
   end
 
+  sub_test_case 'Check TLS handshake stuck warning log' do
+    test 'warning TLS log' do
+      config = %{
+        scheme https
+        http_backend_excon_nonblock false
+        ssl_version TLSv1_2
+        @log_level info
+      }
+      driver(config)
+      logs = driver.logs
+      assert_logs_include(logs, /TLS handshake will be stucked with block connection.\n                    Consider to set `http_backend_excon_nonblock` as true\n/)
+    end
+  end
+
   sub_test_case 'ILM default config' do
     setup do
       begin
