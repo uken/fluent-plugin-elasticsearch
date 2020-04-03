@@ -525,12 +525,7 @@ EOC
           local_reload_connections = @reload_after
         end
 
-        gzip_headers = if compression
-                         {'Content-Encoding' => 'gzip'}
-                       else
-                         {}
-                       end
-        headers = { 'Content-Type' => @content_type.to_s }.merge(@custom_headers).merge(gzip_headers)
+        headers = { 'Content-Type' => @content_type.to_s }.merge(@custom_headers)
         ssl_options = { verify: @ssl_verify, ca_file: @ca_file}.merge(@ssl_version_options)
 
         transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(connection_options.merge(
@@ -947,7 +942,13 @@ EOC
                           data
                         end
 
-        response = client(info.host).bulk body: prepared_data, index: info.index
+        headers = if compression
+                    {'Content-Encoding' => 'gzip'}
+                  else
+                    {}
+                  end
+
+        response = client(info.host).bulk body: prepared_data, headers: headers, index: info.index
         log.on_trace { log.trace "bulk response: #{response}" }
 
         if response['errors']
