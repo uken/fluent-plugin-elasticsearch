@@ -885,7 +885,7 @@ If they are *not* specified in the Elasticsearch plugin configuration, `ssl_max_
 
 In Elasticsearch plugin v4.0.8 or later with Ruby 2.5 or later environment, `ssl_max_version` should be `TLSv1_3` and `ssl_min_version` should be `TLSv1_2`.
 
-From Elasticsearch plugin v4.0.4 to v4.0.7 with RUby 2.5 or later environment, the value of `ssl_version` will be *used in `ssl_max_version` and `ssl_min_version`*.
+From Elasticsearch plugin v4.0.4 to v4.0.7 with Ruby 2.5 or later environment, the value of `ssl_version` will be *used in `ssl_max_version` and `ssl_min_version`*.
 
 
 ### Proxy Support
