@@ -10,7 +10,7 @@ module Fluent::Plugin
                                [:SSLv23, :TLSv1, :TLSv1_1, :TLSv1_2].freeze
                              end
 
-    DEFAULT_VERSION = :TLSv1
+    DEFAULT_VERSION = :TLSv1_2
     METHODS_MAP = begin
                     # When openssl supports OpenSSL::SSL::TLSXXX constants representations, we use them.
                     map = {
@@ -48,8 +48,8 @@ module Fluent::Plugin
       if USE_TLS_MINMAX_VERSION
         case
         when ssl_min_version.nil? && ssl_max_version.nil?
-          ssl_min_version = METHODS_MAP[ssl_version]
-          ssl_max_version = METHODS_MAP[ssl_version]
+          ssl_min_version = METHODS_MAP[:TLSv1_2]
+          ssl_max_version = METHODS_MAP[:TLSv1_3]
         when ssl_min_version && ssl_max_version.nil?
           raise Fluent::ConfigError, "When you set 'ssl_min_version', must set 'ssl_max_version' together."
         when ssl_min_version.nil? && ssl_max_version
