@@ -284,7 +284,16 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     }
     instance = driver(config).instance
 
-    assert_equal "gzip", instance.client.transport.options[:transport_options][:headers]["Content-Encoding"]
+    assert_equal nil, instance.client.transport.options[:transport_options][:headers]["Content-Encoding"]
+
+    stub_request(:post, "http://localhost:9200/_bulk").
+      to_return(status: 200, body: "", headers: {})
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+    compressable = instance.compressable_connection
+
+    assert_equal "gzip", instance.client(nil, compressable).transport.options[:transport_options][:headers]["Content-Encoding"]
   end
 
   test 'check compression option is passed to transport' do
@@ -295,7 +304,16 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     }
     instance = driver(config).instance
 
-    assert_equal true, instance.client.transport.options[:compression]
+    assert_equal false, instance.client.transport.options[:compression]
+
+    stub_request(:post, "http://localhost:9200/_bulk").
+      to_return(status: 200, body: "", headers: {})
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+    compressable = instance.compressable_connection
+
+    assert_equal true, instance.client(nil, compressable).transport.options[:compression]
   end
 
   test 'configure Content-Type' do

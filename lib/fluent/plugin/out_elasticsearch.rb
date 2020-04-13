@@ -55,6 +55,7 @@ module Fluent::Plugin
     attr_reader :alias_indexes
     attr_reader :template_names
     attr_reader :ssl_version_options
+    attr_reader :compressable_connection
 
     helpers :event_emitter, :compat_parameters, :record_accessor, :timer
 
@@ -343,6 +344,7 @@ EOC
       @routing_key_name = configure_routing_key_name
       @meta_config_map = create_meta_config_map
       @current_config = nil
+      @compressable_connection = false
 
       @ignore_exception_classes = @ignore_exceptions.map do |exception|
         unless Object.const_defined?(exception)
@@ -511,13 +513,15 @@ EOC
       return Time.at(event_time).to_datetime
     end
 
-    def client(host = nil)
+    def client(host = nil, compress_connection = false)
       # check here to see if we already have a client connection for the given host
       connection_options = get_connection_options(host)
 
       @_es = nil unless is_existing_connection(connection_options[:hosts])
+      @_es = nil unless @compressable_connection == compress_connection
 
       @_es ||= begin
+        @compressable_connection = compress_connection
         @current_config = connection_options[:hosts].clone
         adapter_conf = lambda {|f| f.adapter @http_backend, @backend_options }
         local_reload_connections = @reload_connections
@@ -525,7 +529,7 @@ EOC
           local_reload_connections = @reload_after
         end
 
-        gzip_headers = if compression
+        gzip_headers = if compress_connection
                          {'Content-Encoding' => 'gzip'}
                        else
                          {}
@@ -551,7 +555,7 @@ EOC
                                                                               },
                                                                               sniffer_class: @sniffer_class,
                                                                               serializer_class: @serializer_class,
-                                                                              compression: compression,
+                                                                              compression: compress_connection,
                                                                             }), &adapter_conf)
         Elasticsearch::Client.new transport: transport
       end
@@ -947,7 +951,7 @@ EOC
                           data
                         end
 
-        response = client(info.host).bulk body: prepared_data, index: info.index
+        response = client(info.host, compression).bulk body: prepared_data, index: info.index
         log.on_trace { log.trace "bulk response: #{response}" }
 
         if response['errors']
