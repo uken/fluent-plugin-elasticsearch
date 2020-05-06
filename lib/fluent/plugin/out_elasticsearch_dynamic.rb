@@ -35,16 +35,18 @@ module Fluent::Plugin
     end
 
 
-    def client(host = nil)
+    def client(host = nil, compress_connection = false)
       # check here to see if we already have a client connection for the given host
       connection_options = get_connection_options(host)
 
       @_es = nil unless is_existing_connection(connection_options[:hosts])
+      @_es = nil unless @compressable_connection == compress_connection
 
       @_es ||= begin
+        @compressable_connection = compress_connection
         @current_config = connection_options[:hosts].clone
         adapter_conf = lambda {|f| f.adapter @http_backend, @backend_options }
-        gzip_headers = if compression
+        gzip_headers = if compress_connection
                          {'Content-Encoding' => 'gzip'}
                        else
                          {}
@@ -67,7 +69,7 @@ module Fluent::Plugin
                                                                                 password: @password,
                                                                                 scheme: @scheme
                                                                               },
-                                                                              compression: compression,
+                                                                              compression: compress_connection,
                                                                             }), &adapter_conf)
         Elasticsearch::Client.new transport: transport
       end
@@ -228,7 +230,7 @@ module Fluent::Plugin
                         else
                           data
                         end
-        response = client(host).bulk body: prepared_data, index: index
+        response = client(host, compression).bulk body: prepared_data, index: index
         if response['errors']
           log.error "Could not push log to Elasticsearch: #{response}"
         end
