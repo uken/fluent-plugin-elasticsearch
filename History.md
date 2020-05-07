@@ -2,6 +2,11 @@
 
 ### [Unreleased]
 
+### 4.0.8
+- Handle compressable connection usable state (#743)
+- Use newer tls protocol versions (#739)
+- Add GitHub Actions file (#740)
+
 ### 4.0.7
 - Added http_backend_excon_nonblock config in out_elasticsearch (#733)
 
