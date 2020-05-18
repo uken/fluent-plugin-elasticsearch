@@ -93,6 +93,7 @@ Current maintainers: @cosmo0920
   + [enable_ilm](#enable_ilm)
   + [ilm_policy_id](#ilm_policy_id)
   + [ilm_policy](#ilm_policy)
+  + [ilm_policies](#ilm_policies)
   + [ilm_policy_overwrite](#ilm_policy_overwrite)
   + [truncate_caches_interval](#truncate_caches_interval)
 * [Configuration - Elasticsearch Input](#configuration---elasticsearch-input)
@@ -1208,6 +1209,14 @@ Default value is `logstash-policy`.
 ## ilm_policy
 
 Specify ILM policy contents as Hash.
+
+Default value is `{}`.
+
+**NOTE:** This parameter requests to install elasticsearch-xpack gem.
+
+## ilm_policies
+
+A hash in the format `{"ilm_policy_id1":{ <ILM policy 1 hash> }, "ilm_policy_id2": { <ILM policy 2 hash> }}`.
 
 Default value is `{}`.
 
