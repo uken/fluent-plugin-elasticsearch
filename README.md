@@ -96,6 +96,7 @@ Current maintainers: @cosmo0920
   + [ilm_policy_overwrite](#ilm_policy_overwrite)
   + [truncate_caches_interval](#truncate_caches_interval)
 * [Configuration - Elasticsearch Input](#configuration---elasticsearch-input)
+* [Elasticsearch permissions](#elasticsearch-permissions)
 * [Troubleshooting](#troubleshooting)
   + [Cannot send events to elasticsearch](#cannot-send-events-to-elasticsearch)
   + [Cannot see detailed failure log](#cannot-see-detailed-failure-log)
@@ -1232,6 +1233,32 @@ Default value is `nil`.
 ## Configuration - Elasticsearch Input
 
 See [Elasticsearch Input plugin document](README.ElasticsearchInput.md)
+
+## Elasticsearch permissions
+
+If the target Elasticsearch requires authentication, a user holding the necessary permissions needs to be provided.
+
+The set of required permissions are the following:
+
+```json
+  "cluster": ["manage_index_templates", "monitor", "manage_ilm"],
+  "indices": [
+    {
+      "names": [ "*" ],
+      "privileges": ["write","create","delete","create_index","manage","manage_ilm"]
+    }
+  ]
+```
+
+These permissions can be narrowed down by:
+
+- Setting a more specific pattern for indices under the `names` field
+- Removing the `manage_index_templates` cluster permission when not using the feature within your plugin configuration
+- Removing the `manage_ilm` cluster permission and the `manage` and `manage_ilm` indices privileges when not using ilm
+features in the plugin configuration
+
+The list of privileges along with their description can be found in
+[security privileges](https://www.elastic.co/guide/en/elasticsearch/reference/current/security-privileges.html).
 
 ## Troubleshooting
 
