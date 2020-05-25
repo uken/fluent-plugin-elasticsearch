@@ -160,6 +160,7 @@ EOC
     config_param :enable_ilm, :bool, :default => false
     config_param :ilm_policy_id, :string, :default => DEFAULT_POLICY_ID
     config_param :ilm_policy, :hash, :default => {}
+    config_param :ilm_policies, :hash, :default => {}
     config_param :ilm_policy_overwrite, :bool, :default => false
     config_param :truncate_caches_interval, :time, :default => nil
 
@@ -220,6 +221,11 @@ EOC
         log.info "host placeholder and template installation makes your Elasticsearch cluster a bit slow down(beta)."
       end
 
+      raise Fluent::ConfigError, "You can't specify ilm_policy and ilm_policies at the same time" unless @ilm_policy.empty? or @ilm_policies.empty?
+
+      unless @ilm_policy.empty?
+        @ilm_policies = { @ilm_policy_id => @ilm_policy }
+      end
       @alias_indexes = []
       @template_names = []
       if !dry_run?
@@ -235,7 +241,7 @@ EOC
               alias_method :template_installation, :template_installation_actual
             end
           else
-            template_installation_actual(@deflector_alias ? @deflector_alias : @index_name, @template_name, @customize_template, @application_name, @index_name)
+            template_installation_actual(@deflector_alias ? @deflector_alias : @index_name, @template_name, @customize_template, @application_name, @index_name, @ilm_policy_id)
           end
           verify_ilm_working if @enable_ilm
         elsif @templates
@@ -719,7 +725,12 @@ EOC
       else
         pipeline = nil
       end
-      return logstash_prefix, logstash_dateformat, index_name, type_name, template_name, customize_template, deflector_alias, application_name, pipeline
+      if @ilm_policy_id
+        ilm_policy_id = extract_placeholders(@ilm_policy_id, chunk)
+      else
+        ilm_policy_id = nil
+      end
+      return logstash_prefix, logstash_dateformat, index_name, type_name, template_name, customize_template, deflector_alias, application_name, pipeline, ilm_policy_id
     end
 
     def multi_workers_ready?
@@ -793,7 +804,7 @@ EOC
     end
 
     def process_message(tag, meta, header, time, record, extracted_values)
-      logstash_prefix, logstash_dateformat, index_name, type_name, _template_name, _customize_template, _deflector_alias, _application_name, pipeline = extracted_values
+      logstash_prefix, logstash_dateformat, index_name, type_name, _template_name, _customize_template, _deflector_alias, _application_name, pipeline, _ilm_policy_id = extracted_values
 
       if @flatten_hashes
         record = flatten_record(record)
@@ -901,16 +912,17 @@ EOC
         placeholder?(:logstash_prefix, @logstash_prefix.to_s) ||
         placeholder?(:logstash_dateformat, @logstash_dateformat.to_s) ||
         placeholder?(:deflector_alias, @deflector_alias.to_s) ||
-        placeholder?(:application_name, @application_name.to_s)
+        placeholder?(:application_name, @application_name.to_s) ||
+        placeholder?(:ilm_policy_id, @ilm_policy_id.to_s)
       log.debug("Need substitution: #{need_substitution}")
       need_substitution
     end
 
-    def template_installation(deflector_alias, template_name, customize_template, application_name, target_index, host)
+    def template_installation(deflector_alias, template_name, customize_template, application_name, ilm_policy_id, target_index, host)
       # for safety.
     end
 
-    def template_installation_actual(deflector_alias, template_name, customize_template, application_name, target_index, host=nil)
+    def template_installation_actual(deflector_alias, template_name, customize_template, application_name, target_index, ilm_policy_id, host=nil)
       if template_name && @template_file
         if @alias_indexes.include? deflector_alias
           log.debug("Index alias #{deflector_alias} already exists (cached)")
@@ -919,11 +931,12 @@ EOC
         else
           retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
             if customize_template
-              template_custom_install(template_name, @template_file, @template_overwrite, customize_template, @enable_ilm, deflector_alias, @ilm_policy_id, host)
+              template_custom_install(template_name, @template_file, @template_overwrite, customize_template, @enable_ilm, deflector_alias, ilm_policy_id, host)
             else
-              template_install(template_name, @template_file, @template_overwrite, @enable_ilm, deflector_alias, @ilm_policy_id, host)
+              template_install(template_name, @template_file, @template_overwrite, @enable_ilm, deflector_alias, ilm_policy_id, host)
             end
-            create_rollover_alias(target_index, @rollover_index, deflector_alias, application_name, @index_date_pattern, @index_separator, @enable_ilm, @ilm_policy_id, @ilm_policy, @ilm_policy_overwrite, host)
+            ilm_policy = @ilm_policies[ilm_policy_id] || {}
+            create_rollover_alias(target_index, @rollover_index, deflector_alias, application_name, @index_date_pattern, @index_separator, @enable_ilm, ilm_policy_id, ilm_policy, @ilm_policy_overwrite, host)
           end
           @alias_indexes << deflector_alias unless deflector_alias.nil?
           @template_names << template_name unless template_name.nil?
@@ -934,11 +947,11 @@ EOC
     # send_bulk given a specific bulk request, the original tag,
     # chunk, and bulk_message_count
     def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, info)
-      logstash_prefix, _logstash_dateformat, index_name, _type_name, template_name, customize_template, deflector_alias, application_name, _pipeline = extracted_values
+      logstash_prefix, _logstash_dateformat, index_name, _type_name, template_name, customize_template, deflector_alias, application_name, _pipeline, ilm_policy_id = extracted_values
       if deflector_alias
-        template_installation(deflector_alias, template_name, customize_template, application_name, index_name, info.host)
+        template_installation(deflector_alias, template_name, customize_template, application_name, index_name, ilm_policy_id, info.host)
       else
-        template_installation(info.ilm_index, template_name, customize_template, application_name, @logstash_format ? logstash_prefix : index_name, info.host)
+        template_installation(info.ilm_index, template_name, customize_template, application_name, @logstash_format ? logstash_prefix : index_name, ilm_policy_id, info.host)
       end
 
       begin
