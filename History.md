@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 4.0.9
+- Add possibility to configure multiple ILM policies (#753)
+- Document required permissions (#757)
+
 ### 4.0.8
 - Handle compressable connection usable state (#743)
 - Use newer tls protocol versions (#739)
