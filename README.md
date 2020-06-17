@@ -987,7 +987,7 @@ If you use Fluentd directly, you must pass the following lines as Fluentd comman
 
 ```
 sniffer=$(td-agent-gem contents fluent-plugin-elasticsearch|grep elasticsearch_simple_sniffer.rb)
-$ fluentd -r $sniffer" [AND YOUR OTHER OPTIONS]
+$ fluentd -r $sniffer [AND YOUR OTHER OPTIONS]
 ```
 
 ### Reload After
