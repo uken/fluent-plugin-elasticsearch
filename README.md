@@ -33,6 +33,7 @@ Current maintainers: @cosmo0920
   + [time_key_exclude_timestamp](#time_key_exclude_timestamp)
   + [include_timestamp](#include_timestamp)
   + [utc_index](#utc_index)
+  + [suppress_type_name](#suppress_type_name)
   + [target_index_key](#target_index_key)
   + [target_type_key](#target_type_key)
   + [template_name](#template_name)
@@ -352,6 +353,20 @@ utc_index true
 ```
 
 By default, the records inserted into index `logstash-YYMMDD` with UTC (Coordinated Universal Time). This option allows to use local time if you describe utc_index to false.
+
+### suppress_type_name
+
+In Elasticsearch 7.x, Elasticsearch cluster complains the following types removal warnings:
+
+```json
+{"type": "deprecation", "timestamp": "2020-07-03T08:02:20,830Z", "level": "WARN", "component": "o.e.d.a.b.BulkRequestParser", "cluster.name": "docker-cluster", "node.name": "70dd5c6b94c3", "message": "[types removal] Specifying types in bulk requests is deprecated.", "cluster.uuid": "NoJJmtzfTtSzSMv0peG8Wg", "node.id": "VQ-PteHmTVam2Pnbg7xWHw"  }
+```
+
+This can be suppressed with:
+
+```
+suppress_type_name true
+```
 
 ### target_index_key
 
