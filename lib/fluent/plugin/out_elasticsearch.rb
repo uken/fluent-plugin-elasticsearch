@@ -90,6 +90,7 @@ EOC
     config_param :logstash_dateformat, :string, :default => "%Y.%m.%d"
     config_param :utc_index, :bool, :default => true
     config_param :type_name, :string, :default => DEFAULT_TYPE_NAME
+    config_param :suppress_type_name, :bool, :default => false
     config_param :index_name, :string, :default => "fluentd"
     config_param :id_key, :string, :default => nil
     config_param :write_operation, :string, :default => "index"
@@ -304,16 +305,20 @@ EOC
                                  else
                                    @default_elasticsearch_version
                                  end
-      if @last_seen_major_version == 6 && @type_name != DEFAULT_TYPE_NAME_ES_7x
-        log.info "Detected ES 6.x: ES 7.x will only accept `_doc` in type_name."
-      end
-      if @last_seen_major_version == 7 && @type_name != DEFAULT_TYPE_NAME_ES_7x
-        log.warn "Detected ES 7.x: `_doc` will be used as the document `_type`."
-        @type_name = '_doc'.freeze
-      end
-      if @last_seen_major_version >= 8 && @type_name != DEFAULT_TYPE_NAME_ES_7x
-        log.info "Detected ES 8.x or above: This parameter has no effect."
+      if @suppress_type_name && @last_seen_major_version >= 7
         @type_name = nil
+      else
+        if @last_seen_major_version == 6 && @type_name != DEFAULT_TYPE_NAME_ES_7x
+          log.info "Detected ES 6.x: ES 7.x will only accept `_doc` in type_name."
+        end
+        if @last_seen_major_version == 7 && @type_name != DEFAULT_TYPE_NAME_ES_7x
+          log.warn "Detected ES 7.x: `_doc` will be used as the document `_type`."
+          @type_name = '_doc'.freeze
+        end
+        if @last_seen_major_version >= 8 && @type_name != DEFAULT_TYPE_NAME_ES_7x
+          log.info "Detected ES 8.x or above: This parameter has no effect."
+          @type_name = nil
+        end
       end
 
       if @validate_client_version && !dry_run?
@@ -856,7 +861,9 @@ EOC
           target_type = nil
         end
       else
-        if @last_seen_major_version == 7 && @type_name != DEFAULT_TYPE_NAME_ES_7x
+        if @suppress_type_name && @last_seen_major_version >= 7
+          target_type = nil
+        elsif @last_seen_major_version == 7 && @type_name != DEFAULT_TYPE_NAME_ES_7x
           log.warn "Detected ES 7.x: `_doc` will be used as the document `_type`."
           target_type = '_doc'.freeze
         elsif @last_seen_major_version >= 8

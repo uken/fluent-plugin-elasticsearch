@@ -3147,6 +3147,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
 
   data("border"        => {"es_version" => 6, "_type" => "mytype"},
        "fixed_behavior"=> {"es_version" => 7, "_type" => "_doc"},
+       "to be nil"     => {"es_version" => 8, "_type" => nil},
       )
   def test_writes_to_speficied_type(data)
     driver('', data["es_version"]).configure("type_name mytype\n")
@@ -3159,9 +3160,24 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
 
   data("border"        => {"es_version" => 6, "_type" => "mytype.test"},
        "fixed_behavior"=> {"es_version" => 7, "_type" => "_doc"},
+       "to be nil"     => {"es_version" => 8, "_type" => nil},
       )
   def test_writes_to_speficied_type_with_placeholders(data)
     driver('', data["es_version"]).configure("type_name mytype.${tag}\n")
+    stub_elastic
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+    assert_equal(data['_type'], index_cmds.first['index']['_type'])
+  end
+
+  data("border"        => {"es_version" => 6, "_type" => "mytype.test"},
+       "fixed_behavior"=> {"es_version" => 7, "_type" => nil},
+       "to be nil"     => {"es_version" => 8, "_type" => nil},
+      )
+  def test_writes_to_speficied_type_with_suppress_type_name(data)
+    driver('', data["es_version"])
+      .configure("type_name mytype.${tag}\nsuppress_type_name true")
     stub_elastic
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
