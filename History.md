@@ -2,6 +2,15 @@
 
 ### [Unreleased]
 
+### 4.0.10
+- filter_elasticsearch_genid: Use entire record as hash seed (#777)
+- Suppress type in meta with suppress_type_name parameter (#774)
+- filter\_elasticsearch\_genid: Add hash generation mechanism from events (#773)
+- Clean up error text (#772)
+- Use GitHub Actions badges instead of Travis' (#760)
+- Add issue auto closer workflow (#759)
+- Document required permissions (#757)
+
 ### 4.0.9
 - Add possibility to configure multiple ILM policies (#753)
 - Document required permissions (#757)
