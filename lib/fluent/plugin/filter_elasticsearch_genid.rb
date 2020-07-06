@@ -24,20 +24,34 @@ module Fluent::Plugin
       if @record_keys.empty? && @use_record_as_seed
         raise Fluent::ConfigError, "When using record as hash seed, users must specify `record_keys`."
       end
+
+      if @use_record_as_seed
+        class << self
+          alias_method :filter, :filter_seed_as_record
+        end
+      else
+        class << self
+          alias_method :filter, :filter_simple
+        end
+      end
     end
 
     def filter(tag, time, record)
-      if @use_record_as_seed
-        seed = ""
-        seed += tag + separator if @include_tag_in_seed
-        seed += time.to_s + separator if @include_time_in_seed
-        seed += record_keys.map {|k| record[k]}.join(separator)
-        record[@hash_id_key] = Base64.strict_encode64(encode_hash(@hash_type, seed))
-        record
-      else
-        record[@hash_id_key] = Base64.strict_encode64(SecureRandom.uuid)
-        record
-      end
+      # for safety.
+    end
+
+    def filter_simple(tag, time, record)
+      record[@hash_id_key] = Base64.strict_encode64(SecureRandom.uuid)
+      record
+    end
+
+    def filter_seed_as_record(tag, time, record)
+      seed = ""
+      seed += tag + separator if @include_tag_in_seed
+      seed += time.to_s + separator if @include_time_in_seed
+      seed += record_keys.map {|k| record[k]}.join(separator)
+      record[@hash_id_key] = Base64.strict_encode64(encode_hash(@hash_type, seed))
+      record
     end
 
     def encode_hash(type, seed)
