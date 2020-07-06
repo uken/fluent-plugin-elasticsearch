@@ -100,6 +100,7 @@ Current maintainers: @cosmo0920
   + [ilm_policy_overwrite](#ilm_policy_overwrite)
   + [truncate_caches_interval](#truncate_caches_interval)
 * [Configuration - Elasticsearch Input](#configuration---elasticsearch-input)
+* [Configuration - Elasticsearch Filter GenID](#configuration---elasticsearch-filter-genid)
 * [Elasticsearch permissions](#elasticsearch-permissions)
 * [Troubleshooting](#troubleshooting)
   + [Cannot send events to elasticsearch](#cannot-send-events-to-elasticsearch)
@@ -1259,6 +1260,10 @@ Default value is `nil`.
 ## Configuration - Elasticsearch Input
 
 See [Elasticsearch Input plugin document](README.ElasticsearchInput.md)
+
+## Configuration - Elasticsearch Filter GenID
+
+See [Elasticsearch Filter GenID document](README.ElasticsearchGenID.md)
 
 ## Elasticsearch permissions
 
