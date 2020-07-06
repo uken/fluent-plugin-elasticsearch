@@ -130,4 +130,86 @@ class ElasticsearchGenidFilterTest < Test::Unit::TestCase
                    d.filtered.map {|e| e.last}.first[d.instance.hash_id_key])
     end
   end
+
+  class UseEntireRecordAsSeedTest < self
+    data("md5" => ["md5", "MuMU0gHOP1cWvvg/J4aEFg=="],
+         "sha1" => ["sha1", "GZ6Iup9Ywyk5spCWtPQbtZnfK0U="],
+         "sha256" => ["sha256", "O4YN0RiXCUAYeaR97UUULRLxgra/R2dvTV47viir5l4="],
+         "sha512" => ["sha512", "FtbwO1xsLUq0KcO0mj0l80rbwFH5rGE3vL+Vgh90+4R/9j+/Ni/ipwhiOoUcetDxj1r5Vf/92B54La+QTu3eMA=="],)
+    def test_record
+      hash_type, expected = data
+      d = create_driver(%[
+        use_record_as_seed true
+        use_entire_record true
+        hash_type #{hash_type}
+      ])
+      time = event_time("2017-10-15 15:00:23.34567890 UTC")
+      d.run(default_tag: 'test.fluentd') do
+        d.feed(time, sample_record.merge("custom_key" => "This is also encoded value."))
+      end
+      assert_equal(expected,
+                   d.filtered.map {|e| e.last}.first[d.instance.hash_id_key])
+    end
+
+    data("md5" => ["md5", "GJfpWe8ofiGzn97bc9Gh0Q=="],
+         "sha1" => ["sha1", "AVaK67Tz0bEJ8xNEzjOQ6r9fAu4="],
+         "sha256" => ["sha256", "WIXWAuf/Z94Uw95mudloo2bgjhSsSduQIwkKTQsNFgU="],
+         "sha512" => ["sha512", "yjMGGxy8uc7gCrPgm8W6MzJGLFk0GtUwJ6w/91laf6WNywuvG/7T6kNHLagAV8rSW8xzxmtEfyValBO5scuoKw=="],)
+    def test_record_with_tag
+      hash_type, expected = data
+      d = create_driver(%[
+        use_record_as_seed true
+        use_entire_record true
+        hash_type #{hash_type}
+        include_tag_in_seed true
+      ])
+      time = event_time("2017-10-15 15:00:23.34567890 UTC")
+      d.run(default_tag: 'test.fluentd') do
+        d.feed(time, sample_record.merge("custom_key" => "This is also encoded value."))
+      end
+      assert_equal(expected,
+                   d.filtered.map {|e| e.last}.first[d.instance.hash_id_key])
+    end
+
+    data("md5" => ["md5", "5nQSaJ4F1p9rDFign13Lfg=="],
+         "sha1" => ["sha1", "hyo9+0ZFBpizKl2NShs3C8yQcGw="],
+         "sha256" => ["sha256", "romVsZSIksbqYsOSnUzolZQw76ankcy0DgvDZ3CayTo="],
+         "sha512" => ["sha512", "RPU7K2Pt0iVyvV7p5usqcUIIOmfTajD1aa7pkR9qZ89UARH/lpm6ESY9iwuYJj92lxOUuF5OxlEwvV7uXJ07iA=="],)
+    def test_record_with_time
+      hash_type, expected = data
+      d = create_driver(%[
+        use_record_as_seed true
+        use_entire_record true
+        hash_type #{hash_type}
+        include_time_in_seed true
+      ])
+      time = event_time("2017-10-15 15:00:23.34567890 UTC")
+      d.run(default_tag: 'test.fluentd') do
+        d.feed(time, sample_record.merge("custom_key" => "This is also encoded value."))
+      end
+      assert_equal(expected,
+                   d.filtered.map {|e| e.last}.first[d.instance.hash_id_key])
+    end
+
+    data("md5" => ["md5", "zGQF35KlMUibJAcgkgQDtw=="],
+         "sha1" => ["sha1", "1x9RZO1xEuWps090qq4DUIsU9x8="],
+         "sha256" => ["sha256", "eulMz0eF56lBEf31aIs0OG2TGCH/aoPfZbRqfEOkAwk="],
+         "sha512" => ["sha512", "mIiYATtpdUFEFCIZg1FdKssIs7oWY0gJjhSSbet0ddUmqB+CiQAcAMTmrXO6AVSH0vsMvao/8vtC8AsIPfF1fA=="],)
+    def test_record_with_tag_and_time
+      hash_type, expected = data
+      d = create_driver(%[
+        use_record_as_seed true
+        use_entire_record true
+        hash_type #{hash_type}
+        include_tag_in_seed true
+        include_time_in_seed true
+      ])
+      time = event_time("2017-10-15 15:00:23.34567890 UTC")
+      d.run(default_tag: 'test.fluentd') do
+        d.feed(time, sample_record.merge("custom_key" => "This is also encoded value."))
+      end
+      assert_equal(expected,
+                   d.filtered.map {|e| e.last}.first[d.instance.hash_id_key])
+    end
+  end
 end
