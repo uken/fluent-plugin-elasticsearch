@@ -1937,11 +1937,11 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       to_return(:status => 200, :body => "", :headers => {})
     # check if alias exists
     timestr = Time.now.strftime("%Y.%m.%d")
-    stub_request(:head, "https://logs.google.com:777/es//_alias/mylogs-#{timestr}").
+    stub_request(:head, "https://logs.google.com:777/es//_alias/mylogs-myapp-#{timestr}").
       with(basic_auth: ['john', 'doe']).
       to_return(:status => 404, :body => "", :headers => {})
     # put the alias for the index
-    stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/mylogs-#{timestr}").
+    stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/mylogs-myapp-#{timestr}").
       with(basic_auth: ['john', 'doe']).
       to_return(:status => 200, :body => "", :headers => {})
 
