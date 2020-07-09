@@ -78,6 +78,7 @@ Current maintainers: @cosmo0920
   + [Hash flattening](#hash-flattening)
   + [Generate Hash ID](#generate-hash-id)
   + [sniffer_class_name](#sniffer-class-name)
+  + [selector_class_name](#selector-class-name)
   + [reload_after](#reload-after)
   + [validate_client_version](#validate-client-version)
   + [unrecoverable_error_types](#unrecoverable-error-types)
@@ -985,6 +986,18 @@ port 9200
 reload_connections true
 sniffer_class_name Fluent::Plugin::ElasticsearchSimpleSniffer
 reload_after 100
+```
+
+### Selector Class Name
+
+The default selector used by the `Elasticsearch::Transport` class works well when Fluentd should round robin and random selector cases. This doesn't work well when Fluentd should fallback behavior.
+The parameter `selector_class_name` gives you the ability to provide your own Selector class to implement whatever selection nodes logic you require.
+
+The below configuration is using plugin built-in `ElasticseatchFallbackSelector`:
+
+```
+hosts exhausted-host:9201,normal-host:9200
+selector_class_name "Fluent::Plugin::ElasticseatchFallbackSelector"
 ```
 
 #### Tips
