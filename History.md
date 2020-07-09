@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 4.0.11
+- Add custom and time placeholders combination testcase for ILM (#781)
+- Really support ILM on `logstash_format` enabled environment (#779)
+
 ### 4.0.10
 - filter_elasticsearch_genid: Use entire record as hash seed (#777)
 - Suppress type in meta with suppress_type_name parameter (#774)
