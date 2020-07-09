@@ -761,9 +761,9 @@ EOC
         begin
           meta, header, record = process_message(tag, meta, header, time, record, extracted_values)
           info = if @include_index_in_url
-                   RequestInfo.new(host, meta.delete("_index".freeze), meta["_index".freeze])
+                   RequestInfo.new(host, meta.delete("_index".freeze), meta.delete("_alias".freeze))
                  else
-                   RequestInfo.new(host, nil, meta["_index".freeze])
+                   RequestInfo.new(host, nil, meta.delete("_alias".freeze))
                  end
 
           if split_request?(bulk_message, info)
@@ -809,7 +809,7 @@ EOC
     end
 
     def process_message(tag, meta, header, time, record, extracted_values)
-      logstash_prefix, logstash_dateformat, index_name, type_name, _template_name, _customize_template, _deflector_alias, _application_name, pipeline, _ilm_policy_id = extracted_values
+      logstash_prefix, logstash_dateformat, index_name, type_name, _template_name, _customize_template, _deflector_alias, application_name, pipeline, _ilm_policy_id = extracted_values
 
       if @flatten_hashes
         record = flatten_record(record)
@@ -832,17 +832,19 @@ EOC
 
       target_index_parent, target_index_child_key = @target_index_key ? get_parent_of(record, @target_index_key) : nil
       if target_index_parent && target_index_parent[target_index_child_key]
-        target_index = target_index_parent.delete(target_index_child_key)
+        target_index_alias = target_index = target_index_parent.delete(target_index_child_key)
       elsif @logstash_format
         dt = dt.new_offset(0) if @utc_index
         target_index = "#{logstash_prefix}#{@logstash_prefix_separator}#{dt.strftime(logstash_dateformat)}"
+        target_index_alias = "#{logstash_prefix}#{@logstash_prefix_separator}#{application_name}#{@logstash_prefix_separator}#{dt.strftime(logstash_dateformat)}"
       else
-        target_index = index_name
+        target_index_alias = target_index = index_name
       end
 
       # Change target_index to lower-case since Elasticsearch doesn't
       # allow upper-case characters in index names.
       target_index = target_index.downcase
+      target_index_alias = target_index_alias.downcase
       if @include_tag_key
         record[@tag_key] = tag
       end
@@ -877,6 +879,7 @@ EOC
       meta.clear
       meta["_index".freeze] = target_index
       meta["_type".freeze] = target_type unless @last_seen_major_version >= 8
+      meta["_alias".freeze] = target_index_alias
 
       if @pipeline
         meta["pipeline".freeze] = pipeline
