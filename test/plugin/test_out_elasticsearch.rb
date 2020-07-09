@@ -1681,6 +1681,83 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
 
       assert_requested(elastic_request)
     end
+
+    def test_template_create_with_rollover_index_and_default_ilm_and_custom_and_time_placeholders
+      cwd = File.dirname(__FILE__)
+      template_file = File.join(cwd, 'test_template.json')
+
+      config = Fluent::Config::Element.new(
+        'ROOT', '', {
+          '@type' => 'elasticsearch',
+          'host' => 'logs.google.com',
+          'port' => 777,
+          'scheme' => "https",
+          'path' => "/es/",
+          'user' => 'john',
+          'password' => 'doe',
+          'template_name' => 'logstash',
+          'template_file' => "#{template_file}",
+          'index_date_pattern' => 'now/w{xxxx.ww}',
+          'index_name' => "${taskDef}-%Y.%m",
+          'enable_ilm' => true,
+        }, [
+          Fluent::Config::Element.new('buffer', 'tag, time, taskDef', {
+                                        'chunk_keys' => ['tag', 'time', 'taskDef'],
+                                        'timekey' => 3600,
+                                      }, [])
+        ]
+      )
+
+      task_def_value = "task_definition"
+      date_str = Time.now.strftime("%Y.%m")
+      # connection start
+      stub_request(:head, "https://logs.google.com:777/es//").
+        with(basic_auth: ['john', 'doe']).
+        to_return(:status => 200, :body => "", :headers => {})
+      # check if template exists
+      stub_request(:get, "https://logs.google.com:777/es//_template/#{task_def_value}-#{date_str}").
+        with(basic_auth: ['john', 'doe']).
+        to_return(:status => 404, :body => "", :headers => {})
+      # creation
+      stub_request(:put, "https://logs.google.com:777/es//_template/#{task_def_value}-#{date_str}").
+        with(basic_auth: ['john', 'doe'],
+             body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"#{task_def_value}-#{date_str}\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"#{task_def_value}-#{date_str}-*\",\"order\":52}").
+        to_return(:status => 200, :body => "", :headers => {})
+      # check if alias exists
+      stub_request(:head, "https://logs.google.com:777/es//_alias/#{task_def_value}-#{date_str}").
+        with(basic_auth: ['john', 'doe']).
+        to_return(:status => 404, :body => "", :headers => {})
+      # put the alias for the index
+      stub_request(:put, "https://logs.google.com:777/es//%3C#{task_def_value}-#{date_str}-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
+        with(basic_auth: ['john', 'doe']).
+        to_return(:status => 200, :body => "", :headers => {})
+      stub_request(:put, "https://logs.google.com:777/es//%3C#{task_def_value}-#{date_str}-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/#{task_def_value}-#{date_str}").
+        with(basic_auth: ['john', 'doe'],
+             :body => "{\"aliases\":{\"#{task_def_value}-#{date_str}\":{\"is_write_index\":true}}}").
+        to_return(:status => 200, :body => "", :headers => {})
+      stub_request(:get, "https://logs.google.com:777/es//_xpack").
+        with(basic_auth: ['john', 'doe']).
+        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
+      stub_request(:get, "https://logs.google.com:777/es//_ilm/policy/logstash-policy").
+        with(basic_auth: ['john', 'doe']).
+        to_return(:status => 404, :body => "", :headers => {})
+      stub_request(:put, "https://logs.google.com:777/es//_ilm/policy/logstash-policy").
+        with(basic_auth: ['john', 'doe'],
+             :body => "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}").
+        to_return(:status => 200, :body => "", :headers => {})
+
+      driver(config)
+
+      elastic_request = stub_elastic("https://logs.google.com:777/es//_bulk")
+      driver.run(default_tag: 'test') do
+        driver.feed(sample_record.merge("taskDef" => task_def_value))
+      end
+      assert_equal("#{task_def_value}-#{date_str}", index_cmds.first['index']['_index'])
+
+      assert_equal ["#{task_def_value}-#{date_str}"], driver.instance.alias_indexes
+
+      assert_requested(elastic_request)
+    end
   end
 
   def test_custom_template_create
