@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 4.1.0
+- Implement Fallback selector and configurable selector class (#782)
+
 ### 4.0.11
 - Add custom and time placeholders combination testcase for ILM (#781)
 - Really support ILM on `logstash_format` enabled environment (#779)
