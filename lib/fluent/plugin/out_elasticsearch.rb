@@ -25,6 +25,7 @@ require_relative 'elasticsearch_error_handler'
 require_relative 'elasticsearch_index_template'
 require_relative 'elasticsearch_index_lifecycle_management'
 require_relative 'elasticsearch_tls'
+require_relative 'elasticsearch_fallback_selector'
 begin
   require_relative 'oj_serializer'
 rescue LoadError
@@ -137,6 +138,7 @@ EOC
     config_param :with_transporter_log, :bool, :default => false
     config_param :emit_error_for_missing_id, :bool, :default => false
     config_param :sniffer_class_name, :string, :default => nil
+    config_param :selector_class_name, :string, :default => nil
     config_param :reload_after, :integer, :default => DEFAULT_RELOAD_AFTER
     config_param :content_type, :enum, list: [:"application/json", :"application/x-ndjson"], :default => :"application/json",
                  :deprecated => <<EOC
@@ -298,6 +300,13 @@ EOC
         @sniffer_class = Object.const_get(@sniffer_class_name) if @sniffer_class_name
       rescue Exception => ex
         raise Fluent::ConfigError, "Could not load sniffer class #{@sniffer_class_name}: #{ex}"
+      end
+
+      @selector_class = nil
+      begin
+        @selector_class = Object.const_get(@selector_class_name) if @selector_class_name
+      rescue Exception => ex
+        raise Fluent::ConfigError, "Could not load selector class #{@selector_class_name}: #{ex}"
       end
 
       @last_seen_major_version = if major_version = handle_last_seen_es_major_version
@@ -566,6 +575,7 @@ EOC
                                                                               },
                                                                               sniffer_class: @sniffer_class,
                                                                               serializer_class: @serializer_class,
+                                                                              selector_class: @selector_class,
                                                                               compression: compress_connection,
                                                                             }), &adapter_conf)
         Elasticsearch::Client.new transport: transport
