@@ -1009,7 +1009,7 @@ $ fluentd -r $sniffer [AND YOUR OTHER OPTIONS]
 
 ### Selector Class Name
 
-The default selector used by the `Elasticsearch::Transport` class works well when Fluentd should round robin and random selector cases. This doesn't work well when Fluentd should fallback behavior.
+The default selector used by the `Elasticsearch::Transport` class works well when Fluentd should behave round robin and random selector cases. This doesn't work well when Fluentd should behave fallbacking from exhausted ES cluster to normal ES cluster.
 The parameter `selector_class_name` gives you the ability to provide your own Selector class to implement whatever selection nodes logic you require.
 
 The below configuration is using plugin built-in `ElasticseatchFallbackSelector`:
