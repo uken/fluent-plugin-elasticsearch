@@ -988,21 +988,9 @@ sniffer_class_name Fluent::Plugin::ElasticsearchSimpleSniffer
 reload_after 100
 ```
 
-### Selector Class Name
-
-The default selector used by the `Elasticsearch::Transport` class works well when Fluentd should round robin and random selector cases. This doesn't work well when Fluentd should fallback behavior.
-The parameter `selector_class_name` gives you the ability to provide your own Selector class to implement whatever selection nodes logic you require.
-
-The below configuration is using plugin built-in `ElasticseatchFallbackSelector`:
-
-```
-hosts exhausted-host:9201,normal-host:9200
-selector_class_name "Fluent::Plugin::ElasticseatchFallbackSelector"
-```
-
 #### Tips
 
-The included sniffer class does not required `out_elasticsearch`.
+The included sniffer class is not required `out_elasticsearch`.
 You should tell Fluentd where the sniffer class exists.
 
 If you use td-agent, you must put the following lines into `TD_AGENT_DEFAULT` file:
@@ -1017,6 +1005,38 @@ If you use Fluentd directly, you must pass the following lines as Fluentd comman
 ```
 sniffer=$(td-agent-gem contents fluent-plugin-elasticsearch|grep elasticsearch_simple_sniffer.rb)
 $ fluentd -r $sniffer [AND YOUR OTHER OPTIONS]
+```
+
+### Selector Class Name
+
+The default selector used by the `Elasticsearch::Transport` class works well when Fluentd should round robin and random selector cases. This doesn't work well when Fluentd should fallback behavior.
+The parameter `selector_class_name` gives you the ability to provide your own Selector class to implement whatever selection nodes logic you require.
+
+The below configuration is using plugin built-in `ElasticseatchFallbackSelector`:
+
+```
+hosts exhausted-host:9201,normal-host:9200
+selector_class_name "Fluent::Plugin::ElasticseatchFallbackSelector"
+```
+
+#### Tips
+
+The included selector class is required in `out_elasticsearch` by default.
+But, your custom selector class is not required in `out_elasticsearch`.
+You should tell Fluentd where the selector class exists.
+
+If you use td-agent, you must put the following lines into `TD_AGENT_DEFAULT` file:
+
+```
+selector=/path/to/your_awesome_selector.rb
+TD_AGENT_OPTIONS="--use-v1-config -r $selector"
+```
+
+If you use Fluentd directly, you must pass the following lines as Fluentd command line option:
+
+```
+selector=/path/to/your_awesome_selector.rb
+$ fluentd -r $selector [AND YOUR OTHER OPTIONS]
 ```
 
 ### Reload After
