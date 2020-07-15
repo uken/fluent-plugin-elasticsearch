@@ -51,7 +51,7 @@ module Fluent::Plugin
       end
     end
 
-    RequestInfo = Struct.new(:host, :index, :ilm_index)
+    RequestInfo = Struct.new(:host, :index, :ilm_index, :ilm_alias)
 
     attr_reader :alias_indexes
     attr_reader :template_names
@@ -771,9 +771,9 @@ EOC
         begin
           meta, header, record = process_message(tag, meta, header, time, record, extracted_values)
           info = if @include_index_in_url
-                   RequestInfo.new(host, meta.delete("_index".freeze), meta.delete("_alias".freeze))
+                   RequestInfo.new(host, meta.delete("_index".freeze), meta["_index".freeze], meta.delete("_alias".freeze))
                  else
-                   RequestInfo.new(host, nil, meta.delete("_alias".freeze))
+                   RequestInfo.new(host, nil, meta["_index".freeze], meta.delete("_alias".freeze))
                  end
 
           if split_request?(bulk_message, info)
@@ -847,6 +847,7 @@ EOC
         dt = dt.new_offset(0) if @utc_index
         target_index = "#{logstash_prefix}#{@logstash_prefix_separator}#{dt.strftime(logstash_dateformat)}"
         target_index_alias = "#{logstash_prefix}#{@logstash_prefix_separator}#{application_name}#{@logstash_prefix_separator}#{dt.strftime(logstash_dateformat)}"
+        target_index = target_index_alias if @ilm_enabled
       else
         target_index_alias = target_index = index_name
       end
@@ -951,9 +952,9 @@ EOC
         else
           retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
             if customize_template
-              template_custom_install(template_name, @template_file, @template_overwrite, customize_template, @enable_ilm, deflector_alias, ilm_policy_id, host)
+              template_custom_install(template_name, @template_file, @template_overwrite, customize_template, @enable_ilm, deflector_alias, ilm_policy_id, host, target_index)
             else
-              template_install(template_name, @template_file, @template_overwrite, @enable_ilm, deflector_alias, ilm_policy_id, host)
+              template_install(template_name, @template_file, @template_overwrite, @enable_ilm, deflector_alias, ilm_policy_id, host, target_index)
             end
             ilm_policy = @ilm_policies[ilm_policy_id] || {}
             create_rollover_alias(target_index, @rollover_index, deflector_alias, application_name, @index_date_pattern, @index_separator, @enable_ilm, ilm_policy_id, ilm_policy, @ilm_policy_overwrite, host)
@@ -967,11 +968,11 @@ EOC
     # send_bulk given a specific bulk request, the original tag,
     # chunk, and bulk_message_count
     def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, info)
-      logstash_prefix, _logstash_dateformat, index_name, _type_name, template_name, customize_template, deflector_alias, application_name, _pipeline, ilm_policy_id = extracted_values
+      _logstash_prefix, _logstash_dateformat, index_name, _type_name, template_name, customize_template, deflector_alias, application_name, _pipeline, ilm_policy_id = extracted_values
       if deflector_alias
         template_installation(deflector_alias, template_name, customize_template, application_name, index_name, ilm_policy_id, info.host)
       else
-        template_installation(info.ilm_index, template_name, customize_template, application_name, @logstash_format ? logstash_prefix : index_name, ilm_policy_id, info.host)
+        template_installation(info.ilm_index, template_name, customize_template, application_name, @logstash_format ? info.ilm_alias : index_name, ilm_policy_id, info.host)
       end
 
       begin
