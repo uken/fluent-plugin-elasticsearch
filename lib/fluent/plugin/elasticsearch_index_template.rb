@@ -69,7 +69,8 @@ module Fluent::ElasticsearchIndexTemplate
     inject_template_name = get_template_name(enable_ilm, name, deflector_alias_name)
     if overwrite
       template_put(inject_template_name,
-                   enable_ilm ? inject_ilm_settings_to_template(target_index,
+                   enable_ilm ? inject_ilm_settings_to_template(deflector_alias_name,
+                                                                target_index,
                                                                 ilm_policy_id,
                                                                 get_template(template_file)) :
                      get_template(template_file), host)
@@ -79,7 +80,8 @@ module Fluent::ElasticsearchIndexTemplate
     end
     if !template_exists?(inject_template_name, host)
       template_put(inject_template_name,
-                   enable_ilm ? inject_ilm_settings_to_template(target_index,
+                   enable_ilm ? inject_ilm_settings_to_template(deflector_alias_name,
+                                                                target_index,
                                                                 ilm_policy_id,
                                                                 get_template(template_file)) :
                      get_template(template_file), host)
@@ -92,7 +94,8 @@ module Fluent::ElasticsearchIndexTemplate
   def template_custom_install(template_name, template_file, overwrite, customize_template, enable_ilm, deflector_alias_name, ilm_policy_id, host, target_index)
     template_custom_name = get_template_name(enable_ilm, template_name, deflector_alias_name)
     custom_template = if enable_ilm
-                        inject_ilm_settings_to_template(target_index,
+                        inject_ilm_settings_to_template(deflector_alias_name,
+                                                        target_index,
                                                         ilm_policy_id,
                                                         get_custom_template(template_file,
                                                                             customize_template))
@@ -116,7 +119,7 @@ module Fluent::ElasticsearchIndexTemplate
     enable_ilm ? deflector_alias_name : template_name
   end
 
-  def inject_ilm_settings_to_template(target_index, ilm_policy_id, template)
+  def inject_ilm_settings_to_template(deflector_alias, target_index, ilm_policy_id, template)
     log.debug("Overwriting index patterns when Index Lifecycle Management is enabled.")
     template.delete('template') if template.include?('template')
     template['index_patterns'] = "#{target_index}-*"
@@ -124,7 +127,7 @@ module Fluent::ElasticsearchIndexTemplate
     if template['settings'] && (template['settings']['index.lifecycle.name'] || template['settings']['index.lifecycle.rollover_alias'])
       log.debug("Overwriting index lifecycle name and rollover alias when Index Lifecycle Management is enabled.")
     end
-    template['settings'].update({ 'index.lifecycle.name' => ilm_policy_id, 'index.lifecycle.rollover_alias' => target_index})
+    template['settings'].update({ 'index.lifecycle.name' => ilm_policy_id, 'index.lifecycle.rollover_alias' => deflector_alias})
     template
   end
 
