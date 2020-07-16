@@ -234,7 +234,7 @@ EOC
       if !dry_run?
         if @template_name && @template_file
           if @enable_ilm
-            raise Fluent::ConfigError, "deflector_alias is prohibited to use with 'logstash_format at same time." if @logstash_format and @deflector_alias
+            raise Fluent::ConfigError, "deflector_alias is prohibited to use with enable_ilm at same time." if @deflector_alias
           end
           if @ilm_policy.empty? && @ilm_policy_overwrite
             raise Fluent::ConfigError, "ilm_policy_overwrite requires a non empty ilm_policy."
