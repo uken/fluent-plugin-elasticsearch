@@ -847,7 +847,6 @@ EOC
         dt = dt.new_offset(0) if @utc_index
         target_index = "#{logstash_prefix}#{@logstash_prefix_separator}#{dt.strftime(logstash_dateformat)}"
         target_index_alias = "#{logstash_prefix}#{@logstash_prefix_separator}#{application_name}#{@logstash_prefix_separator}#{dt.strftime(logstash_dateformat)}"
-        target_index = target_index_alias if @ilm_enabled
       else
         target_index_alias = target_index = index_name
       end
