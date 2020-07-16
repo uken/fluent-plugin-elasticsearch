@@ -479,6 +479,8 @@ deflector_alias test-current
 
 If [rollover_index](#rollover_index) is set, then this parameter will be in effect otherwise ignored.
 
+**NOTE:** Since 4.1.1, `deflector_alias` is prohibited to use with `enable_ilm`.
+
 ### index_prefix
 
 This parameter is marked as obsoleted.
@@ -1753,7 +1755,7 @@ ILM target index alias is created with `index_name` or an index which is calcula
 
 From Elasticsearch plugin v4.0.0, ILM target index will be calculated from `index_name` (normal mode) or `logstash_prefix` (using with `logstash_format`as true).
 
-When using `deflector_alias` parameter, Elasticsearch plugin will create ILM target indices alias with `deflector_alias` instead of `index_name` or an index which is calculated from `logstash_prefix`. This behavior should be kept due to backward ILM feature compatibility.
+**NOTE:** Before Elasticsearch plugin v4.1.0, using `deflector_alias` parameter when ILM is enabled is permitted and handled, but, in the later releases such that 4.1.1 or later, it cannot use with when ILM is enabled.
 
 And also, ILM feature users should specify their Elasticsearch template for ILM enabled indices.
 Because ILM settings are injected into their Elasticsearch templates.
@@ -1766,7 +1768,13 @@ It usually should be used with default value which is `default`.
 
 Then, ILM parameters are used in alias index like as:
 
-`<index_name/logstash_prefix><index_separator><application_name>-000001`.
+##### Simple `index_name` case:
+
+`<index_name><index_separator><application_name>-000001`.
+
+##### `logstash_format` as `true` case:
+
+`<logstash_prefix><logstash_prefix_separator><application_name><logstash_prefix_separator><logstash_dateformat>-000001`.
 
 #### Example ILM settings
 
