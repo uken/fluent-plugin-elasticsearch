@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 4.1.1
+- Correct ILM explain on logstash_format case (#786)
+
 ### 4.1.0
 - Implement Fallback selector and configurable selector class (#782)
 
