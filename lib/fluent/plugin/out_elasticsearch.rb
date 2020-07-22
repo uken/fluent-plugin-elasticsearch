@@ -51,7 +51,7 @@ module Fluent::Plugin
       end
     end
 
-    RequestInfo = Struct.new(:host, :index, :ilm_index, :ilm_alias, :ilm_patterns)
+    RequestInfo = Struct.new(:host, :index, :ilm_index, :ilm_alias)
 
     attr_reader :alias_indexes
     attr_reader :template_names
@@ -771,9 +771,9 @@ EOC
         begin
           meta, header, record = process_message(tag, meta, header, time, record, extracted_values)
           info = if @include_index_in_url
-                   RequestInfo.new(host, meta.delete("_index".freeze), meta["_index".freeze], meta.delete("_alias".freeze), meta.delete("_index_patterns".freeze))
+                   RequestInfo.new(host, meta.delete("_index".freeze), meta["_index".freeze], meta.delete("_alias".freeze))
                  else
-                   RequestInfo.new(host, nil, meta["_index".freeze], meta.delete("_alias".freeze), meta.delete("_index_patterns".freeze))
+                   RequestInfo.new(host, nil, meta["_index".freeze], meta.delete("_alias".freeze))
                  end
 
           if split_request?(bulk_message, info)
@@ -842,21 +842,19 @@ EOC
 
       target_index_parent, target_index_child_key = @target_index_key ? get_parent_of(record, @target_index_key) : nil
       if target_index_parent && target_index_parent[target_index_child_key]
-        target_index_patterns = target_index_alias = target_index = target_index_parent.delete(target_index_child_key)
+        target_index_alias = target_index = target_index_parent.delete(target_index_child_key)
       elsif @logstash_format
         dt = dt.new_offset(0) if @utc_index
         target_index = "#{logstash_prefix}#{@logstash_prefix_separator}#{dt.strftime(logstash_dateformat)}"
-        target_index_alias = "#{logstash_prefix}#{@logstash_prefix_separator}#{application_name}#{@logstash_prefix_separator}{#{index_date_pattern}}"
-        target_index_patterns = "#{logstash_prefix}#{@logstash_prefix_separator}#{application_name}"
+        target_index_alias = "#{logstash_prefix}#{@logstash_prefix_separator}#{application_name}#{@logstash_prefix_separator}#{dt.strftime(logstash_dateformat)}"
       else
-        target_index_patterns = target_index_alias = target_index = index_name
+        target_index_alias = target_index = index_name
       end
 
       # Change target_index to lower-case since Elasticsearch doesn't
       # allow upper-case characters in index names.
       target_index = target_index.downcase
       target_index_alias = target_index_alias.downcase
-      target_index_patterns = target_index_patterns.downcase
       if @include_tag_key
         record[@tag_key] = tag
       end
@@ -892,7 +890,6 @@ EOC
       meta["_index".freeze] = target_index
       meta["_type".freeze] = target_type unless @last_seen_major_version >= 8
       meta["_alias".freeze] = target_index_alias
-      meta["_index_patterns".freeze] = target_index_patterns
 
       if @pipeline
         meta["pipeline".freeze] = pipeline
@@ -941,11 +938,11 @@ EOC
       need_substitution
     end
 
-    def template_installation(deflector_alias, template_name, customize_template, application_name, ilm_policy_id, target_index, host, index_patterns)
+    def template_installation(deflector_alias, template_name, customize_template, application_name, ilm_policy_id, target_index, host)
       # for safety.
     end
 
-    def template_installation_actual(deflector_alias, template_name, customize_template, application_name, target_index, ilm_policy_id, host=nil, index_patterns=nil)
+    def template_installation_actual(deflector_alias, template_name, customize_template, application_name, target_index, ilm_policy_id, host=nil)
       if template_name && @template_file
         if !@logstash_format && @alias_indexes.include?(deflector_alias)
           log.debug("Index alias #{deflector_alias} already exists (cached)")
@@ -954,9 +951,9 @@ EOC
         else
           retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
             if customize_template
-              template_custom_install(template_name, @template_file, @template_overwrite, customize_template, @enable_ilm, deflector_alias, ilm_policy_id, host, target_index, index_patterns ? index_patterns : deflector_alias)
+              template_custom_install(template_name, @template_file, @template_overwrite, customize_template, @enable_ilm, deflector_alias, ilm_policy_id, host, target_index)
             else
-              template_install(template_name, @template_file, @template_overwrite, @enable_ilm, deflector_alias, ilm_policy_id, host, target_index, index_patterns ? index_patterns : deflector_alias)
+              template_install(template_name, @template_file, @template_overwrite, @enable_ilm, deflector_alias, ilm_policy_id, host, target_index)
             end
             ilm_policy = @ilm_policies[ilm_policy_id] || {}
             create_rollover_alias(target_index, @rollover_index, deflector_alias, application_name, @index_date_pattern, @index_separator, @enable_ilm, ilm_policy_id, ilm_policy, @ilm_policy_overwrite, host)
@@ -974,7 +971,7 @@ EOC
       if deflector_alias
         template_installation(deflector_alias, template_name, customize_template, application_name, index_name, ilm_policy_id, info.host)
       else
-        template_installation(info.ilm_index, template_name, customize_template, application_name, @logstash_format ? info.ilm_alias : index_name, ilm_policy_id, info.host, @logstash_format ? info.ilm_patterns : info.ilm_alias)
+        template_installation(info.ilm_index, template_name, customize_template, application_name, @logstash_format ? info.ilm_alias : index_name, ilm_policy_id, info.host)
       end
 
       begin
