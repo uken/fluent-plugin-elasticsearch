@@ -121,10 +121,12 @@ Current maintainers: @cosmo0920
 
 ## Requirements
 
-| fluent-plugin-elasticsearch  | fluentd | ruby |
-|-------------------|---------|------|
-| >= 2.0.0 | >= v0.14.20 | >= 2.1 |
-|  < 2.0.0 | >= v0.12.0 | >= 1.9 |
+| fluent-plugin-elasticsearch  | fluentd     | ruby   |
+|:----------------------------:|:-----------:|:------:|
+| >= 4.0.1                     | >= v0.14.22 | >= 2.3 |
+| >= 3.2.4 && < 4.0.1          | >= v0.14.22 | >= 2.1 |
+| >= 2.0.0 && < 3.2.3          | >= v0.14.20 | >= 2.1 |
+|  < 2.0.0                     | >= v0.12.0  | >= 1.9 |
 
 NOTE: For v0.12 version, you should use 1.x.y version. Please send patch into v0.12 branch if you encountered 1.x version's bug.
 
