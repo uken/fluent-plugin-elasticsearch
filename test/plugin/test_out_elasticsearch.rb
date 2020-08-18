@@ -707,7 +707,10 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
         def detect_es_major_version
           @_es_info ||= client.info
-          @_es_info["version"]["number"].to_i
+          unless version = @_es_info.dig("version", "number")
+            version = @default_elasticsearch_version
+          end
+          version.to_i
         end
       CODE
       Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
@@ -753,7 +756,10 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
         def detect_es_major_version
           @_es_info ||= client.info
-          @_es_info["version"]["number"].to_i
+          unless version = @_es_info.dig("version", "number")
+            version = @default_elasticsearch_version
+          end
+          version.to_i
         end
       CODE
       Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)

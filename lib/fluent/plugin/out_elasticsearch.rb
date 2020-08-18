@@ -461,7 +461,10 @@ EOC
 
     def detect_es_major_version
       @_es_info ||= client.info
-      @_es_info["version"]["number"].to_i
+      unless version = @_es_info.dig("version", "number")
+        version = @default_elasticsearch_version
+      end
+      version.to_i
     end
 
     def client_library_version
