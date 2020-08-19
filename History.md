@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 4.1.2
+- Use Hash#dig instead of Hash#[] on retrieving version information from Elasticsearch info API (#793)
+
 ### 4.1.1
 - Correct ILM explain on logstash_format case (#786)
 
