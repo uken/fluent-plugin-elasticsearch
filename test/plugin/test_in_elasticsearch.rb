@@ -20,6 +20,11 @@ class ElasticsearchInputTest < Test::Unit::TestCase
     @driver = nil
     log = Fluent::Engine.log
     log.out.logs.slice!(0, log.out.logs.length)
+    @http_method = if Gem::Version.new(Elasticsearch::VERSION) >= Gem::Version.new("7.9.0")
+                     :post
+                   else
+                     :get
+                   end
   end
 
   def driver(conf='')
@@ -313,7 +318,7 @@ class ElasticsearchInputTest < Test::Unit::TestCase
   end
 
   def test_emit
-    stub_request(:get, "http://localhost:9200/fluentd/_search?scroll=1m&size=1000").
+    stub_request(@http_method, "http://localhost:9200/fluentd/_search?scroll=1m&size=1000").
       with(body: "{\"sort\":[\"_doc\"]}").
       to_return(status: 200, body: sample_response.to_s,
                 headers: {'Content-Type' => 'application/json'})
@@ -328,7 +333,7 @@ class ElasticsearchInputTest < Test::Unit::TestCase
 
   def test_emit_with_custom_index_name
     index_name = "logstash"
-    stub_request(:get, "http://localhost:9200/#{index_name}/_search?scroll=1m&size=1000").
+    stub_request(@http_method, "http://localhost:9200/#{index_name}/_search?scroll=1m&size=1000").
       with(body: "{\"sort\":[\"_doc\"]}").
       to_return(status: 200, body: sample_response(index_name).to_s,
                 headers: {'Content-Type' => 'application/json'})
@@ -343,7 +348,7 @@ class ElasticsearchInputTest < Test::Unit::TestCase
 
   def test_emit_with_parse_timestamp
     index_name = "fluentd"
-    stub_request(:get, "http://localhost:9200/#{index_name}/_search?scroll=1m&size=1000").
+    stub_request(@http_method, "http://localhost:9200/#{index_name}/_search?scroll=1m&size=1000").
       with(body: "{\"sort\":[\"_doc\"]}").
       to_return(status: 200, body: sample_response(index_name).to_s,
                 headers: {'Content-Type' => 'application/json'})
@@ -361,7 +366,7 @@ class ElasticsearchInputTest < Test::Unit::TestCase
 
   def test_emit_with_parse_timestamp_and_timstamp_format
     index_name = "fluentd"
-    stub_request(:get, "http://localhost:9200/#{index_name}/_search?scroll=1m&size=1000").
+    stub_request(@http_method, "http://localhost:9200/#{index_name}/_search?scroll=1m&size=1000").
       with(body: "{\"sort\":[\"_doc\"]}").
       to_return(status: 200, body: sample_response(index_name).to_s,
                 headers: {'Content-Type' => 'application/json'})
@@ -380,7 +385,7 @@ class ElasticsearchInputTest < Test::Unit::TestCase
   end
 
   def test_emit_with_docinfo
-    stub_request(:get, "http://localhost:9200/fluentd/_search?scroll=1m&size=1000").
+    stub_request(@http_method, "http://localhost:9200/fluentd/_search?scroll=1m&size=1000").
       with(body: "{\"sort\":[\"_doc\"]}").
       to_return(status: 200, body: sample_response.to_s,
                 headers: {'Content-Type' => 'application/json'})
@@ -399,11 +404,11 @@ class ElasticsearchInputTest < Test::Unit::TestCase
   end
 
   def test_emit_with_slices
-    stub_request(:get, "http://localhost:9200/fluentd/_search?scroll=1m&size=1000").
+    stub_request(@http_method, "http://localhost:9200/fluentd/_search?scroll=1m&size=1000").
       with(body: "{\"sort\":[\"_doc\"],\"slice\":{\"id\":0,\"max\":2}}").
       to_return(status: 200, body: sample_response.to_s,
                 headers: {'Content-Type' => 'application/json'})
-    stub_request(:get, "http://localhost:9200/fluentd/_search?scroll=1m&size=1000").
+    stub_request(@http_method, "http://localhost:9200/fluentd/_search?scroll=1m&size=1000").
       with(body: "{\"sort\":[\"_doc\"],\"slice\":{\"id\":1,\"max\":2}}").
       to_return(status: 200, body: sample_response.to_s,
                 headers: {'Content-Type' => 'application/json'})
@@ -419,12 +424,12 @@ class ElasticsearchInputTest < Test::Unit::TestCase
   end
 
   def test_emit_with_size
-    stub_request(:get, "http://localhost:9200/fluentd/_search?scroll=1m&size=1").
+    stub_request(@http_method, "http://localhost:9200/fluentd/_search?scroll=1m&size=1").
       with(body: "{\"sort\":[\"_doc\"]}").
       to_return(status: 200, body: sample_scroll_response.to_s,
                 headers: {'Content-Type' => 'application/json'})
     connection = 0
-    scroll_request = stub_request(:get, "http://localhost:9200/_search/scroll?scroll=1m").
+    scroll_request = stub_request(@http_method, "http://localhost:9200/_search/scroll?scroll=1m").
       with(
         body: "{\"scroll_id\":\"WomkoUKG0QPB679Ulo6TqQgh3pIGRUmrl9qXXGK3EeiQh9rbYNasTkspZQcJ01uz\"}") do
       connection += 1
