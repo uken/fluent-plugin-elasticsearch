@@ -247,7 +247,8 @@ EOC
             template_installation_actual(@deflector_alias ? @deflector_alias : @index_name, @template_name, @customize_template, @application_name, @index_name, @ilm_policy_id)
           end
           verify_ilm_working if @enable_ilm
-        elsif @templates
+        end 
+        if @templates
           retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
             templates_hash_install(@templates, @template_overwrite)
           end
