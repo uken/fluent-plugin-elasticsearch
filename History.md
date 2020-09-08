@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 4.1.3
+- Load multiple templates even if template_name and template_file given (#799)
+- Handle elasticsearch-ruby 7.9.0 using HTTP method changes (#795)
+
 ### 4.1.2
 - Use Hash#dig instead of Hash#[] on retrieving version information from Elasticsearch info API (#793)
 
