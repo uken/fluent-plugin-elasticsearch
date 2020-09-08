@@ -2659,7 +2659,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     assert_requested(:put, "https://logs.google.com:777/es//_template/logstash3", times: 1)
   end
 
-  def test_templates_not_used
+  def test_templates_are_also_used
     cwd = File.dirname(__FILE__)
     template_file = File.join(cwd, 'test_template.json')
 
@@ -2703,8 +2703,8 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
 
     assert_requested(:put, "https://logs.google.com:777/es//_template/logstash", times: 1)
 
-    assert_not_requested(:put, "https://logs.google.com:777/es//_template/logstash1")
-    assert_not_requested(:put, "https://logs.google.com:777/es//_template/logstash2")
+    assert_requested(:put, "https://logs.google.com:777/es//_template/logstash1")
+    assert_requested(:put, "https://logs.google.com:777/es//_template/logstash2")
   end
 
   def test_templates_can_be_partially_created_if_error_occurs
