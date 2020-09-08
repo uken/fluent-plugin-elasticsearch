@@ -431,7 +431,7 @@ Specify index templates in form of hash. Can contain multiple templates.
 templates { "template_name_1": "path_to_template_1_file", "template_name_2": "path_to_template_2_file"}
 ```
 
-If `template_file` and `template_name` are set, then this parameter will be ignored.
+**Note:** Before ES plugin v4.1.2, if `template_file` and `template_name` are set, then this parameter will be ignored. In 4.1.3 or later, `template_file` and `template_name` can work with `templates`.
 
 ### customize_template
 
