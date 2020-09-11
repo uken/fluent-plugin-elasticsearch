@@ -61,7 +61,7 @@ module Fluent::ElasticsearchIndexTemplate
     if e.message =~ /"already exists"/ || e.message =~ /resource_already_exists_exception/
       log.debug("Index #{index_name} already exists")
     else
-      log.error("Error while index creation - #{index_name}: #{e.inspect}")
+      log.error("Error while index creation - #{index_name}", error: e)
     end
   end
 
