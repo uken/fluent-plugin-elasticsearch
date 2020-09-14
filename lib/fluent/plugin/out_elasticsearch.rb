@@ -8,6 +8,7 @@ rescue LoadError
 end
 require 'json'
 require 'uri'
+require 'base64'
 begin
   require 'strptime'
 rescue LoadError
@@ -57,6 +58,7 @@ module Fluent::Plugin
     attr_reader :template_names
     attr_reader :ssl_version_options
     attr_reader :compressable_connection
+    attr_reader :api_key_header
 
     helpers :event_emitter, :compat_parameters, :record_accessor, :timer
 
@@ -155,6 +157,7 @@ EOC
     config_param :default_elasticsearch_version, :integer, :default => DEFAULT_ELASTICSEARCH_VERSION
     config_param :log_es_400_reason, :bool, :default => false
     config_param :custom_headers, :hash, :default => {}
+    config_param :api_key, :string, :default => nil, :secret => true
     config_param :suppress_doc_wrap, :bool, :default => false
     config_param :ignore_exceptions, :array, :default => [], value_type: :string, :desc => "Ignorable exception list"
     config_param :exception_backup, :bool, :default => true, :desc => "Chunk backup flag when ignore exception occured"
@@ -211,6 +214,8 @@ EOC
       if @remove_keys_on_update && @remove_keys_on_update.is_a?(String)
         @remove_keys_on_update = @remove_keys_on_update.split ','
       end
+
+      @api_key_header = setup_api_key
 
       raise Fluent::ConfigError, "'max_retry_putting_template' must be greater than or equal to zero." if @max_retry_putting_template < 0
       raise Fluent::ConfigError, "'max_retry_get_es_version' must be greater than or equal to zero." if @max_retry_get_es_version < 0
@@ -398,6 +403,12 @@ EOC
       end
     end
 
+    def setup_api_key
+      return {} unless @api_key
+
+      { "Authorization" => "ApiKey " + Base64.strict_encode64(@api_key) }
+    end
+
     def dry_run?
       if Fluent::Engine.respond_to?(:dry_run_mode)
         Fluent::Engine.dry_run_mode
@@ -558,7 +569,10 @@ EOC
                        else
                          {}
                        end
-        headers = { 'Content-Type' => @content_type.to_s }.merge(@custom_headers).merge(gzip_headers)
+        headers = { 'Content-Type' => @content_type.to_s }
+                    .merge(@custom_headers)
+                    .merge(@api_key_header)
+                    .merge(gzip_headers)
         ssl_options = { verify: @ssl_verify, ca_file: @ca_file}.merge(@ssl_version_options)
 
         transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(connection_options.merge(

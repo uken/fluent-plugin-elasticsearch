@@ -85,6 +85,7 @@ Current maintainers: @cosmo0920
   + [verify_es version at startup](#verify_es_version_at_startup)
   + [default_elasticsearch_version](#default_elasticsearch_version)
   + [custom_headers](#custom_headers)
+  + [api_key](#api_key)
   + [Not seeing a config you need?](#not-seeing-a-config-you-need)
   + [Dynamic configuration](#dynamic-configuration)
   + [Placeholders](#placeholders)
@@ -1104,6 +1105,14 @@ This parameter adds additional headers to request. The default value is `{}`.
 
 ```
 custom_headers {"token":"secret"}
+```
+
+### api_key
+
+This parameter adds authentication header. The default value is `nil`.
+
+```
+api_key "ElasticsearchAPIKEY"
 ```
 
 ### Not seeing a config you need?
