@@ -2,6 +2,11 @@
 
 ### [Unreleased]
 
+### 4.1.4
+- ElasticsearchGenID update docs for hash_type (#809)
+- Handle api key header (#808)
+- index_template: Handle error object entirely on index creation failure (#807)
+
 ### 4.1.3
 - Load multiple templates even if template_name and template_file given (#799)
 - Handle elasticsearch-ruby 7.9.0 using HTTP method changes (#795)
