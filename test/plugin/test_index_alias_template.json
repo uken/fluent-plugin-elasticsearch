@@ -1,0 +1,11 @@
+{
+  "priority": 105,
+  "index_patterns": "--index_prefix-----appid---*",
+  "template" : {
+    "settings": {},
+    "mappings": {},
+    "aliases": {
+      "--appid---alias": {}
+    }
+  }
+}

@@ -169,6 +169,7 @@ EOC
     config_param :ilm_policies, :hash, :default => {}
     config_param :ilm_policy_overwrite, :bool, :default => false
     config_param :truncate_caches_interval, :time, :default => nil
+    config_param :use_legacy_template, :bool, :default => true
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE

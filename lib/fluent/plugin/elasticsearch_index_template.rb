@@ -22,7 +22,11 @@ module Fluent::ElasticsearchIndexTemplate
   end
 
   def template_exists?(name, host = nil)
-    client(host).indices.get_template(:name => name)
+    if @use_legacy_template
+      client(host).indices.get_template(:name => name)
+    else
+      client(host).indices.get_index_template(:name => name)
+    end
     return true
   rescue Elasticsearch::Transport::Transport::Errors::NotFound
     return false
@@ -52,7 +56,11 @@ module Fluent::ElasticsearchIndexTemplate
   end
 
   def template_put(name, template, host = nil)
-    client(host).indices.put_template(:name => name, :body => template)
+    if @use_legacy_template
+      client(host).indices.put_template(:name => name, :body => template)
+    else
+      client(host).indices.put_index_template(:name => name, :body => template)
+    end
   end
 
   def indexcreation(index_name, host = nil)
@@ -121,13 +129,29 @@ module Fluent::ElasticsearchIndexTemplate
 
   def inject_ilm_settings_to_template(deflector_alias, target_index, ilm_policy_id, template)
     log.debug("Overwriting index patterns when Index Lifecycle Management is enabled.")
-    template.delete('template') if template.include?('template')
     template['index_patterns'] = "#{target_index}-*"
-    template['order'] = template['order'] ? template['order'] + target_index.split('-').length : 50 + target_index.split('-').length
-    if template['settings'] && (template['settings']['index.lifecycle.name'] || template['settings']['index.lifecycle.rollover_alias'])
-      log.debug("Overwriting index lifecycle name and rollover alias when Index Lifecycle Management is enabled.")
+    if @use_legacy_template
+      template.delete('template') if template.include?('template')
+      # Prepare settings Hash
+      if !template.key?('settings')
+        template['settings'] = {}
+      end
+      if template['settings'] && (template['settings']['index.lifecycle.name'] || template['settings']['index.lifecycle.rollover_alias'])
+        log.debug("Overwriting index lifecycle name and rollover alias when Index Lifecycle Management is enabled.")
+      end
+      template['settings'].update({ 'index.lifecycle.name' => ilm_policy_id, 'index.lifecycle.rollover_alias' => deflector_alias})
+      template['order'] = template['order'] ? template['order'] + target_index.split('-').length : 50 + target_index.split('-').length
+    else
+      # Prepare template.settings Hash
+      if !template['template'].key?('settings')
+        template['template']['settings'] = {}
+      end
+      if template['template']['settings'] && (template['template']['settings']['index.lifecycle.name'] || template['template']['settings']['index.lifecycle.rollover_alias'])
+        log.debug("Overwriting index lifecycle name and rollover alias when Index Lifecycle Management is enabled.")
+      end
+      template['template']['settings'].update({ 'index.lifecycle.name' => ilm_policy_id, 'index.lifecycle.rollover_alias' => deflector_alias})
+      template['priority'] = template['priority'] ? template['priority'] + target_index.split('-').length : 100 + target_index.split('-').length
     end
-    template['settings'].update({ 'index.lifecycle.name' => ilm_policy_id, 'index.lifecycle.rollover_alias' => deflector_alias})
     template
   end
 
