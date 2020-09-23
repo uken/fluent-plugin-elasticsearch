@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 4.2.0
+- ci: Add Ruby 2.7 jobs (#812)
+- Support Elasticsearch new style template (#810)
+
 ### 4.1.4
 - ElasticsearchGenID update docs for hash_type (#809)
 - Handle api key header (#808)
