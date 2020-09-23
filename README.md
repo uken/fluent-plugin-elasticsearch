@@ -101,6 +101,7 @@ Current maintainers: @cosmo0920
   + [ilm_policies](#ilm_policies)
   + [ilm_policy_overwrite](#ilm_policy_overwrite)
   + [truncate_caches_interval](#truncate_caches_interval)
+  + [use_legacy_template](#use_legacy_template)
 * [Configuration - Elasticsearch Input](#configuration---elasticsearch-input)
 * [Configuration - Elasticsearch Filter GenID](#configuration---elasticsearch-filter-genid)
 * [Elasticsearch permissions](#elasticsearch-permissions)
@@ -1302,6 +1303,18 @@ Specify truncating caches interval.
 If it is set, timer for clearing `alias_indexes` and `template_names` caches will be launched and executed.
 
 Default value is `nil`.
+
+## use_legacy_template
+
+Use legacy template or not.
+
+Elasticsearch 7.8 or later supports the brand new composable templates.
+
+For Elasticsearch 7.7 or older, users should specify this parameter as `false`.
+
+Composable template documentation is [Put Index Template API | Elasticsearch Reference](https://www.elastic.co/guide/en/elasticsearch/reference/current/index-templates.html) and legacy template documentation is [Index Templates | Elasticsearch Reference](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates-v1.html).
+
+Please confirm that whether the using Elasticsearch cluster(s) support the composable template feature or not when turn on the brand new feature with this parameter.
 
 ## Configuration - Elasticsearch Input
 
