@@ -101,8 +101,13 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     assert_nil instance.ssl_max_version
     assert_nil instance.ssl_min_version
     if Fluent::Plugin::ElasticsearchTLS::USE_TLS_MINMAX_VERSION
-      assert_equal({max_version: OpenSSL::SSL::TLS1_3_VERSION, min_version: OpenSSL::SSL::TLS1_2_VERSION},
-                   instance.ssl_version_options)
+      if defined?(OpenSSL::SSL::TLS1_3_VERSION)
+        assert_equal({max_version: OpenSSL::SSL::TLS1_3_VERSION, min_version: OpenSSL::SSL::TLS1_2_VERSION},
+                     instance.ssl_version_options)
+      else
+        assert_equal({max_version: nil, min_version: OpenSSL::SSL::TLS1_2_VERSION},
+                     instance.ssl_version_options)
+      end
     else
       assert_equal({version: Fluent::Plugin::ElasticsearchTLS::DEFAULT_VERSION},
                    instance.ssl_version_options)

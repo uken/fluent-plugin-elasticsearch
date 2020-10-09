@@ -62,8 +62,14 @@ class TestElasticsearchTLS < Test::Unit::TestCase
       d = driver('')
       ssl_version_options = d.instance.set_tls_minmax_version_config(d.instance.ssl_version, nil, nil)
       if @use_tls_minmax_version
-        assert_equal({max_version: OpenSSL::SSL::TLS1_3_VERSION,
-                      min_version: OpenSSL::SSL::TLS1_2_VERSION}, ssl_version_options)
+        if @enabled_tlsv1_3
+          assert_equal({max_version: OpenSSL::SSL::TLS1_3_VERSION,
+                        min_version: OpenSSL::SSL::TLS1_2_VERSION}, ssl_version_options)
+        else
+          assert_equal({max_version: nil,
+                        min_version: OpenSSL::SSL::TLS1_2_VERSION}, ssl_version_options)
+
+        end
       else
         assert_equal({version: Fluent::Plugin::ElasticsearchTLS::DEFAULT_VERSION}, ssl_version_options)
       end
