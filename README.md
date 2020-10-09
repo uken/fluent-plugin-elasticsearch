@@ -102,6 +102,9 @@ Current maintainers: @cosmo0920
   + [ilm_policy_overwrite](#ilm_policy_overwrite)
   + [truncate_caches_interval](#truncate_caches_interval)
   + [use_legacy_template](#use_legacy_template)
+  + [metadata section](#metadata-section)
+    + [include_chunk_id](#include_chunk_id)
+    + [chunk_id_key](#chunk_id_key)
 * [Configuration - Elasticsearch Input](#configuration---elasticsearch-input)
 * [Configuration - Elasticsearch Filter GenID](#configuration---elasticsearch-filter-genid)
 * [Elasticsearch permissions](#elasticsearch-permissions)
@@ -1315,6 +1318,51 @@ For Elasticsearch 7.7 or older, users should specify this parameter as `false`.
 Composable template documentation is [Put Index Template API | Elasticsearch Reference](https://www.elastic.co/guide/en/elasticsearch/reference/current/index-templates.html) and legacy template documentation is [Index Templates | Elasticsearch Reference](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates-v1.html).
 
 Please confirm that whether the using Elasticsearch cluster(s) support the composable template feature or not when turn on the brand new feature with this parameter.
+
+## <metadata\> section
+
+Users can specify whether including `chunk_id` information into records or not:
+
+```aconf
+<match your.awesome.routing.tag>
+  @type elasticsearch
+  # Other configurations.
+  <metadata>
+    include_chunk_id true
+    # chunk_id_key chunk_id # Default value is "chunk_id".
+  </metadata>
+</match>
+```
+
+### include_chunk_id
+
+Whether including `chunk_id` for not. Default value is `false`.
+
+```aconf
+<match your.awesome.routing.tag>
+  @type elasticsearch
+  # Other configurations.
+  <metadata>
+    include_chunk_id true
+  </metadata>
+</match>
+```
+
+
+### chunk_id_key
+
+Specify `chunk_id_key` to store `chunk_id` information into records. Default value is `chunk_id`.
+
+```aconf
+<match your.awesome.routing.tag>
+  @type elasticsearch
+  # Other configurations.
+  <metadata>
+  include_chunk_id
+    chunk_id_key chunk_hex
+  </metadata>
+</match>
+```
 
 ## Configuration - Elasticsearch Input
 
