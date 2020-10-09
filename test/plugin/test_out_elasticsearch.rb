@@ -3409,6 +3409,39 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     assert_requested(request, times: 2)
   end
 
+  def test_writes_with_record_metadata
+    chunk_id_key = "metadata_key".freeze
+    driver.configure(Fluent::Config::Element.new(
+                       'ROOT', '', {
+                         '@type' => 'elasticsearch',
+                       }, [
+                         Fluent::Config::Element.new('metadata', '', {
+                                                       'include_chunk_id' => true,
+                                                       'chunk_id_key' => chunk_id_key,
+                                                     }, [])
+                       ]
+                     ))
+    stub_request(:post, "http://localhost:9200/_bulk").
+      with(
+        body: /{"index":{"_index":"fluentd","_type":"fluentd"}}\n{"age":26,"request_id":"42","parent_id":"parent","routing_id":"routing","#{chunk_id_key}":".*"}\n/) do |req|
+      @index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
+    end
+    driver.run(default_tag: 'test', shutdown: false) do
+      driver.feed(sample_record)
+    end
+    assert_true index_cmds[1].has_key?(chunk_id_key)
+    first_chunk_id = index_cmds[1].fetch(chunk_id_key)
+
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+    assert_true index_cmds[1].has_key?(chunk_id_key)
+    second_chunk_id = index_cmds[1].fetch(chunk_id_key)
+    assert do
+      first_chunk_id != second_chunk_id
+    end
+  end
+
   def test_writes_with_huge_records_but_uncheck
     driver.configure(Fluent::Config::Element.new(
                        'ROOT', '', {

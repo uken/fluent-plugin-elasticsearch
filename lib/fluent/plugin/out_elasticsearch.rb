@@ -18,6 +18,7 @@ require 'fluent/plugin/output'
 require 'fluent/event'
 require 'fluent/error'
 require 'fluent/time'
+require 'fluent/unique_id'
 require 'fluent/log-ext'
 require 'zlib'
 require_relative 'elasticsearch_constants'
@@ -170,6 +171,11 @@ EOC
     config_param :ilm_policy_overwrite, :bool, :default => false
     config_param :truncate_caches_interval, :time, :default => nil
     config_param :use_legacy_template, :bool, :default => true
+
+    config_section :metadata, param_name: :metainfo, multi: false do
+      config_param :include_chunk_id, :bool, :default => false
+      config_param :chunk_id_key, :string, :default => "chunk_id".freeze
+    end
 
     config_section :buffer do
       config_set_default :@type, DEFAULT_BUFFER_TYPE
@@ -778,6 +784,7 @@ EOC
       meta = {}
 
       tag = chunk.metadata.tag
+      chunk_id = dump_unique_id_hex(chunk.unique_id)
       extracted_values = expand_placeholders(chunk)
       host = if @hosts
                extract_placeholders(@hosts, chunk)
@@ -787,6 +794,11 @@ EOC
 
       chunk.msgpack_each do |time, record|
         next unless record.is_a? Hash
+
+        if @metainfo && @metainfo.include_chunk_id
+          record[@metainfo.chunk_id_key] = chunk_id
+        end
+
         begin
           meta, header, record = process_message(tag, meta, header, time, record, extracted_values)
           info = if @include_index_in_url
