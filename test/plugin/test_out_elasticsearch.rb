@@ -230,8 +230,13 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     assert_nil instance.ssl_max_version
     assert_nil instance.ssl_min_version
     if Fluent::Plugin::ElasticsearchTLS::USE_TLS_MINMAX_VERSION
-      assert_equal({max_version: OpenSSL::SSL::TLS1_3_VERSION, min_version: OpenSSL::SSL::TLS1_2_VERSION},
-                   instance.ssl_version_options)
+      if defined?(OpenSSL::SSL::TLS1_3_VERSION)
+        assert_equal({max_version: OpenSSL::SSL::TLS1_3_VERSION, min_version: OpenSSL::SSL::TLS1_2_VERSION},
+                     instance.ssl_version_options)
+      else
+        assert_equal({max_version: nil, min_version: OpenSSL::SSL::TLS1_2_VERSION},
+                     instance.ssl_version_options)
+      end
     else
       assert_equal({version: Fluent::Plugin::ElasticsearchTLS::DEFAULT_VERSION},
                    instance.ssl_version_options)
@@ -1873,7 +1878,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       else
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/#{task_def_value}-#{date_str}").
           with(basic_auth: ['john', 'doe'],
-               body: "{\"index_patterns\":\"task_definition-2020.09-*\",\"template\":{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"task_definition-2020.09\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}}},\"priority\":102}").
+               body: "{\"index_patterns\":\"task_definition-#{date_str}-*\",\"template\":{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"task_definition-#{date_str}\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}}},\"priority\":102}").
           to_return(:status => 200, :body => "", :headers => {})
       end
       # check if alias exists
