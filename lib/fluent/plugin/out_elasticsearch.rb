@@ -777,6 +777,15 @@ EOC
       true
     end
 
+    def inject_chunk_id_to_record_if_needed(record, chunk_id)
+      if @metainfo && @metainfo.include_chunk_id
+        record[@metainfo.chunk_id_key] = chunk_id
+        record
+      else
+        record
+      end
+    end
+
     def write(chunk)
       bulk_message_count = Hash.new { |h,k| h[k] = 0 }
       bulk_message = Hash.new { |h,k| h[k] = '' }
@@ -795,9 +804,7 @@ EOC
       chunk.msgpack_each do |time, record|
         next unless record.is_a? Hash
 
-        if @metainfo && @metainfo.include_chunk_id
-          record[@metainfo.chunk_id_key] = chunk_id
-        end
+        record = inject_chunk_id_to_record_if_needed(record, chunk_id)
 
         begin
           meta, header, record = process_message(tag, meta, header, time, record, extracted_values)
