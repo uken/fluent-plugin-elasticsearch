@@ -1358,7 +1358,7 @@ Specify `chunk_id_key` to store `chunk_id` information into records. Default val
   @type elasticsearch
   # Other configurations.
   <metadata>
-  include_chunk_id
+    include_chunk_id
     chunk_id_key chunk_hex
   </metadata>
 </match>
