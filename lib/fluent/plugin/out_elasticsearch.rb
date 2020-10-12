@@ -778,7 +778,7 @@ EOC
     end
 
     def inject_chunk_id_to_record_if_needed(record, chunk_id)
-      if @metainfo && @metainfo.include_chunk_id
+      if @metainfo&.include_chunk_id
         record[@metainfo.chunk_id_key] = chunk_id
         record
       else
