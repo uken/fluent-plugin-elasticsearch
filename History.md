@@ -2,6 +2,11 @@
 
 ### [Unreleased]
 
+### 4.2.1
+- Update a broken link (#821)
+- Include chunk_id in records (#820)
+- Fix a failing testcase (#818)
+
 ### 4.2.0
 - ci: Add Ruby 2.7 jobs (#812)
 - Support Elasticsearch new style template (#810)
