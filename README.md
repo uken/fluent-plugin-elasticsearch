@@ -924,7 +924,7 @@ Starting with version 0.8.0, this gem uses excon, which supports proxy with envi
 
 ### Buffer options
 
-`fluentd-plugin-elasticsearch` extends [Fluentd's builtin Output plugin](https://docs.fluentd.org/v0.14/articles/output-plugin-overview) and use `compat_parameters` plugin helper. It adds the following options:
+`fluentd-plugin-elasticsearch` extends [Fluentd's builtin Output plugin](https://docs.fluentd.org/output#overview) and use `compat_parameters` plugin helper. It adds the following options:
 
 ```
 buffer_type memory
