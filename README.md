@@ -1881,6 +1881,16 @@ template_name your-fluentd-template
 template_file /path/to/fluentd-template.json
 ```
 
+Note that if you create a new set of indexes every day, the elasticsearch ILM policy system will treat each day separately and will always
+maintain a separate active write index for each day.
+
+If you have a rollover based on max_age, it will continue to roll the indexes for prior dates even if no new documents are indexed.  If you want
+to delete indexes after a period of time, the ILM policy will never delete the current write index regardless of its age, so you would need a separate
+system, such as curator, to actually delete the old indexes.
+
+For this reason, if you put the date into the index names with ILM you should only rollover based on size or number of documents and may need to use
+curator to actually delete old indexes.
+
 #### Fixed ILM indices
 
 Also, users can use fixed ILM indices configuration.
