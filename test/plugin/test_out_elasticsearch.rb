@@ -1846,7 +1846,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
         template_name   logstash
         template_file   #{template_file}
         index_date_pattern now/w{xxxx.ww}
-        index_name logstash-${tag}
+        index_name logstash.${tag}
         enable_ilm      true
         index_separator "."
         use_legacy_template #{use_legacy_template_flag}
@@ -1865,30 +1865,30 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 200, :body => "", :headers => {})
       # check if alias exists
-      stub_request(:head, "https://logs.google.com:777/es//_alias/logstash-tag1").
+      stub_request(:head, "https://logs.google.com:777/es//_alias/logstash.tag1").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 404, :body => "", :headers => {})
-      stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash-tag1").
+      stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash.tag1").
         with(basic_auth: ['john', 'doe']).
         to_return(status: 404, body: "", headers: {})
       if use_legacy_template_flag
-        stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash-tag1").
+        stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash.tag1").
           with(basic_auth: ['john', 'doe'],
-               body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash-tag1\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"logstash-tag1.*\",\"order\":52}").
+               body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash.tag1\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"logstash.tag1.*\",\"order\":52}").
           to_return(status: 200, body: "", headers: {})
       else
-        stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash-tag1").
+        stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash.tag1").
           with(basic_auth: ['john', 'doe'],
-               body: "{\"index_patterns\":\"logstash-tag1.*\",\"template\":{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash-tag1\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}}},\"priority\":102}").
+               body: "{\"index_patterns\":\"logstash.tag1.*\",\"template\":{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash.tag1\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}}},\"priority\":102}").
           to_return(status: 200, body: "", headers: {})
       end
       # put the alias for the index
-      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-tag1.default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
+      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash.tag1.default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
         to_return(:status => 200, :body => "", :headers => {})
-      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-tag1.default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/logstash-tag1").
+      stub_request(:put, "https://logs.google.com:777/es//%3Clogstash.tag1.default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/logstash.tag1").
         with(basic_auth: ['john', 'doe'],
-             :body => "{\"aliases\":{\"logstash-tag1\":{\"is_write_index\":true}}}").
+             :body => "{\"aliases\":{\"logstash.tag1\":{\"is_write_index\":true}}}").
         to_return(:status => 200, :body => "", :headers => {})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
@@ -1907,9 +1907,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       driver.run(default_tag: 'test') do
         driver.feed('tag1', event_time, sample_record)
       end
-      assert_equal('logstash-tag1', index_cmds.first['index']['_index'])
+      assert_equal('logstash.tag1', index_cmds.first['index']['_index'])
 
-      assert_equal ["logstash-tag1"], driver.instance.alias_indexes
+      assert_equal ["logstash.tag1"], driver.instance.alias_indexes
 
       assert_requested(elastic_request)
     end

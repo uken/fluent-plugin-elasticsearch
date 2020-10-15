@@ -143,7 +143,7 @@ module Fluent::ElasticsearchIndexTemplate
         log.debug("Overwriting index lifecycle name and rollover alias when Index Lifecycle Management is enabled.")
       end
       template['settings'].update({ 'index.lifecycle.name' => ilm_policy_id, 'index.lifecycle.rollover_alias' => deflector_alias})
-      template['order'] = template['order'] ? template['order'] + target_index.split('-').length : 50 + target_index.split('-').length
+      template['order'] = template['order'] ? template['order'] + target_index.count(index_separator) + 1 : 51 + target_index.count(index_separator)
     else
       # Prepare template.settings Hash
       if !template['template'].key?('settings')
@@ -153,7 +153,7 @@ module Fluent::ElasticsearchIndexTemplate
         log.debug("Overwriting index lifecycle name and rollover alias when Index Lifecycle Management is enabled.")
       end
       template['template']['settings'].update({ 'index.lifecycle.name' => ilm_policy_id, 'index.lifecycle.rollover_alias' => deflector_alias})
-      template['priority'] = template['priority'] ? template['priority'] + target_index.split('-').length : 100 + target_index.split('-').length
+      template['priority'] = template['priority'] ? template['priority'] + target_index.count(index_separator) + 1 : 101 + target_index.count(index_separator)
     end
     template
   end
