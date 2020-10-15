@@ -2006,4 +2006,7 @@ Install dev dependencies:
 $ gem install bundler
 $ bundle install
 $ bundle exec rake test
+# To just run the test you are working on:
+$ bundle exec rake test TEST=test/plugin/test_out_elasticsearch.rb TESTOPTS='--verbose --name=test_custom_template_with_rollover_index_create_and_custom_ilm'
+
 ```

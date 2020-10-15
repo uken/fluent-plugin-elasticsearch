@@ -259,7 +259,7 @@ EOC
             template_installation_actual(@deflector_alias ? @deflector_alias : @index_name, @template_name, @customize_template, @application_name, @index_name, @ilm_policy_id)
           end
           verify_ilm_working if @enable_ilm
-        end 
+        end
         if @templates
           retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
             templates_hash_install(@templates, @template_overwrite)
@@ -982,10 +982,12 @@ EOC
 
     def template_installation_actual(deflector_alias, template_name, customize_template, application_name, target_index, ilm_policy_id, host=nil)
       if template_name && @template_file
-        if !@logstash_format && @alias_indexes.include?(deflector_alias)
-          log.debug("Index alias #{deflector_alias} already exists (cached)")
-        elsif !@logstash_format && @template_names.include?(template_name)
-          log.debug("Template name #{template_name} already exists (cached)")
+        if !@logstash_format && (deflector_alias.nil? || (@alias_indexes.include? deflector_alias)) && (@template_names.include? template_name)
+          if deflector_alias
+            log.debug("Index alias #{deflector_alias} and template #{template_name} already exist (cached)")
+          else
+            log.debug("Template #{template_name} already exists (cached)")
+          end
         else
           retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
             if customize_template
