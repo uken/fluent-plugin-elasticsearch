@@ -2,6 +2,12 @@
 
 ### [Unreleased]
 
+### 4.2.2
+- Remove unnecessary nil check (#826)
+- Fix ILM rollover index template pattern to apply index_separator (#825)
+- Fix ILM rollover alias creation when a placeholder is used in index_name (#823)
+- Add a note about the pitfalls of per-date indexes used with ILM (#822)
+
 ### 4.2.1
 - Update a broken link (#821)
 - Include chunk_id in records (#820)
