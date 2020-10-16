@@ -999,7 +999,7 @@ EOC
             create_rollover_alias(target_index, @rollover_index, deflector_alias, application_name, @index_date_pattern, @index_separator, @enable_ilm, ilm_policy_id, ilm_policy, @ilm_policy_overwrite, host)
           end
           @alias_indexes << deflector_alias unless deflector_alias.nil?
-          @template_names << template_name unless template_name.nil?
+          @template_names << template_name
         end
       end
     end
