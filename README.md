@@ -501,7 +501,7 @@ Specify the application name for the rollover index to be created.
 application_name default # defaults to "default"
 ```
 
-If [enable_ilm](#enable_ilm is set, then this parameter will be in effect otherwise ignored.
+If [enable_ilm](#enable_ilm) is set, then this parameter will be in effect otherwise ignored.
 
 ### template_overwrite
 
