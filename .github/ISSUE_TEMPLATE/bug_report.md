@@ -6,7 +6,7 @@ about: Create a report to help us improve. If you have questions about ES plugin
 
 (check apply)
 - [ ] read [the contribution guideline](https://github.com/uken/fluent-plugin-elasticsearch/blob/master/CONTRIBUTING.md)
-- [ ] already reported 3rd party upstream repository or mailing list if you use k8s addon or helm charts.
+- [ ] (optional) already reported 3rd party upstream repository or mailing list if you use k8s addon or helm charts.
 
 #### Problem
 
