@@ -1143,6 +1143,8 @@ And yet another option is described in Dynamic Configuration section.
 
 ### Dynamic configuration
 
+**NOTE**: *`out_elasticsearch_dynamic` will be planned to be marked as deprecated.* Please don't use the new Fluentd configuration. This plugin is maintained for backward compatibility.
+
 If you want configurations to depend on information in messages, you can use `elasticsearch_dynamic`. This is an experimental variation of the Elasticsearch plugin allows configuration values to be specified in ways such as the below:
 
 ```
