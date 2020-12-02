@@ -35,7 +35,7 @@ module Fluent::ElasticsearchIndexTemplate
   def retry_operate(max_retries, fail_on_retry_exceed = true)
     return unless block_given?
     retries = 0
-    transport_errors = Elasticsearch::Transport::Transport::Errors.constants().map{ |c| Elasticsearch::Transport::Transport::Errors.const_get c }
+    transport_errors = Elasticsearch::Transport::Transport::Errors.constants.map{ |c| Elasticsearch::Transport::Transport::Errors.const_get c }
     begin
       yield
     rescue *client.transport.host_unreachable_exceptions, *transport_errors, Timeout::Error => e

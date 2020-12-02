@@ -3053,7 +3053,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
   end
 
   transport_errors_handled_separately = [Elasticsearch::Transport::Transport::Errors::NotFound]
-  transport_errors = Elasticsearch::Transport::Transport::Errors.constants().map { |err| [err, Elasticsearch::Transport::Transport::Errors.const_get(err)]  }
+  transport_errors = Elasticsearch::Transport::Transport::Errors.constants.map { |err| [err, Elasticsearch::Transport::Transport::Errors.const_get(err)]  }
   transport_errors_hash = Hash[transport_errors.select { |err| !transport_errors_handled_separately.include?(err[1]) } ]
 
   data(transport_errors_hash)
