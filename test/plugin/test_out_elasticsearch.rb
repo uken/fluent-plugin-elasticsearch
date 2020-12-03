@@ -3155,10 +3155,10 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
 
   data(transport_errors_hash)
   def test_template_retry_transport_errors(error)
-    endpoint = if Gem::Version.create(::Elasticsearch::Transport::VERSION) >= Gem::Version.create("7.8.0")
-                 "_index_template".freeze
+    endpoint, use_legacy_template_flag = if Gem::Version.create(::Elasticsearch::Transport::VERSION) >= Gem::Version.create("7.8.0")
+                 ["_index_template".freeze, false]
                else
-                 "_template".freeze
+                 ["_template".freeze, true]
                end
     cwd = File.dirname(__FILE__)
     template_file = File.join(cwd, 'test_index_template.json')
@@ -3173,7 +3173,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       template_name   logstash
       template_file   #{template_file}
       max_retry_putting_template 0
-      use_legacy_template false
+      use_legacy_template #{use_legacy_template_flag}
     }
 
     retries = 0
