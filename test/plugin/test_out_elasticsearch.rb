@@ -2012,10 +2012,10 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     data("legacy_template" => [true, "_template"],
          "new_template"    => [false, "_index_template"])
     def test_template_create_with_rollover_index_and_default_ilm_and_custom_and_time_placeholders(data)
+      use_legacy_template_flag, endpoint = data
       if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
         omit "elastisearch-ruby v7.8.0 or later is needed."
       end
-      use_legacy_template_flag, endpoint = data
       cwd = File.dirname(__FILE__)
       template_file = if use_legacy_template_flag
                         File.join(cwd, 'test_template.json')
