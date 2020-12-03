@@ -383,6 +383,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     data("legacy_template" => [true, "_template"],
          "new_template"    => [false, "_index_template"])
     test 'valid configuration of index lifecycle management' do |data|
+      if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.4.0")
+        omit "elastisearch-ruby v7.4.0 or later is needed for ILM."
+      end
       use_legacy_template_flag, endpoint = data
       if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
         omit "elastisearch-ruby v7.8.0 or later is needed."
@@ -422,6 +425,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     data("legacy_template" => [true, "_template"],
          "new_template"    => [false, "_index_template"])
     test 'valid configuration of overwriting ilm_policy' do |data|
+      if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.4.0")
+        omit "elastisearch-ruby v7.4.0 or later is needed for ILM."
+      end
       use_legacy_template_flag, endpoint = data
       if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
         omit "elastisearch-ruby v7.8.0 or later is needed."
@@ -1051,6 +1057,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
         require "elasticsearch/xpack"
       rescue LoadError
         omit "ILM testcase needs elasticsearch-xpack gem."
+      end
+      if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.4.0")
+        omit "elastisearch-ruby v7.4.0 or later is needed for ILM."
       end
     end
 
@@ -2442,6 +2451,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
         require "elasticsearch/xpack"
       rescue LoadError
         omit "ILM testcase needs elasticsearch-xpack gem."
+      end
+      if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.4.0")
+        omit "elastisearch-ruby v7.4.0 or later is needed."
       end
     end
 

@@ -11,6 +11,9 @@ class TestElasticsearchIndexLifecycleManagement < Test::Unit::TestCase
     rescue LoadError
       omit "ILM testcase needs elasticsearch-xpack gem."
     end
+    if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.4.0")
+      omit "elastisearch-ruby v7.4.0 or later is needed for ILM."
+    end
     Fluent::Plugin::ElasticsearchIndexLifecycleManagement.module_eval(<<-CODE)
       def client
         Elasticsearch::Client.new url: 'localhost:9200'
