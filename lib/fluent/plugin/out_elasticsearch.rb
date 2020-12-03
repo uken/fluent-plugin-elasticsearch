@@ -171,6 +171,7 @@ EOC
     config_param :ilm_policy_overwrite, :bool, :default => false
     config_param :truncate_caches_interval, :time, :default => nil
     config_param :use_legacy_template, :bool, :default => true
+    config_param :catch_transport_exception_on_retry, :bool, :default => true
 
     config_section :metadata, param_name: :metainfo, multi: false do
       config_param :include_chunk_id, :bool, :default => false
@@ -261,7 +262,9 @@ EOC
           verify_ilm_working if @enable_ilm
         end
         if @templates
-          retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
+          retry_operate(@max_retry_putting_template,
+                        @fail_on_putting_template_retry_exceed,
+                        @catch_transport_exception_on_retry) do
             templates_hash_install(@templates, @template_overwrite)
           end
         end
@@ -470,7 +473,9 @@ EOC
 
     def handle_last_seen_es_major_version
       if @verify_es_version_at_startup && !dry_run?
-        retry_operate(@max_retry_get_es_version, @fail_on_detecting_es_version_retry_exceed) do
+        retry_operate(@max_retry_get_es_version,
+                      @fail_on_detecting_es_version_retry_exceed,
+                      @catch_transport_exception_on_retry) do
           detect_es_major_version
         end
       else
@@ -989,7 +994,9 @@ EOC
             log.debug("Template #{template_name} already exists (cached)")
           end
         else
-          retry_operate(@max_retry_putting_template, @fail_on_putting_template_retry_exceed) do
+          retry_operate(@max_retry_putting_template,
+                        @fail_on_putting_template_retry_exceed,
+                        @catch_transport_exception_on_retry) do
             if customize_template
               template_custom_install(template_name, @template_file, @template_overwrite, customize_template, @enable_ilm, deflector_alias, ilm_policy_id, host, target_index, @index_separator)
             else
