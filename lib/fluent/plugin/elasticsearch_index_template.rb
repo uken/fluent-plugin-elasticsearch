@@ -32,12 +32,13 @@ module Fluent::ElasticsearchIndexTemplate
     return false
   end
 
-  def retry_operate(max_retries, fail_on_retry_exceed = true)
+  def retry_operate(max_retries, fail_on_retry_exceed = true, catch_trasport_exceptions = true)
     return unless block_given?
     retries = 0
+    transport_errors = Elasticsearch::Transport::Transport::Errors.constants.map{ |c| Elasticsearch::Transport::Transport::Errors.const_get c } if catch_trasport_exceptions
     begin
       yield
-    rescue *client.transport.host_unreachable_exceptions, Timeout::Error => e
+    rescue *client.transport.host_unreachable_exceptions, *transport_errors, Timeout::Error => e
       @_es = nil
       @_es_info = nil
       if retries < max_retries

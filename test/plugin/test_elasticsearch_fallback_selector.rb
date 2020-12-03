@@ -58,6 +58,7 @@ class ElasticsearchFallbackSelectorTest < Test::Unit::TestCase
       with_transporter_log true
       reload_connections true
       reload_after 10
+      catch_transport_exception_on_retry false # For fallback testing
     ]
     assert_raise(Elasticsearch::Transport::Transport::Errors::NotFound) do
       driver(config)

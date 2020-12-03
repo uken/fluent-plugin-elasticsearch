@@ -3052,6 +3052,42 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     assert_equal(4, connection_resets)
   end
 
+  transport_errors_handled_separately = [Elasticsearch::Transport::Transport::Errors::NotFound]
+  transport_errors = Elasticsearch::Transport::Transport::Errors.constants.map { |err| [err, Elasticsearch::Transport::Transport::Errors.const_get(err)]  }
+  transport_errors_hash = Hash[transport_errors.select { |err| !transport_errors_handled_separately.include?(err[1]) } ]
+
+  data(transport_errors_hash)
+  def test_template_retry_transport_errors(error)
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_index_template.json')
+
+    config = %{
+      host            logs.google.com
+      port            778
+      scheme          https
+      path            /es/
+      user            john
+      password        doe
+      template_name   logstash
+      template_file   #{template_file}
+      max_retry_putting_template 0
+      use_legacy_template false
+    }
+
+    retries = 0
+    stub_request(:get, "https://logs.google.com:778/es//_index_template/logstash")
+      .with(basic_auth: ['john', 'doe']) do |req|
+      retries += 1
+      raise error
+    end
+
+    assert_raise(Fluent::Plugin::ElasticsearchError::RetryableOperationExhaustedFailure) do
+      driver(config)
+    end
+
+    assert_equal(1, retries)
+  end
+
   data("legacy_template" => [true, "_template"],
        "new_template"    => [false, "_index_template"])
   def test_template_retry_install_does_not_fail(data)
