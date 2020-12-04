@@ -77,6 +77,8 @@ module Fluent::Plugin
     config_param :port, :integer, :default => 9200
     config_param :user, :string, :default => nil
     config_param :password, :string, :default => nil, :secret => true
+    config_param :cloud_id, :string, :default => nil
+    config_param :cloud_auth, :string, :default => nil
     config_param :path, :string, :default => nil
     config_param :scheme, :enum, :list => [:https, :http], :default => :http
     config_param :hosts, :string, :default => nil
@@ -294,7 +296,13 @@ EOC
         @dump_proc = Yajl.method(:dump)
       end
 
+      raise Fluent::ConfigError, "`cloud_auth` must be present if `cloud_id` is present" if @cloud_id && @cloud_auth.nil?
       raise Fluent::ConfigError, "`password` must be present if `user` is present" if @user && @password.nil?
+
+      if @cloud_auth
+        @user = @cloud_auth.split(':', -1)[0]
+        @password = @cloud_auth.split(':', -1)[1]
+      end
 
       if @user && m = @user.match(/%{(?<user>.*)}/)
         @user = URI.encode_www_form_component(m["user"])
@@ -560,7 +568,17 @@ EOC
       return Time.at(event_time).to_datetime
     end
 
+    def cloud_client
+      Elasticsearch::Client.new(
+        cloud_id: @cloud_id,
+        user: @user,
+        password: @password
+      )
+    end
+
     def client(host = nil, compress_connection = false)
+      return cloud_client if @cloud_id
+
       # check here to see if we already have a client connection for the given host
       connection_options = get_connection_options(host)
 

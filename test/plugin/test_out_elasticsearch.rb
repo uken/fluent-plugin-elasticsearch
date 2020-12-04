@@ -322,6 +322,19 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     assert_equal true, instance.client(nil, compressable).transport.options[:compression]
   end
 
+  test 'check configure cloud_id based client' do
+
+    config = %{
+      cloud_id "name:bG9jYWxob3N0JGFiY2QkZWZnaA=="
+      cloud_auth "some:auth"
+    }
+    instance = driver(config).instance
+
+    assert_equal "name:bG9jYWxob3N0JGFiY2QkZWZnaA==", instance.cloud_id
+    assert_equal "some", instance.user
+    assert_equal "auth", instance.password
+  end
+
   test 'configure Content-Type' do
     config = %{
       content_type application/x-ndjson

@@ -19,6 +19,8 @@ Current maintainers: @cosmo0920
 * [Configuration](#configuration)
   + [host](#host)
   + [port](#port)
+  + [cloud_id](#cloud_id)
+  + [cloud_auth](#cloud_auth)
   + [emit_error_for_missing_id](#emit_error_for_missing_id)
   + [hosts](#hosts)
   + [user, password, path, scheme, ssl_verify](#user-password-path-scheme-ssl_verify)
@@ -186,6 +188,26 @@ port 9201 # defaults to 9200
 ```
 
 You can specify Elasticsearch port by this parameter.
+
+### cloud_id
+
+```
+cloud_id test-dep:ZXVyb3BlLXdlc3QxLmdjcC5jbG91ZC5lcy5pbyRiYZTA1Ng== 
+```
+
+You can specify Elasticsearch cloud_id by this parameter.
+
+If you specify `cloud_id` option then `cloud_auth` option is required.
+If you specify `cloud_id` option, `host`, `port`, `user` and `password` options are ignored.
+
+### cloud_auth
+
+```
+cloud_auth 'elastic:slkjdaooewkd87iqQ2O8EQYV'
+```
+
+You can specify Elasticsearch cloud_auth by this parameter.
+
 
 ### emit_error_for_missing_id
 
