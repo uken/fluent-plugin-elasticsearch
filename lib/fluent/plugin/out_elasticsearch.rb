@@ -349,7 +349,7 @@ EOC
           @type_name = '_doc'.freeze
         end
         if @last_seen_major_version >= 8 && @type_name != DEFAULT_TYPE_NAME_ES_7x
-          log.info "Detected ES 8.x or above: This parameter has no effect."
+          log.debug "Detected ES 8.x or above: This parameter has no effect."
           @type_name = nil
         end
       end
@@ -930,7 +930,7 @@ EOC
           log.warn "Detected ES 7.x: `_doc` will be used as the document `_type`."
           target_type = '_doc'.freeze
         elsif @last_seen_major_version >=8
-          log.warn "Detected ES 8.x or above: document type will not be used."
+          log.debug "Detected ES 8.x or above: document type will not be used."
           target_type = nil
         end
       else
@@ -940,7 +940,7 @@ EOC
           log.warn "Detected ES 7.x: `_doc` will be used as the document `_type`."
           target_type = '_doc'.freeze
         elsif @last_seen_major_version >= 8
-          log.warn "Detected ES 8.x or above: document type will not be used."
+          log.debug "Detected ES 8.x or above: document type will not be used."
           target_type = nil
         else
           target_type = type_name
