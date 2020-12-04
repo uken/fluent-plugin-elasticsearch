@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 4.3.1
+- Unsplit huge records by default (#851)
+
 ### 4.3.0
 - Add cloud_id & cloud_auth settings (#850)
 - Fix failing tests on es6 client (#848)
