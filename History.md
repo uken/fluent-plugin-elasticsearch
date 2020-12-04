@@ -2,6 +2,13 @@
 
 ### [Unreleased]
 
+### 4.3.0
+- Add cloud_id & cloud_auth settings (#850)
+- Fix failing tests on es6 client (#848)
+- feat: retry on transport errors (#846)
+- fix typo (#838)
+- Remove unnecessary nil check (#826)
+
 ### 4.2.2
 - Remove unnecessary nil check (#826)
 - Fix ILM rollover index template pattern to apply index_separator (#825)
