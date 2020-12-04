@@ -3751,6 +3751,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     driver.configure(Fluent::Config::Element.new(
                        'ROOT', '', {
                          '@type' => 'elasticsearch',
+                         'bulk_message_request_threshold' => 20 * 1024 * 1024,
                        }, [
                          Fluent::Config::Element.new('buffer', 'tag', {
                                                        'chunk_keys' => ['tag', 'time'],

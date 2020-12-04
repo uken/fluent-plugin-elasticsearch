@@ -1279,7 +1279,7 @@ Default value is `true`.
 
 Configure `bulk_message` request splitting threshold size.
 
-Default value is `20MB`. (20 * 1024 * 1024)
+Default value is `-1`(unlimited).
 
 If you specify this size as negative number, `bulk_message` request splitting feature will be disabled.
 
