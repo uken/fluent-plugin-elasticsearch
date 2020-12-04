@@ -383,7 +383,13 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     data("legacy_template" => [true, "_template"],
          "new_template"    => [false, "_index_template"])
     test 'valid configuration of index lifecycle management' do |data|
+      if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.4.0")
+        omit "elastisearch-ruby v7.4.0 or later is needed for ILM."
+      end
       use_legacy_template_flag, endpoint = data
+      if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+        omit "elastisearch-ruby v7.8.0 or later is needed."
+      end
       cwd = File.dirname(__FILE__)
       template_file = File.join(cwd, 'test_template.json')
 
@@ -419,7 +425,13 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     data("legacy_template" => [true, "_template"],
          "new_template"    => [false, "_index_template"])
     test 'valid configuration of overwriting ilm_policy' do |data|
+      if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.4.0")
+        omit "elastisearch-ruby v7.4.0 or later is needed for ILM."
+      end
       use_legacy_template_flag, endpoint = data
+      if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+        omit "elastisearch-ruby v7.8.0 or later is needed."
+      end
       cwd = File.dirname(__FILE__)
       template_file = File.join(cwd, 'test_template.json')
 
@@ -823,6 +835,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
        "new_template"    => [false, "_index_template"])
   def test_template_already_present(data)
     use_legacy_template_flag, endpoint = data
+    if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+      omit "elastisearch-ruby v7.8.0 or later is needed."
+    end
     config = %{
       host            logs.google.com
       port            777
@@ -853,6 +868,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
        "new_template"    => [false, "_index_template"])
   def test_template_create(data)
     use_legacy_template_flag, endpoint = data
+    if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+      omit "elastisearch-ruby v7.8.0 or later is needed."
+    end
     cwd = File.dirname(__FILE__)
     template_file = if use_legacy_template_flag
                       File.join(cwd, 'test_template.json')
@@ -894,6 +912,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
        "new_template"    => [false, "_index_template"])
   def test_template_create_with_rollover_index_and_template_related_placeholders(data)
     use_legacy_template_flag, endpoint = data
+    if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+      omit "elastisearch-ruby v7.8.0 or later is needed."
+    end
     cwd = File.dirname(__FILE__)
     template_file = if use_legacy_template_flag
                       File.join(cwd, 'test_template.json')
@@ -959,6 +980,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
        "new_template"    => [false, "_index_template"])
   def test_template_create_with_rollover_index_and_template_related_placeholders_with_truncating_caches(data)
     use_legacy_template_flag, endpoint = data
+    if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+      omit "elastisearch-ruby v7.8.0 or later is needed."
+    end
     cwd = File.dirname(__FILE__)
     template_file = if use_legacy_template_flag
                       File.join(cwd, 'test_template.json')
@@ -1034,12 +1058,18 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       rescue LoadError
         omit "ILM testcase needs elasticsearch-xpack gem."
       end
+      if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.4.0")
+        omit "elastisearch-ruby v7.4.0 or later is needed for ILM."
+      end
     end
 
     data("legacy_template" => [true, "_template"],
          "new_template"    => [false, "_index_template"])
     def test_template_create_with_rollover_index_and_default_ilm(data)
       use_legacy_template_flag, endpoint = data
+      if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+        omit "elastisearch-ruby v7.8.0 or later is needed."
+      end
       cwd = File.dirname(__FILE__)
       template_file = if use_legacy_template_flag
                         File.join(cwd, 'test_template.json')
@@ -1120,6 +1150,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
          "new_template"    => [false, "_index_template"])
     def test_template_create_with_rollover_index_and_default_ilm_on_logstash_format(data)
       use_legacy_template_flag, endpoint = data
+      if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+        omit "elastisearch-ruby v7.8.0 or later is needed."
+      end
       cwd = File.dirname(__FILE__)
       template_file = if use_legacy_template_flag
                         File.join(cwd, 'test_template.json')
@@ -1209,6 +1242,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
          "new_template"    => [false, "_index_template"])
     def test_template_create_with_rollover_index_and_default_ilm_and_ilm_policy_overwrite(data)
       use_legacy_template_flag, endpoint = data
+      if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+        omit "elastisearch-ruby v7.8.0 or later is needed."
+      end
       cwd = File.dirname(__FILE__)
       template_file = if use_legacy_template_flag
                         File.join(cwd, 'test_template.json')
@@ -1316,6 +1352,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
          "new_template"    => [false, "_index_template"])
     def test_template_create_with_rollover_index_and_default_ilm_with_empty_index_date_pattern(data)
       use_legacy_template_flag, endpoint = data
+      if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+        omit "elastisearch-ruby v7.8.0 or later is needed."
+      end
       cwd = File.dirname(__FILE__)
       template_file = if use_legacy_template_flag
                         File.join(cwd, 'test_template.json')
@@ -1396,6 +1435,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
          "new_template"    => [false, "_index_template"])
     def test_template_create_with_rollover_index_and_custom_ilm(data)
       use_legacy_template_flag, endpoint = data
+      if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+        omit "elastisearch-ruby v7.8.0 or later is needed."
+      end
       cwd = File.dirname(__FILE__)
       template_file = if use_legacy_template_flag
                         File.join(cwd, 'test_template.json')
@@ -1477,6 +1519,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
          "new_template"    => [false, "_index_template"])
     def test_template_create_with_rollover_index_and_ilm_policies_and_placeholderstest_template_create_with_rollover_index_and_ilm_policies_and_placeholders(data)
       use_legacy_template_flag, endpoint = data
+      if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+        omit "elastisearch-ruby v7.8.0 or later is needed."
+      end
       cwd = File.dirname(__FILE__)
       template_file = if use_legacy_template_flag
                         File.join(cwd, 'test_template.json')
@@ -1565,6 +1610,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
            "new_template"    => [false, "_index_template"])
       def test_tag_placeholder(data)
         use_legacy_template_flag, endpoint = data
+        if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+          omit "elastisearch-ruby v7.8.0 or later is needed."
+        end
         cwd = File.dirname(__FILE__)
         template_file = if use_legacy_template_flag
                           File.join(cwd, 'test_template.json')
@@ -1652,6 +1700,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
            "new_template"    => [false, "_index_template"])
       def test_tag_placeholder_with_multiple_policies(data)
         use_legacy_template_flag, endpoint = data
+        if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+          omit "elastisearch-ruby v7.8.0 or later is needed."
+        end
         cwd = File.dirname(__FILE__)
         template_file = if use_legacy_template_flag
                           File.join(cwd, 'test_template.json')
@@ -1740,6 +1791,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
          "new_template"    => [false, "_index_template"])
     def test_template_create_with_rollover_index_and_default_ilm_and_placeholders(data)
       use_legacy_template_flag, endpoint = data
+      if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+        omit "elastisearch-ruby v7.8.0 or later is needed."
+      end
       cwd = File.dirname(__FILE__)
       template_file = if use_legacy_template_flag
                         File.join(cwd, 'test_template.json')
@@ -1867,6 +1921,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
          "new_template"    => [false, "_index_template"])
     def test_template_create_with_rollover_index_and_default_ilm_and_placeholders_and_index_separator(data)
       use_legacy_template_flag, endpoint = data
+      if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+        omit "elastisearch-ruby v7.8.0 or later is needed."
+      end
       cwd = File.dirname(__FILE__)
       template_file = if use_legacy_template_flag
                         File.join(cwd, 'test_template.json')
@@ -1956,6 +2013,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
          "new_template"    => [false, "_index_template"])
     def test_template_create_with_rollover_index_and_default_ilm_and_custom_and_time_placeholders(data)
       use_legacy_template_flag, endpoint = data
+      if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+        omit "elastisearch-ruby v7.8.0 or later is needed."
+      end
       cwd = File.dirname(__FILE__)
       template_file = if use_legacy_template_flag
                         File.join(cwd, 'test_template.json')
@@ -2050,6 +2110,10 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
        "new_template"    => [false, "_index_template"])
   def test_custom_template_create(data)
     use_legacy_template_flag, endpoint = data
+
+    if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+      omit "elastisearch-ruby v7.8.0 or later is needed."
+    end
     cwd = File.dirname(__FILE__)
     template_file = if use_legacy_template_flag
                       File.join(cwd, 'test_alias_template.json')
@@ -2092,6 +2156,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
        "new_template"    => [false, "_index_template"])
   def test_custom_template_create_with_customize_template_related_placeholders(data)
     use_legacy_template_flag, endpoint = data
+    if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+      omit "elastisearch-ruby v7.8.0 or later is needed."
+    end
     cwd = File.dirname(__FILE__)
     template_file = if use_legacy_template_flag
                       File.join(cwd, 'test_alias_template.json')
@@ -2142,6 +2209,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
        "new_template"    => [false, "_index_template"])
   def test_custom_template_installation_for_host_placeholder(data)
     use_legacy_template_flag, endpoint = data
+    if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+      omit "elastisearch-ruby v7.8.0 or later is needed."
+    end
     cwd = File.dirname(__FILE__)
     template_file = if use_legacy_template_flag
                       File.join(cwd, 'test_template.json')
@@ -2188,6 +2258,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
        "new_template"    => [false, "_index_template"])
   def test_custom_template_with_rollover_index_create(data)
     use_legacy_template_flag, endpoint = data
+    if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+      omit "elastisearch-ruby v7.8.0 or later is needed."
+    end
     cwd = File.dirname(__FILE__)
     template_file = if use_legacy_template_flag
                       File.join(cwd, 'test_alias_template.json')
@@ -2246,6 +2319,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
        "new_template"    => [false, "_index_template"])
   def test_custom_template_with_rollover_index_create_and_deflector_alias(data)
     use_legacy_template_flag, endpoint = data
+    if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+      omit "elastisearch-ruby v7.8.0 or later is needed."
+    end
     cwd = File.dirname(__FILE__)
     template_file = if use_legacy_template_flag
                       File.join(cwd, 'test_alias_template.json')
@@ -2305,6 +2381,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
        "new_template"    => [false, "_index_template"])
   def test_custom_template_with_rollover_index_create_with_logstash_format(data)
     use_legacy_template_flag, endpoint = data
+    if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+      omit "elastisearch-ruby v7.8.0 or later is needed."
+    end
     cwd = File.dirname(__FILE__)
     template_file = if use_legacy_template_flag
                       File.join(cwd, 'test_alias_template.json')
@@ -2373,12 +2452,18 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       rescue LoadError
         omit "ILM testcase needs elasticsearch-xpack gem."
       end
+      if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.4.0")
+        omit "elastisearch-ruby v7.4.0 or later is needed."
+      end
     end
 
     data("legacy_template" => [true, "_template"],
          "new_template"    => [false, "_index_template"])
     def test_custom_template_with_rollover_index_create_and_default_ilm(data)
       use_legacy_template_flag, endpoint = data
+      if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+        omit "elastisearch-ruby v7.8.0 or later is needed."
+      end
       cwd = File.dirname(__FILE__)
       template_file = if use_legacy_template_flag
                         File.join(cwd, 'test_alias_template.json')
@@ -2463,6 +2548,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
          "new_template"    => [false, "_index_template"])
     def test_custom_template_with_rollover_index_create_and_default_ilm_and_ilm_policy_overwrite(data)
       use_legacy_template_flag, endpoint = data
+      if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+        omit "elastisearch-ruby v7.8.0 or later is needed."
+      end
       cwd = File.dirname(__FILE__)
       template_file = if use_legacy_template_flag
                         File.join(cwd, 'test_alias_template.json')
@@ -2577,6 +2665,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
          "new_template"    => [false, "_index_template"])
     def test_custom_template_with_rollover_index_create_and_default_ilm_and_placeholders(data)
       use_legacy_template_flag, endpoint = data
+      if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+        omit "elastisearch-ruby v7.8.0 or later is needed."
+      end
       cwd = File.dirname(__FILE__)
       template_file = if use_legacy_template_flag
                         File.join(cwd, 'test_alias_template.json')
@@ -2720,6 +2811,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
          "new_template"    => [false, "_index_template"])
     def test_custom_template_with_rollover_index_create_and_custom_ilm(data)
       use_legacy_template_flag, endpoint = data
+      if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+        omit "elastisearch-ruby v7.8.0 or later is needed."
+      end
       cwd = File.dirname(__FILE__)
       template_file = if use_legacy_template_flag
                         File.join(cwd, 'test_alias_template.json')
@@ -2798,6 +2892,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
        "new_template"    => [false, "_index_template"])
   def test_template_overwrite(data)
     use_legacy_template_flag, endpoint = data
+    if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+      omit "elastisearch-ruby v7.8.0 or later is needed."
+    end
     cwd = File.dirname(__FILE__)
     template_file = if use_legacy_template_flag
                       File.join(cwd, 'test_template.json')
@@ -2840,6 +2937,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
        "new_template"    => [false, "_index_template"])
   def test_custom_template_overwrite(data)
     use_legacy_template_flag, endpoint = data
+    if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+      omit "elastisearch-ruby v7.8.0 or later is needed."
+    end
     cwd = File.dirname(__FILE__)
     template_file = if use_legacy_template_flag
                       File.join(cwd, 'test_template.json')
@@ -2883,6 +2983,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
        "new_template"    => [false, "_index_template"])
   def test_custom_template_with_rollover_index_overwrite(data)
     use_legacy_template_flag, endpoint = data
+    if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+      omit "elastisearch-ruby v7.8.0 or later is needed."
+    end
     cwd = File.dirname(__FILE__)
     template_file = if use_legacy_template_flag
                       File.join(cwd, 'test_template.json')
@@ -2969,6 +3072,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
        "new_template"    => [false, "_index_template"])
   def test_template_create_for_host_placeholder(data)
     use_legacy_template_flag, endpoint = data
+    if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+      omit "elastisearch-ruby v7.8.0 or later is needed."
+    end
     cwd = File.dirname(__FILE__)
     template_file = if use_legacy_template_flag
                       File.join(cwd, 'test_template.json')
@@ -3017,6 +3123,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
        "new_template"    => [false, "_index_template"])
   def test_template_retry_install_fails(data)
     use_legacy_template_flag, endpoint = data
+    if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+      omit "elastisearch-ruby v7.8.0 or later is needed."
+    end
     cwd = File.dirname(__FILE__)
     template_file = if use_legacy_template_flag
                       File.join(cwd, 'test_template.json')
@@ -3058,6 +3167,11 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
 
   data(transport_errors_hash)
   def test_template_retry_transport_errors(error)
+    endpoint, use_legacy_template_flag = if Gem::Version.create(::Elasticsearch::Transport::VERSION) >= Gem::Version.create("7.8.0")
+                 ["_index_template".freeze, false]
+               else
+                 ["_template".freeze, true]
+               end
     cwd = File.dirname(__FILE__)
     template_file = File.join(cwd, 'test_index_template.json')
 
@@ -3071,11 +3185,11 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       template_name   logstash
       template_file   #{template_file}
       max_retry_putting_template 0
-      use_legacy_template false
+      use_legacy_template #{use_legacy_template_flag}
     }
 
     retries = 0
-    stub_request(:get, "https://logs.google.com:778/es//_index_template/logstash")
+    stub_request(:get, "https://logs.google.com:778/es//#{endpoint}/logstash")
       .with(basic_auth: ['john', 'doe']) do |req|
       retries += 1
       raise error
@@ -3092,6 +3206,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
        "new_template"    => [false, "_index_template"])
   def test_template_retry_install_does_not_fail(data)
     use_legacy_template_flag, endpoint = data
+    if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+      omit "elastisearch-ruby v7.8.0 or later is needed."
+    end
     cwd = File.dirname(__FILE__)
     template_file = if use_legacy_template_flag
                       File.join(cwd, 'test_template.json')
@@ -3130,6 +3247,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
        "new_template"    => [false, "_index_template"])
   def test_templates_create(data)
     use_legacy_template_flag, endpoint = data
+    if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+      omit "elastisearch-ruby v7.8.0 or later is needed."
+    end
     cwd = File.dirname(__FILE__)
     template_file = if use_legacy_template_flag
                       File.join(cwd, 'test_template.json')
@@ -3184,6 +3304,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
        "new_template"    => [false, "_index_template"])
   def test_templates_overwrite(data)
     use_legacy_template_flag, endpoint = data
+    if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+      omit "elastisearch-ruby v7.8.0 or later is needed."
+    end
     cwd = File.dirname(__FILE__)
     template_file = if use_legacy_template_flag
                       File.join(cwd, 'test_template.json')
@@ -3238,6 +3361,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
        "new_template"    => [false, "_index_template"])
   def test_templates_are_also_used(data)
     use_legacy_template_flag, endpoint = data
+    if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+      omit "elastisearch-ruby v7.8.0 or later is needed."
+    end
     cwd = File.dirname(__FILE__)
     template_file = if use_legacy_template_flag
                       File.join(cwd, 'test_template.json')
@@ -3294,6 +3420,9 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
        "new_template"    => [false, "_index_template"])
   def test_templates_can_be_partially_created_if_error_occurs(data)
     use_legacy_template_flag, endpoint = data
+    if !use_legacy_template_flag && Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.8.0")
+      omit "elastisearch-ruby v7.8.0 or later is needed."
+    end
     cwd = File.dirname(__FILE__)
     template_file = if use_legacy_template_flag
                       File.join(cwd, 'test_template.json')
