@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 4.3.2
+- Use log.debug to dump ES 8.x _type information (#852)
+
 ### 4.3.1
 - Unsplit huge records by default (#851)
 
