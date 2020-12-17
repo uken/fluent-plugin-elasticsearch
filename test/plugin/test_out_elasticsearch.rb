@@ -370,6 +370,65 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     }
   end
 
+  sub_test_case 'Check client.info response' do
+    def create_driver(conf='', es_version=5, client_version="\"5.0\"")
+      # For request stub to detect compatibility.
+      @client_version ||= client_version
+      @default_elasticsearch_version ||= es_version
+      Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
+        def detect_es_major_version
+          @_es_info ||= client.info
+          begin
+            unless version = @_es_info.dig("version", "number")
+              version = @default_elasticsearch_version
+            end
+          rescue NoMethodError => e
+            log.warn "#{@_es_info} can not dig version information. Assuming Elasticsearch #{@default_elasticsearch_version}", error: e
+            version = @default_elasticsearch_version
+          end
+          version.to_i
+        end
+      CODE
+
+      Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
+        def client_library_version
+          #{@client_version}
+        end
+      CODE
+      @driver ||= Fluent::Test::Driver::Output.new(Fluent::Plugin::ElasticsearchOutput) {
+        # v0.12's test driver assume format definition. This simulates ObjectBufferedOutput format
+        if !defined?(Fluent::Plugin::Output)
+          def format(tag, time, record)
+            [time, record].to_msgpack
+          end
+        end
+      }.configure(conf)
+    end
+
+    def stub_elastic_info_bad(url="http://localhost:9200/", version="6.4.2")
+      body ="{\"version\":{\"number\":\"#{version}\"}}"
+      stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'text/plain' } })
+    end
+
+    test 'handle invalid client.info' do
+      stub_elastic_info_bad("https://logs.fluentd.com:24225/es//", "7.7.1")
+      config = %{
+        host     logs.fluentd.com
+        port     24225
+        scheme   https
+        path     /es/
+        user     john
+        password doe
+        default_elasticsearch_version 7
+        scheme https
+        @log_level info
+      }
+      d = create_driver(config, 7, "\"7.10.1\"")
+      logs = d.logs
+      assert_logs_include(logs, /can not dig version information. Assuming Elasticsearch 7/)
+    end
+  end
+
   sub_test_case 'Check TLS handshake stuck warning log' do
     test 'warning TLS log' do
       config = %{
