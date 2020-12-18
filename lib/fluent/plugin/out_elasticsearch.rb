@@ -493,7 +493,12 @@ EOC
 
     def detect_es_major_version
       @_es_info ||= client.info
-      unless version = @_es_info.dig("version", "number")
+      begin
+        unless version = @_es_info.dig("version", "number")
+          version = @default_elasticsearch_version
+        end
+      rescue NoMethodError => e
+        log.warn "#{@_es_info} can not dig version information. Assuming Elasticsearch #{@default_elasticsearch_version}", error: e
         version = @default_elasticsearch_version
       end
       version.to_i
