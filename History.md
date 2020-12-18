@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 4.3.3
+- Handle invalid Elasticsearch::Client#info response (#855)
+
 ### 4.3.2
 - Use log.debug to dump ES 8.x _type information (#852)
 
