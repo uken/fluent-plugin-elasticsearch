@@ -37,7 +37,7 @@ In your Fluentd configuration, use `@type elasticsearch` and specify `tag your.a
   index_name fluentd
   type_name fluentd
   tag my.logs
-</match>
+</source>
 ```
 
 ## Configuration
