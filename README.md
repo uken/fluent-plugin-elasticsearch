@@ -109,6 +109,7 @@ Current maintainers: @cosmo0920
     + [chunk_id_key](#chunk_id_key)
 * [Configuration - Elasticsearch Input](#configuration---elasticsearch-input)
 * [Configuration - Elasticsearch Filter GenID](#configuration---elasticsearch-filter-genid)
+* [Configuration - Elasticsearch Output Data Stream](#configuration---elasticsearch-output-data-stream)
 * [Elasticsearch permissions](#elasticsearch-permissions)
 * [Troubleshooting](#troubleshooting)
 * [Contact](#contact)
@@ -1410,6 +1411,29 @@ features in the plugin configuration
 
 The list of privileges along with their description can be found in
 [security privileges](https://www.elastic.co/guide/en/elasticsearch/reference/current/security-privileges.html).
+
+## Configuration - Elasticsearch Output Data Stream
+
+Since Elasticsearch 7.9, Data Streams was introduced.
+
+You can enable this feature by specifying `@type elasticsearch_data_stream`.
+
+```
+@type elasticsearch_data_stream
+data_stream_name test
+```
+
+When `@type elasticsearch_data_stream` is used, ILM default policy is set to the specified data stream.
+Then, the matching index template is also created automatically.
+
+### data_stream_name
+
+You can specify Elasticsearch data stream name by this parameter.
+This parameter is mandatory for `elasticsearch_data_stream`.
+
+There are some limitations about naming rule.
+
+In more detail, please refer to the [Path parameters](https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-create-data-stream.html#indices-create-data-stream-api-path-params).
 
 ## Troubleshooting
 
