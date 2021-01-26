@@ -41,13 +41,19 @@ module Fluent::Plugin
         raise Fluent::ConfigError, "'elasticsearch/xpack'' is required for <@elasticsearch_data_stream>."
       end
 
-      begin
-        @client = client
-        create_ilm_policy
-        create_index_template
-        create_data_stream
-      rescue => e
-        raise Fluent::ConfigError, "Failed to create data stream: <#{@data_stream_name}> #{e.message}"
+      @client = client
+      if placeholder?(:data_stream_name_placeholder, @data_stream_name)
+        @use_placeholder = true
+        @data_stream_names = []
+      else
+        begin
+          @data_stream_names = [@data_stream_name]
+          create_ilm_policy(@data_stream_name)
+          create_index_template(@data_stream_name)
+          create_data_stream(@data_stream_name)
+        rescue => e
+          raise Fluent::ConfigError, "Failed to create data stream: <#{@data_stream_name}> #{e.message}"
+        end
       end
     end
 
@@ -135,7 +141,7 @@ module Fluent::Plugin
             create_data_stream(data_stream_name)
             @data_stream_names << data_stream_name
           rescue => e
-            raise Fluent::ConfigError, "Failed to create data stream: <#{extracted_name}> #{e.message}"
+            raise Fluent::ConfigError, "Failed to create data stream: <#{data_stream_name}> #{e.message}"
           end
         end
       end

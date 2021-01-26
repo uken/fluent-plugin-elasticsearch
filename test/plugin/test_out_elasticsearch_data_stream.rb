@@ -221,6 +221,23 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     assert_equal "foo", driver(conf).instance.data_stream_name
   end
 
+  def test_placeholder
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    name = "foo_test"
+    stub_default(name)
+    stub_bulk_feed(name)
+    conf = config_element(
+      'ROOT', '', {
+        '@type' => ELASTIC_DATA_STREAM_TYPE,
+        'data_stream_name' => 'foo_${tag}'
+      })
+    driver(conf).run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+    assert_equal 1, @bulk_records
+  end
+
   def test_bulk_insert_feed
     omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
 
