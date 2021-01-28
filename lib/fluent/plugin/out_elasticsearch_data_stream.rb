@@ -96,10 +96,10 @@ module Fluent::Plugin
     end
 
     def create_data_stream(name)
+      return if data_stream_exist?(name)
       params = {
         "name": name
       }
-      return if data_stream_exist?(name)
       @client.indices.create_data_stream(params)
     end
 
