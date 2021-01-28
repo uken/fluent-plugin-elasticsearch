@@ -262,7 +262,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
         driver.feed(record)
       end
     end
-    assert_equal 2, @bulk_records
+    assert_equal keys.count, @bulk_records
   end
 
   def test_bulk_insert_feed
