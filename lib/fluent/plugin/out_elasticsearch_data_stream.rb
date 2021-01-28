@@ -15,7 +15,34 @@ module Fluent::Plugin
     def configure(conf)
       super
 
+      begin
+        require 'elasticsearch/xpack'
+      rescue LoadError
+        raise Fluent::ConfigError, "'elasticsearch/xpack'' is required for <@elasticsearch_data_stream>."
+      end
+
       # ref. https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-create-data-stream.html
+      unless placeholder?(:data_stream_name_placeholder, @data_stream_name)
+        validate_data_stream_name
+      else
+        @use_placeholder = true
+        @data_stream_names = []
+      end
+
+      @client = client
+      unless @use_placeholder
+        begin
+          @data_stream_names = [@data_stream_name]
+          create_ilm_policy(@data_stream_name)
+          create_index_template(@data_stream_name)
+          create_data_stream(@data_stream_name)
+        rescue => e
+          raise Fluent::ConfigError, "Failed to create data stream: <#{@data_stream_name}> #{e.message}"
+        end
+      end
+    end
+
+    def validate_data_stream_name
       unless valid_data_stream_name?
         unless start_with_valid_characters?
           if not_dots?
@@ -32,27 +59,6 @@ module Fluent::Plugin
         end
         if @data_stream_name.bytes.size > 255
           raise Fluent::ConfigError, "'data_stream_name' must not be longer than 255 bytes: <#{@data_stream_name}>"
-        end
-      end
-
-      begin
-        require 'elasticsearch/xpack'
-      rescue LoadError
-        raise Fluent::ConfigError, "'elasticsearch/xpack'' is required for <@elasticsearch_data_stream>."
-      end
-
-      @client = client
-      if placeholder?(:data_stream_name_placeholder, @data_stream_name)
-        @use_placeholder = true
-        @data_stream_names = []
-      else
-        begin
-          @data_stream_names = [@data_stream_name]
-          create_ilm_policy(@data_stream_name)
-          create_index_template(@data_stream_name)
-          create_data_stream(@data_stream_name)
-        rescue => e
-          raise Fluent::ConfigError, "Failed to create data stream: <#{@data_stream_name}> #{e.message}"
         end
       end
     end
