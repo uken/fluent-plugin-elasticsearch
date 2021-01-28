@@ -19,6 +19,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     @driver = nil
     log = Fluent::Engine.log
     log.out.logs.slice!(0, log.out.logs.length)
+    @bulk_records = 0
   end
 
   def driver(conf='', es_version=5, client_version="\"5.0\"")
@@ -86,7 +87,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       # bulk data must be pair of OP and records
       # {"create": {}}\n
       # {"@timestamp": ...}
-      @bulk_records = req.body.split("\n").size / 2
+      @bulk_records += req.body.split("\n").size / 2
     end
   end
 
