@@ -239,6 +239,32 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     assert_equal 1, @bulk_records
   end
 
+  def test_custom_record_placeholder
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    keys = ["bar", "baz"]
+    keys.each do |key|
+      name = "foo_#{key}"
+      stub_default(name)
+      stub_bulk_feed(name)
+    end
+    conf = config_element(
+      'ROOT', '', {
+        '@type' => ELASTIC_DATA_STREAM_TYPE,
+        'data_stream_name' => 'foo_${key1}'
+      }, [config_element('buffer', 'tag,key1', {
+                          'timekey' => '1d'
+                        }, [])]
+    )
+    driver(conf).run(default_tag: 'test') do
+      keys.each do |key|
+        record = sample_record.merge({"key1" => key})
+        driver.feed(record)
+      end
+    end
+    assert_equal 2, @bulk_records
+  end
+
   def test_bulk_insert_feed
     omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
 
