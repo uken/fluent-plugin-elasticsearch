@@ -115,7 +115,7 @@ module Fluent::Plugin
     def not_dots?
       not (@data_stream_name == "." or @data_stream_name == "..")
     end
-    
+
     def client_library_version
       Elasticsearch::VERSION
     end
@@ -140,7 +140,7 @@ module Fluent::Plugin
           router.emit_error_event(tag, time, record, e)
         end
       end
-      
+
       params = {
         index: @data_stream_name,
         body: bulk_message
