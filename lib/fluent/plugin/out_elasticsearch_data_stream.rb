@@ -80,10 +80,14 @@ module Fluent::Plugin
       params = {
         "name": @data_stream_name,
       }
-      response = @client.indices.get_data_stream(params)
-      unless response.is_a?(Elasticsearch::Transport::Transport::Errors::NotFound)
-        log.info "Specified data stream exists: <#{@data_stream_name}>"
-        return
+      begin
+        response = @client.indices.get_data_stream(params)
+        unless response.is_a?(Elasticsearch::Transport::Transport::Errors::NotFound)
+          log.info "Specified data stream exists: <#{@data_stream_name}>"
+          return
+        end
+      rescue Elasticsearch::Transport::Transport::Errors::NotFound => e
+        log.info "Specified data stream does not exist. Will be created: <#{e}>"
       end
       @client.indices.create_data_stream(params)
     end
