@@ -61,28 +61,28 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   DUPLICATED_DATA_STREAM_EXCEPTION = {"error": {}, "status": 400}
   NONEXISTENT_DATA_STREAM_EXCEPTION = {"error": {}, "status": 404}
 
-  def stub_ilm_policy(url="http://localhost:9200/_ilm/policy/foo_policy")
-    stub_request(:put, url).to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+  def stub_ilm_policy(name="foo")
+    stub_request(:put, "http://localhost:9200/_ilm/policy/#{name}_policy").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
-  def stub_index_template(url="http://localhost:9200/_index_template/foo")
-    stub_request(:put, url).to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+  def stub_index_template(name="foo")
+    stub_request(:put, "http://localhost:9200/_index_template/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
-  def stub_data_stream(url="http://localhost:9200/_data_stream/foo")
-    stub_request(:put, url).to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+  def stub_data_stream(name="foo")
+    stub_request(:put, "http://localhost:9200/_data_stream/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
-  def stub_existent_data_stream?(url="http://localhost:9200/_data_stream/foo")
-    stub_request(:get, url).to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+  def stub_existent_data_stream?(name="foo")
+    stub_request(:get, "http://localhost:9200/_data_stream/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
-  def stub_nonexistent_data_stream?(url="http://localhost:9200/_data_stream/foo")
-    stub_request(:get, url).to_return(:status => [200, Elasticsearch::Transport::Transport::Errors::NotFound])
+  def stub_nonexistent_data_stream?(name="foo")
+    stub_request(:get, "http://localhost:9200/_data_stream/#{name}").to_return(:status => [200, Elasticsearch::Transport::Transport::Errors::NotFound])
   end
 
-  def stub_bulk_feed(url="http://localhost:9200/foo/_bulk")
-    stub_request(:post, url).with do |req|
+  def stub_bulk_feed(name="foo")
+    stub_request(:post, "http://localhost:9200/#{name}/_bulk").with do |req|
       # bulk data must be pair of OP and records
       # {"create": {}}\n
       # {"@timestamp": ...}
@@ -90,11 +90,11 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     end
   end
 
-  def stub_default
-    stub_ilm_policy
-    stub_index_template
-    stub_existent_data_stream?
-    stub_data_stream
+  def stub_default(name="foo")
+    stub_ilm_policy(name)
+    stub_index_template(name)
+    stub_existent_data_stream?(name)
+    stub_data_stream(name)
   end
 
   def data_stream_supported?

@@ -51,34 +51,34 @@ module Fluent::Plugin
       end
     end
 
-    def create_ilm_policy
+    def create_ilm_policy(name)
       params = {
-        policy_id: "#{@data_stream_name}_policy",
+        policy_id: "#{name}_policy",
         body: File.read(File.join(File.dirname(__FILE__), "default-ilm-policy.json"))
       }
       @client.xpack.ilm.put_policy(params)
     end
 
-    def create_index_template
+    def create_index_template(name)
       body = {
-        "index_patterns" => ["#{@data_stream_name}*"],
+        "index_patterns" => ["#{name}*"],
         "data_stream" => {},
         "template" => {
           "settings" => {
-            "index.lifecycle.name" => "#{@data_stream_name}_policy"
+            "index.lifecycle.name" => "#{name}_policy"
           }
         }
       }
       params = {
-        name: @data_stream_name,
+        name: name,
         body: body
       }
       @client.indices.put_index_template(params)
     end
 
-    def create_data_stream
+    def create_data_stream(name)
       params = {
-        "name": @data_stream_name,
+        "name": name
       }
       begin
         response = @client.indices.get_data_stream(params)
@@ -125,6 +125,21 @@ module Fluent::Plugin
     end
 
     def write(chunk)
+      data_stream_name = @data_stream_name
+      if @use_placeholder
+        data_stream_name = extract_placeholders(@data_stream_name, chunk)
+        unless @data_stream_names.include?(data_stream_name)
+          begin
+            create_ilm_policy(data_stream_name)
+            create_index_template(data_stream_name)
+            create_data_stream(data_stream_name)
+            @data_stream_names << data_stream_name
+          rescue => e
+            raise Fluent::ConfigError, "Failed to create data stream: <#{extracted_name}> #{e.message}"
+          end
+        end
+      end
+
       bulk_message = ""
       headers = {
         CREATE_OP => {}
@@ -142,16 +157,16 @@ module Fluent::Plugin
       end
 
       params = {
-        index: @data_stream_name,
+        index: data_stream_name,
         body: bulk_message
       }
       begin
         response = @client.bulk(params)
         if response['errors']
-          log.error "Could not bulk insert to Data Stream: #{@data_stream_name} #{response}"
+          log.error "Could not bulk insert to Data Stream: #{data_stream_name} #{response}"
         end
       rescue => e
-        log.error "Could not bulk insert to Data Stream: #{@data_stream_name} #{e.message}"
+        log.error "Could not bulk insert to Data Stream: #{data_stream_name} #{e.message}"
       end
     end
 
