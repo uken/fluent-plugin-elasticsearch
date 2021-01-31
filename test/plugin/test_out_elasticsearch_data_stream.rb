@@ -19,6 +19,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     @driver = nil
     log = Fluent::Engine.log
     log.out.logs.slice!(0, log.out.logs.length)
+    @bulk_records = 0
   end
 
   def driver(conf='', es_version=5, client_version="\"5.0\"")
@@ -61,40 +62,40 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   DUPLICATED_DATA_STREAM_EXCEPTION = {"error": {}, "status": 400}
   NONEXISTENT_DATA_STREAM_EXCEPTION = {"error": {}, "status": 404}
 
-  def stub_ilm_policy(url="http://localhost:9200/_ilm/policy/foo_policy")
-    stub_request(:put, url).to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+  def stub_ilm_policy(name="foo")
+    stub_request(:put, "http://localhost:9200/_ilm/policy/#{name}_policy").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
-  def stub_index_template(url="http://localhost:9200/_index_template/foo")
-    stub_request(:put, url).to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+  def stub_index_template(name="foo")
+    stub_request(:put, "http://localhost:9200/_index_template/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
-  def stub_data_stream(url="http://localhost:9200/_data_stream/foo")
-    stub_request(:put, url).to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+  def stub_data_stream(name="foo")
+    stub_request(:put, "http://localhost:9200/_data_stream/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
-  def stub_existent_data_stream?(url="http://localhost:9200/_data_stream/foo")
-    stub_request(:get, url).to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+  def stub_existent_data_stream?(name="foo")
+    stub_request(:get, "http://localhost:9200/_data_stream/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
-  def stub_nonexistent_data_stream?(url="http://localhost:9200/_data_stream/foo")
-    stub_request(:get, url).to_return(:status => [200, Elasticsearch::Transport::Transport::Errors::NotFound])
+  def stub_nonexistent_data_stream?(name="foo")
+    stub_request(:get, "http://localhost:9200/_data_stream/#{name}").to_return(:status => [200, Elasticsearch::Transport::Transport::Errors::NotFound])
   end
 
-  def stub_bulk_feed(url="http://localhost:9200/foo/_bulk")
-    stub_request(:post, url).with do |req|
+  def stub_bulk_feed(name="foo")
+    stub_request(:post, "http://localhost:9200/#{name}/_bulk").with do |req|
       # bulk data must be pair of OP and records
       # {"create": {}}\n
       # {"@timestamp": ...}
-      @bulk_records = req.body.split("\n").size / 2
+      @bulk_records += req.body.split("\n").size / 2
     end
   end
 
-  def stub_default
-    stub_ilm_policy
-    stub_index_template
-    stub_existent_data_stream?
-    stub_data_stream
+  def stub_default(name="foo")
+    stub_ilm_policy(name)
+    stub_index_template(name)
+    stub_existent_data_stream?(name)
+    stub_data_stream(name)
   end
 
   def data_stream_supported?
@@ -219,6 +220,70 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
         'data_stream_name' => 'foo'
       })
     assert_equal "foo", driver(conf).instance.data_stream_name
+  end
+
+  def test_placeholder
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    name = "foo_test"
+    stub_default(name)
+    stub_bulk_feed(name)
+    conf = config_element(
+      'ROOT', '', {
+        '@type' => ELASTIC_DATA_STREAM_TYPE,
+        'data_stream_name' => 'foo_${tag}'
+      })
+    driver(conf).run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+    assert_equal 1, @bulk_records
+  end
+
+  def test_time_placeholder
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    flexmock(Time, :now => Time.local(2021, 1, 29))
+    name = "foo_20210129"
+    stub_default(name)
+    stub_bulk_feed(name)
+    conf = config_element(
+      'ROOT', '', {
+        '@type' => ELASTIC_DATA_STREAM_TYPE,
+        'data_stream_name' => 'foo_%Y%m%d'
+      }, [config_element('buffer', 'time', {
+                          'timekey' => '1d'
+                        }, [])]
+      )
+    driver(conf).run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+    assert_equal 1, @bulk_records
+  end
+
+  def test_custom_record_placeholder
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    keys = ["bar", "baz"]
+    keys.each do |key|
+      name = "foo_#{key}"
+      stub_default(name)
+      stub_bulk_feed(name)
+    end
+    conf = config_element(
+      'ROOT', '', {
+        '@type' => ELASTIC_DATA_STREAM_TYPE,
+        'data_stream_name' => 'foo_${key1}'
+      }, [config_element('buffer', 'tag,key1', {
+                          'timekey' => '1d'
+                        }, [])]
+    )
+    driver(conf).run(default_tag: 'test') do
+      keys.each do |key|
+        record = sample_record.merge({"key1" => key})
+        driver.feed(record)
+      end
+    end
+    assert_equal keys.count, @bulk_records
   end
 
   def test_bulk_insert_feed

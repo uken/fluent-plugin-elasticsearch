@@ -15,7 +15,34 @@ module Fluent::Plugin
     def configure(conf)
       super
 
+      begin
+        require 'elasticsearch/xpack'
+      rescue LoadError
+        raise Fluent::ConfigError, "'elasticsearch/xpack'' is required for <@elasticsearch_data_stream>."
+      end
+
       # ref. https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-create-data-stream.html
+      unless placeholder?(:data_stream_name_placeholder, @data_stream_name)
+        validate_data_stream_name
+      else
+        @use_placeholder = true
+        @data_stream_names = []
+      end
+
+      @client = client
+      unless @use_placeholder
+        begin
+          @data_stream_names = [@data_stream_name]
+          create_ilm_policy(@data_stream_name)
+          create_index_template(@data_stream_name)
+          create_data_stream(@data_stream_name)
+        rescue => e
+          raise Fluent::ConfigError, "Failed to create data stream: <#{@data_stream_name}> #{e.message}"
+        end
+      end
+    end
+
+    def validate_data_stream_name
       unless valid_data_stream_name?
         unless start_with_valid_characters?
           if not_dots?
@@ -34,61 +61,51 @@ module Fluent::Plugin
           raise Fluent::ConfigError, "'data_stream_name' must not be longer than 255 bytes: <#{@data_stream_name}>"
         end
       end
-
-      begin
-        require 'elasticsearch/xpack'
-      rescue LoadError
-        raise Fluent::ConfigError, "'elasticsearch/xpack'' is required for <@elasticsearch_data_stream>."
-      end
-
-      begin
-        @client = client
-        create_ilm_policy
-        create_index_template
-        create_data_stream
-      rescue => e
-        raise Fluent::ConfigError, "Failed to create data stream: <#{@data_stream_name}> #{e.message}"
-      end
     end
 
-    def create_ilm_policy
+    def create_ilm_policy(name)
       params = {
-        policy_id: "#{@data_stream_name}_policy",
+        policy_id: "#{name}_policy",
         body: File.read(File.join(File.dirname(__FILE__), "default-ilm-policy.json"))
       }
       @client.xpack.ilm.put_policy(params)
     end
 
-    def create_index_template
+    def create_index_template(name)
       body = {
-        "index_patterns" => ["#{@data_stream_name}*"],
+        "index_patterns" => ["#{name}*"],
         "data_stream" => {},
         "template" => {
           "settings" => {
-            "index.lifecycle.name" => "#{@data_stream_name}_policy"
+            "index.lifecycle.name" => "#{name}_policy"
           }
         }
       }
       params = {
-        name: @data_stream_name,
+        name: name,
         body: body
       }
       @client.indices.put_index_template(params)
     end
 
-    def create_data_stream
+    def data_stream_exist?(name)
       params = {
-        "name": @data_stream_name,
+        "name": name
       }
       begin
         response = @client.indices.get_data_stream(params)
-        unless response.is_a?(Elasticsearch::Transport::Transport::Errors::NotFound)
-          log.info "Specified data stream exists: <#{@data_stream_name}>"
-          return
-        end
+        return (not response.is_a?(Elasticsearch::Transport::Transport::Errors::NotFound))
       rescue Elasticsearch::Transport::Transport::Errors::NotFound => e
         log.info "Specified data stream does not exist. Will be created: <#{e}>"
+        return false
       end
+    end
+
+    def create_data_stream(name)
+      return if data_stream_exist?(name)
+      params = {
+        "name": name
+      }
       @client.indices.create_data_stream(params)
     end
 
@@ -125,6 +142,21 @@ module Fluent::Plugin
     end
 
     def write(chunk)
+      data_stream_name = @data_stream_name
+      if @use_placeholder
+        data_stream_name = extract_placeholders(@data_stream_name, chunk)
+        unless @data_stream_names.include?(data_stream_name)
+          begin
+            create_ilm_policy(data_stream_name)
+            create_index_template(data_stream_name)
+            create_data_stream(data_stream_name)
+            @data_stream_names << data_stream_name
+          rescue => e
+            raise Fluent::ConfigError, "Failed to create data stream: <#{data_stream_name}> #{e.message}"
+          end
+        end
+      end
+
       bulk_message = ""
       headers = {
         CREATE_OP => {}
@@ -142,16 +174,16 @@ module Fluent::Plugin
       end
 
       params = {
-        index: @data_stream_name,
+        index: data_stream_name,
         body: bulk_message
       }
       begin
         response = @client.bulk(params)
         if response['errors']
-          log.error "Could not bulk insert to Data Stream: #{@data_stream_name} #{response}"
+          log.error "Could not bulk insert to Data Stream: #{data_stream_name} #{response}"
         end
       rescue => e
-        log.error "Could not bulk insert to Data Stream: #{@data_stream_name} #{e.message}"
+        log.error "Could not bulk insert to Data Stream: #{data_stream_name} #{e.message}"
       end
     end
 
