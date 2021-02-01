@@ -303,6 +303,8 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   end
 
   def test_template_retry_install_fails
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
     cwd = File.dirname(__FILE__)
     template_file = File.join(cwd, 'test_index_template.json')
 
