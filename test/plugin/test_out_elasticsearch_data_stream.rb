@@ -242,8 +242,8 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   def test_time_placeholder
     omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
 
-    flexmock(Time, :now => Time.local(2021, 1, 29))
-    name = "foo_20210129"
+    time = Time.now
+    name = "foo_#{time.strftime("%Y%m%d")}"
     stub_default(name)
     stub_bulk_feed(name)
     conf = config_element(
