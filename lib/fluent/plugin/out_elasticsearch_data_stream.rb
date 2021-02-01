@@ -8,6 +8,8 @@ module Fluent::Plugin
     helpers :event_emitter
 
     config_param :data_stream_name, :string
+    # Elasticsearch 7.9 or later always support new style of index template.
+    config_set_default :use_legacy_template, false
 
     INVALID_START_CHRACTERS = ["-", "_", "+", "."]
     INVALID_CHARACTERS = ["\\", "/", "*", "?", "\"", "<", ">", "|", " ", ",", "#", ":"]
