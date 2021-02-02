@@ -8,6 +8,8 @@ module Fluent::Plugin
     helpers :event_emitter
 
     config_param :data_stream_name, :string
+    # Elasticsearch 7.9 or later always support new style of index template.
+    config_set_default :use_legacy_template, false
 
     INVALID_START_CHRACTERS = ["-", "_", "+", "."]
     INVALID_CHARACTERS = ["\\", "/", "*", "?", "\"", "<", ">", "|", " ", ",", "#", ":"]
@@ -68,7 +70,11 @@ module Fluent::Plugin
         policy_id: "#{name}_policy",
         body: File.read(File.join(File.dirname(__FILE__), "default-ilm-policy.json"))
       }
-      @client.xpack.ilm.put_policy(params)
+      retry_operate(@max_retry_putting_template,
+                    @fail_on_putting_template_retry_exceed,
+                    @catch_transport_exception_on_retry) do
+        @client.xpack.ilm.put_policy(params)
+      end
     end
 
     def create_index_template(name)
@@ -85,7 +91,11 @@ module Fluent::Plugin
         name: name,
         body: body
       }
-      @client.indices.put_index_template(params)
+      retry_operate(@max_retry_putting_template,
+                    @fail_on_putting_template_retry_exceed,
+                    @catch_transport_exception_on_retry) do
+        @client.indices.put_index_template(params)
+      end
     end
 
     def data_stream_exist?(name)
@@ -106,7 +116,11 @@ module Fluent::Plugin
       params = {
         "name": name
       }
-      @client.indices.create_data_stream(params)
+      retry_operate(@max_retry_putting_template,
+                    @fail_on_putting_template_retry_exceed,
+                    @catch_transport_exception_on_retry) do
+        @client.indices.create_data_stream(params)
+      end
     end
 
     def valid_data_stream_name?

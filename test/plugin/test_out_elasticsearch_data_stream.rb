@@ -242,8 +242,8 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   def test_time_placeholder
     omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
 
-    flexmock(Time, :now => Time.local(2021, 1, 29))
-    name = "foo_20210129"
+    time = Time.now
+    name = "foo_#{time.strftime("%Y%m%d")}"
     stub_default(name)
     stub_bulk_feed(name)
     conf = config_element(
@@ -300,5 +300,38 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       driver.feed(sample_record)
     end
     assert_equal 1, @bulk_records
+  end
+
+  def test_template_retry_install_fails
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    cwd = File.dirname(__FILE__)
+    template_file = File.join(cwd, 'test_index_template.json')
+
+    config = %{
+      host            logs.google.com
+      port            778
+      scheme          https
+      data_stream_name foo
+      user            john
+      password        doe
+      template_name   logstash
+      template_file   #{template_file}
+      max_retry_putting_template 3
+    }
+
+    connection_resets = 0
+    # check if template exists
+    stub_request(:get, "https://logs.google.com:778/_index_template/logstash")
+      .with(basic_auth: ['john', 'doe']) do |req|
+      connection_resets += 1
+      raise Faraday::ConnectionFailed, "Test message"
+    end
+
+    assert_raise(Fluent::Plugin::ElasticsearchError::RetryableOperationExhaustedFailure) do
+      driver(config)
+    end
+
+    assert_equal(4, connection_resets)
   end
 end
