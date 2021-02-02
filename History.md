@@ -2,6 +2,13 @@
 
 ### [Unreleased]
 
+### 5.0.0
+-  Support #retry_operate on data stream (#863)
+- Support placeholder in @data\_stream\_name for @type elasticsearch\_data\_stream (#862)
+- Extract troubleshooting section (#861)
+- Fix unmatched `<source>` close tag (#860)
+- Initial support for Elasticsearch Data Stream (#859)
+
 ### 4.3.3
 - Handle invalid Elasticsearch::Client#info response (#855)
 
