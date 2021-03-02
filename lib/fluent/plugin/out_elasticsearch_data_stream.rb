@@ -18,9 +18,10 @@ module Fluent::Plugin
       super
 
       begin
+        require 'elasticsearch/api'
         require 'elasticsearch/xpack'
       rescue LoadError
-        raise Fluent::ConfigError, "'elasticsearch/xpack'' is required for <@elasticsearch_data_stream>."
+        raise Fluent::ConfigError, "'elasticsearch/api', 'elasticsearch/xpack' are required for <@elasticsearch_data_stream>."
       end
 
       # ref. https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-create-data-stream.html
