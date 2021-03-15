@@ -67,6 +67,7 @@ module Fluent::Plugin
     end
 
     def create_ilm_policy(name)
+      return if data_stream_exist?(name)
       params = {
         policy_id: "#{name}_policy",
         body: File.read(File.join(File.dirname(__FILE__), "default-ilm-policy.json"))
@@ -79,6 +80,7 @@ module Fluent::Plugin
     end
 
     def create_index_template(name)
+      return if data_stream_exist?(name)
       body = {
         "index_patterns" => ["#{name}*"],
         "data_stream" => {},
