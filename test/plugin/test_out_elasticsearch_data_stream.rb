@@ -79,7 +79,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   end
 
   def stub_nonexistent_data_stream?(name="foo")
-    stub_request(:get, "http://localhost:9200/_data_stream/#{name}").to_return(:status => [200, Elasticsearch::Transport::Transport::Errors::NotFound])
+    stub_request(:get, "http://localhost:9200/_data_stream/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
   end
 
   def stub_bulk_feed(name="foo")
@@ -94,7 +94,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   def stub_default(name="foo")
     stub_ilm_policy(name)
     stub_index_template(name)
-    stub_existent_data_stream?(name)
+    stub_nonexistent_data_stream?(name)
     stub_data_stream(name)
   end
 
@@ -207,12 +207,12 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     assert_equal "foo", driver(conf).instance.data_stream_name
   end
 
-  def test_nonexistent_data_stream
+  def test_existent_data_stream
     omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
 
     stub_ilm_policy
     stub_index_template
-    stub_nonexistent_data_stream?
+    stub_existent_data_stream?
     stub_data_stream
     conf = config_element(
       'ROOT', '', {
