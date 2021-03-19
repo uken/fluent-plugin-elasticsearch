@@ -2,6 +2,11 @@
 
 ### [Unreleased]
 
+### 5.0.2
+- GitHub Actions: Tweak Ruby versions on test (#875)
+- test: datastreams: Set nonexistent datastream as default (#874)
+- Fix overwriting of index template and index lifecycle policy on existing data streams (#872)
+
 ### 5.0.1
 - Use elasticsearch/api instead of elasticsearch/xpack (#870)
 
