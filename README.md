@@ -171,6 +171,24 @@ You can specify Elasticsearch host by this parameter.
 
 **Note:** Since v3.3.2, `host` parameter supports builtin placeholders. If you want to send events dynamically into different hosts at runtime with `elasticsearch_dynamic` output plugin, please consider to switch to use plain `elasticsearch` output plugin. In more detail for builtin placeholders, please refer to [Placeholders](#placeholders) section.
 
+To use IPv6 address on `host` parameter, you can use the following styles:
+
+#### string style
+
+To use string style, you must quote IPv6 address due to prevent to be interpreted as JSON:
+
+```
+host "[2404:7a80:d440:3000:192a:a292:bd7f:ca10]"
+```
+
+#### raw style
+
+You can also specify raw IPv6 address. This will be handled as `[specified IPv6 address]`:
+
+```
+host 2404:7a80:d440:3000:192a:a292:bd7f:ca10
+```
+
 ### port
 
 ```
@@ -236,6 +254,16 @@ hosts host1:port1,host2:port2,host3 # port3 is 9200
 **Note:** If you will use scheme https, do not include "https://" in your hosts ie. host "https://domain", this will cause ES cluster to be unreachable and you will receive an error "Can not reach Elasticsearch cluster"
 
 **Note:** Up until v2.8.5, it was allowed to embed the username/password in the URL. However, this syntax is deprecated as of v2.8.6 because it was found to cause serious connection problems (See #394). Please migrate your settings to use the `user` and `password` field (described below) instead.
+
+#### IPv6 addresses
+
+When you want to specify IPv6 addresses, you must specify schema together:
+
+```
+hosts http://[2404:7a80:d440:3000:de:7311:6329:2e6c]:port1,http://[2404:7a80:d440:3000:de:7311:6329:1e6c]:port2,http://[2404:7a80:d440:3000:de:6311:6329:2e6c]:port3
+```
+
+If you don't specify hosts with schema together, Elasticsearch plugin complains Invalid URI for them.
 
 ### user, password, path, scheme, ssl_verify
 

@@ -3612,6 +3612,74 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     assert_equal '/default_path', host2[:path]
   end
 
+  class IPv6AdressStringHostsTest < self
+    def test_legacy_hosts_list
+      config = %{
+        hosts    "[2404:7a80:d440:3000:192a:a292:bd7f:ca19]:50,host2:100,host3"
+        scheme   https
+        path     /es/
+        port     123
+      }
+      instance = driver(config).instance
+
+      assert_raise(URI::InvalidURIError) do
+        instance.get_connection_options[:hosts].length
+      end
+    end
+
+    def test_hosts_list
+      config = %{
+        hosts    https://john:password@[2404:7a80:d440:3000:192a:a292:bd7f:ca19]:443/elastic/,http://host2
+        path     /default_path
+        user     default_user
+        password default_password
+      }
+      instance = driver(config).instance
+
+      assert_equal 2, instance.get_connection_options[:hosts].length
+      host1, host2 = instance.get_connection_options[:hosts]
+
+      assert_equal '[2404:7a80:d440:3000:192a:a292:bd7f:ca19]', host1[:host]
+      assert_equal 443, host1[:port]
+      assert_equal 'https', host1[:scheme]
+      assert_equal 'john', host1[:user]
+      assert_equal 'password', host1[:password]
+      assert_equal '/elastic/', host1[:path]
+
+      assert_equal 'host2', host2[:host]
+      assert_equal 'http', host2[:scheme]
+      assert_equal 'default_user', host2[:user]
+      assert_equal 'default_password', host2[:password]
+      assert_equal '/default_path', host2[:path]
+    end
+
+    def test_hosts_list_with_escape_placeholders
+      config = %{
+        hosts    https://%{j+hn}:%{passw@rd}@[2404:7a80:d440:3000:192a:a292:bd7f:ca19]:443/elastic/,http://host2
+        path     /default_path
+        user     default_user
+        password default_password
+      }
+      instance = driver(config).instance
+
+      assert_equal 2, instance.get_connection_options[:hosts].length
+      host1, host2 = instance.get_connection_options[:hosts]
+
+      assert_equal '[2404:7a80:d440:3000:192a:a292:bd7f:ca19]', host1[:host]
+      assert_equal 443, host1[:port]
+      assert_equal 'https', host1[:scheme]
+      assert_equal 'j%2Bhn', host1[:user]
+      assert_equal 'passw%40rd', host1[:password]
+      assert_equal '/elastic/', host1[:path]
+
+      assert_equal 'host2', host2[:host]
+      assert_equal 'http', host2[:scheme]
+      assert_equal 'default_user', host2[:user]
+      assert_equal 'default_password', host2[:password]
+      assert_equal '/default_path', host2[:path]
+    end
+  end
+
   def test_single_host_params_and_defaults
     config = %{
       host     logs.google.com
@@ -3663,6 +3731,46 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     ports = params.map { |p| p[:port] }
     assert(hosts.none? { |h| h == 'logs.google.com' })
     assert(ports.none? { |p| p == 9200 })
+  end
+
+  class IPv6AdressStringHostTest < self
+    def test_single_host_params_and_defaults
+      config = %{
+        host     2404:7a80:d440:3000:192a:a292:bd7f:ca19
+        user     john
+        password doe
+      }
+      instance = driver(config).instance
+
+      assert_equal 1, instance.get_connection_options[:hosts].length
+      host1 = instance.get_connection_options[:hosts][0]
+
+      assert_equal '[2404:7a80:d440:3000:192a:a292:bd7f:ca19]', host1[:host]
+      assert_equal 9200, host1[:port]
+      assert_equal 'http', host1[:scheme]
+      assert_equal 'john', host1[:user]
+      assert_equal 'doe', host1[:password]
+      assert_equal nil, host1[:path]
+    end
+
+    def test_single_host_params_and_defaults_with_escape_placeholders
+      config = %{
+        host     2404:7a80:d440:3000:192a:a292:bd7f:ca19
+        user     %{j+hn}
+        password %{d@e}
+      }
+      instance = driver(config).instance
+
+      assert_equal 1, instance.get_connection_options[:hosts].length
+      host1 = instance.get_connection_options[:hosts][0]
+
+      assert_equal '[2404:7a80:d440:3000:192a:a292:bd7f:ca19]', host1[:host]
+      assert_equal 9200, host1[:port]
+      assert_equal 'http', host1[:scheme]
+      assert_equal 'j%2Bhn', host1[:user]
+      assert_equal 'd%40e', host1[:password]
+      assert_equal nil, host1[:path]
+    end
   end
 
   def test_password_is_required_if_specify_user

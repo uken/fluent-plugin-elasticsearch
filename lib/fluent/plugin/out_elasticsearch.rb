@@ -13,6 +13,7 @@ begin
   require 'strptime'
 rescue LoadError
 end
+require 'resolv'
 
 require 'fluent/plugin/output'
 require 'fluent/event'
@@ -668,7 +669,11 @@ EOC
           end
         end.compact
       else
-        [{host: @host, port: @port, scheme: @scheme.to_s}]
+        if Resolv::IPv6::Regex.match(@host)
+          [{host: "[#{@host}]", scheme: @scheme.to_s, port: @port}]
+        else
+          [{host: @host, port: @port, scheme: @scheme.to_s}]
+        end
       end.each do |host|
         host.merge!(user: @user, password: @password) if !host[:user] && @user
         host.merge!(path: @path) if !host[:path] && @path
