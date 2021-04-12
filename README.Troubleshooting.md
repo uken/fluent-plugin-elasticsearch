@@ -10,6 +10,7 @@
   + [Random 400 - Rejected by Elasticsearch is occured, why?](#random-400---rejected-by-elasticsearch-is-occured-why)
   + [Fluentd seems to hang if it unable to connect Elasticsearch, why?](#fluentd-seems-to-hang-if-it-unable-to-connect-elasticsearch-why)
   + [Enable Index Lifecycle Management](#enable-index-lifecycle-management)
+    + [Configuring for dynamic index or template](#configuring-for-dynamic-index-or-template)
   + [How to specify index codec](#how-to-specify-index-codec)
   + [Cannot push logs to Elasticsearch with connect_write timeout reached, why?](#cannot-push-logs-to-elasticsearch-with-connect_write-timeout-reached-why)
 
@@ -523,6 +524,96 @@ ilm_policy_id fluentd-policy
 template_name your-fluentd-template
 template_file /path/to/fluentd-template.json
 ```
+
+#### Configuring for dynamic index or template
+
+Some users want to setup ILM for dynamic index/template.
+`index_petterns` and `template.settings.index.lifecycle.name` in Elasticsearch template will be overwritten by Elasticsearch plugin:
+
+```json
+{
+  "index_patterns": ["mock"],
+  "template": {
+    "settings": {
+      "index": {
+        "lifecycle": {
+          "name": "mock",
+          "rollover_alias": "mock"
+        },
+        "number_of_shards": "<<shard>>",
+        "number_of_replicas": "<<replica>>"
+      }
+    }
+  }
+}
+```
+
+This template will be handled with:
+
+```aconf
+<source>
+  @type http
+  port 5004
+  bind 0.0.0.0
+  body_size_limit 32m
+  keepalive_timeout 10s
+  <parse>
+    @type json
+  </parse>
+</source>
+
+<match kubernetes.var.log.containers.**etl-webserver**.log>
+    @type elasticsearch
+    @id out_es_etl_webserver
+    @log_level info
+    include_tag_key true
+    host $HOST
+    port $PORT
+    path "#{ENV['FLUENT_ELASTICSEARCH_PATH']}"
+    request_timeout "#{ENV['FLUENT_ELASTICSEARCH_REQUEST_TIMEOUT'] || '30s'}"
+    scheme "#{ENV['FLUENT_ELASTICSEARCH_SCHEME'] || 'http'}"
+    ssl_verify "#{ENV['FLUENT_ELASTICSEARCH_SSL_VERIFY'] || 'true'}"
+    ssl_version "#{ENV['FLUENT_ELASTICSEARCH_SSL_VERSION'] || 'TLSv1'}"
+    reload_connections "#{ENV['FLUENT_ELASTICSEARCH_RELOAD_CONNECTIONS'] || 'false'}"
+    reconnect_on_error "#{ENV['FLUENT_ELASTICSEARCH_RECONNECT_ON_ERROR'] || 'true'}"
+    reload_on_failure "#{ENV['FLUENT_ELASTICSEARCH_RELOAD_ON_FAILURE'] || 'true'}"
+    log_es_400_reason "#{ENV['FLUENT_ELASTICSEARCH_LOG_ES_400_REASON'] || 'false'}"
+    logstash_prefix "#{ENV['FLUENT_ELASTICSEARCH_LOGSTASH_PREFIX'] || 'etl-webserver'}"
+    logstash_format "#{ENV['FLUENT_ELASTICSEARCH_LOGSTASH_FORMAT'] || 'false'}"
+    index_name "#{ENV['FLUENT_ELASTICSEARCH_LOGSTASH_INDEX_NAME'] || 'etl-webserver'}"
+    type_name "#{ENV['FLUENT_ELASTICSEARCH_LOGSTASH_TYPE_NAME'] || 'fluentd'}"
+    time_key "#{ENV['FLUENT_ELASTICSEARCH_TIME_KEY'] || '@timestamp'}"
+    include_timestamp "#{ENV['FLUENT_ELASTICSEARCH_INCLUDE_TIMESTAMP'] || 'true'}"
+
+    # ILM Settings - WITH ROLLOVER support
+    # https://github.com/uken/fluent-plugin-elasticsearch#enable-index-lifecycle-management
+    application_name "etl-webserver"
+    index_date_pattern ""
+    # Policy configurations
+    enable_ilm true
+    ilm_policy_id etl-webserver
+    ilm_policy_overwrite true
+    ilm_policy {"policy": {"phases": {"hot": {"min_age": "0ms","actions": {"rollover": {"max_age": "5m","max_size": "3gb"},"set_priority": {"priority": 100}}},"delete": {"min_age": "30d","actions": {"delete": {"delete_searchable_snapshot": true}}}}}}
+    use_legacy_template false
+    template_name etl-webserver
+    template_file /configs/index-template.json
+    template_overwrite true
+    customize_template {"<<shard>>": "3","<<replica>>": "0"}
+
+    <buffer>
+        flush_thread_count "#{ENV['FLUENT_ELASTICSEARCH_BUFFER_FLUSH_THREAD_COUNT'] || '8'}"
+        flush_interval "#{ENV['FLUENT_ELASTICSEARCH_BUFFER_FLUSH_INTERVAL'] || '5s'}"
+        chunk_limit_size "#{ENV['FLUENT_ELASTICSEARCH_BUFFER_CHUNK_LIMIT_SIZE'] || '8MB'}"
+        total_limit_size "#{ENV['FLUENT_ELASTICSEARCH_TOTAL_LIMIT_SIZE'] || '450MB'}"
+        queue_limit_length "#{ENV['FLUENT_ELASTICSEARCH_BUFFER_QUEUE_LIMIT_LENGTH'] || '32'}"
+        retry_max_interval "#{ENV['FLUENT_ELASTICSEARCH_BUFFER_RETRY_MAX_INTERVAL'] || '60s'}"
+        retry_forever false
+    </buffer>
+</match>
+```
+
+For more details, please refer the discussion:
+https://github.com/uken/fluent-plugin-elasticsearch/issues/867
 
 ### How to specify index codec
 
