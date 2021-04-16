@@ -1353,9 +1353,9 @@ Default value is `nil`.
 
 Use legacy template or not.
 
-Elasticsearch 7.8 or later supports the brand new composable templates.
+For Elasticsearch 7.8 or later, users can specify this parameter as `false` if their [template_file](#template_file) contains a composable index template.
 
-For Elasticsearch 7.7 or older, users should specify this parameter as `false`.
+For Elasticsearch 7.7 or older, users should specify this parameter as `true`.
 
 Composable template documentation is [Put Index Template API | Elasticsearch Reference](https://www.elastic.co/guide/en/elasticsearch/reference/current/index-templates.html) and legacy template documentation is [Index Templates | Elasticsearch Reference](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates-v1.html).
 
