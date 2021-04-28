@@ -2,6 +2,7 @@
 require 'date'
 require 'excon'
 require 'elasticsearch'
+require 'set'
 begin
   require 'elasticsearch/xpack'
 rescue LoadError
@@ -175,6 +176,7 @@ EOC
     config_param :truncate_caches_interval, :time, :default => nil
     config_param :use_legacy_template, :bool, :default => true
     config_param :catch_transport_exception_on_retry, :bool, :default => true
+    config_param :dynamic_target_index, :bool, :default => false
 
     config_section :metadata, param_name: :metainfo, multi: false do
       config_param :include_chunk_id, :bool, :default => false
@@ -834,13 +836,14 @@ EOC
                extract_placeholders(@host, chunk)
              end
 
+      dynamic_target_indices = get_dynamic_target_indices(chunk)
       chunk.msgpack_each do |time, record|
         next unless record.is_a? Hash
 
         record = inject_chunk_id_to_record_if_needed(record, chunk_id)
 
         begin
-          meta, header, record = process_message(tag, meta, header, time, record, extracted_values)
+          meta, header, record = process_message(tag, meta, header, time, record, dynamic_target_indices, extracted_values)
           info = if @include_index_in_url
                    RequestInfo.new(host, meta.delete("_index".freeze), meta["_index".freeze], meta.delete("_alias".freeze))
                  else
@@ -877,6 +880,42 @@ EOC
       end
     end
 
+    def dynamic_target_index_enabled?()
+      @dynamic_target_index && @logstash_format && @id_key && (@write_operation == UPDATE_OP || @write_operation == UPSERT_OP)
+    end
+
+    def get_dynamic_target_indices(chunk)
+      indices = Hash.new
+      if dynamic_target_index_enabled?()
+        id_key_accessor = record_accessor_create(@id_key)
+        ids = Set.new
+        chunk.msgpack_each do |time, record|
+          next unless record.is_a? Hash
+          begin
+            ids << id_key_accessor.call(record)
+          end
+        end
+        log.debug("Find target_indices by quering on ES (write_operation #{@write_operation}) for ids: #{ids.to_a}")
+        options = {
+          :index => "#{logstash_prefix}#{@logstash_prefix_separator}*",
+        }
+        query = {
+          'query' => { 'ids' => { 'values' => ids.to_a } },
+          '_source' => false,
+          'sort' => [
+            {"_index" => {"order" => "desc"}}
+         ]
+        }
+        result = client.search(options.merge(:body => Yajl.dump(query)))
+        # There should be just one hit per _id, but in case there still is multiple, just the oldest index is stored to map
+        result['hits']['hits'].each do |hit|
+          indices[hit["_id"]] = hit["_index"]
+          log.debug("target_index for id: #{hit["_id"]} from es: #{hit["_index"]}")
+        end
+      end
+      indices
+    end
+
     def split_request?(bulk_message, info)
       # For safety.
     end
@@ -889,7 +928,7 @@ EOC
       false
     end
 
-    def process_message(tag, meta, header, time, record, extracted_values)
+    def process_message(tag, meta, header, time, record, dynamic_target_indices, extracted_values)
       logstash_prefix, logstash_dateformat, index_name, type_name, _template_name, _customize_template, _deflector_alias, application_name, pipeline, _ilm_policy_id = extracted_values
 
       if @flatten_hashes
@@ -928,6 +967,15 @@ EOC
       target_index_alias = target_index_alias.downcase
       if @include_tag_key
         record[@tag_key] = tag
+      end
+
+      # If dynamic target indices map has value for this particular id, use it as target_index
+      if !dynamic_target_indices.empty?
+        id_accessor = record_accessor_create(@id_key)
+        id_value = id_accessor.call(record)
+        if dynamic_target_indices.key?(id_value)
+          target_index = dynamic_target_indices[id_value]
+        end
       end
 
       target_type_parent, target_type_child_key = @target_type_key ? get_parent_of(record, @target_type_key) : nil
