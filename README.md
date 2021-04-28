@@ -38,6 +38,7 @@ Current maintainers: @cosmo0920
   + [suppress_type_name](#suppress_type_name)
   + [target_index_key](#target_index_key)
   + [target_type_key](#target_type_key)
+  + [dynamic_target_index](#dynamic_target_index)
   + [template_name](#template_name)
   + [template_file](#template_file)
   + [template_overwrite](#template_overwrite)
@@ -453,6 +454,75 @@ and this record will be written to the specified index (`logstash-2014.12.19`) r
 ### target_type_key
 
 Similar to `target_index_key` config, find the type name to write to in the record under this key (or nested record). If key not found in record - fallback to `type_name` (default "fluentd").
+
+### dynamic_target_index
+
+Enable plugin to dynamically select logstash time based target index in update/upsert operations based on already indexed data rather than current time of indexing.
+
+```
+dynamic_target_index true # defaults to false
+```
+
+By default plugin writes data of logstash format index based on current time. For example daily based index after mignight data is written to newly created index. This is normally ok when data is coming from single source and not updated after indexing.
+
+But if you have a use case where data is also updated after indexing and `id_key` is used to identify the document uniquely for updating. Logstash format is wanted to be used for easy data managing and retention. Updates are done right after indexing to complete the data (all data not available from single source) and no updates are done anymore later point on time. In this case problem happends at index rotation time where write to 2 indexes with same id_key value may happen.
+
+This setting will search existing data by using elastic search's [id query](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-ids-query.html) using `id_key` value (with logstash_prefix and logstash_prefix_separator index pattarn e.g. `logstash-*`). The index of found data is used for update/upsert. When no data is found, data is written to current logstash index as normally.
+
+This setting requires following other settings:
+```
+logstash_format true
+id_key myId  # Some field on your data to identify the data uniquely
+write_operation upsert  # upsert or update
+```
+
+Suppose you have the following situation where you have 2 different match to consume data from 2 different Kafka topics independently but close in time with each other (order not known).
+
+```
+  <match data1>
+    @type elasticsearch
+    ...
+    id_key myId
+    write_operation upsert
+    logstash_format true
+    logstash_dateformat %Y.%m.%d
+    logstash_prefix myindexprefix
+    dynamic_target_index true
+    ...
+
+  <match data2>
+    @type elasticsearch
+    ...
+    id_key myId
+    write_operation upsert
+    logstash_format true
+    logstash_dateformat %Y.%m.%d
+    logstash_prefix myindexprefix
+    dynamic_target_index true
+    ...
+```
+
+If your first (data1) input is:
+```
+{
+  "myId": "myuniqueId1",
+  "datafield1": "some value",
+}
+```
+
+and your second (data2) input is:
+```
+{
+  "myId": "myuniqueId1",
+  "datafield99": "some important data from other source tightly related to id myuniqueId1 and wanted to be in same document.",
+}
+```
+
+Date today is 10.05.2021 so data is written to index `myindexprefix-2021.05.10` when both data1 and data2 is consumed during today.
+But when we are close to index rotation and data1 is consumed and indexed at `2021-05-10T23:59:55.59707672Z` and data2
+is consumed a bit later at `2021-05-11T00:00:58.222079Z` i.e. logstash index has been rotated and normally data2 would have been written
+to index `myindexprefix-2021.05.11`. But with dynamic_target_index setting as value true, data2 is now written to index `myindexprefix-2021.05.10`
+into same document with data1 as wanted and duplicated document is avoided.
 
 ### template_name
 
