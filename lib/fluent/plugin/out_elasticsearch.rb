@@ -176,7 +176,7 @@ EOC
     config_param :truncate_caches_interval, :time, :default => nil
     config_param :use_legacy_template, :bool, :default => true
     config_param :catch_transport_exception_on_retry, :bool, :default => true
-    config_param :dynamic_target_index, :bool, :default => false
+    config_param :target_index_affinity, :bool, :default => false
 
     config_section :metadata, param_name: :metainfo, multi: false do
       config_param :include_chunk_id, :bool, :default => false
@@ -836,14 +836,14 @@ EOC
                extract_placeholders(@host, chunk)
              end
 
-      dynamic_target_indices = get_dynamic_target_indices(chunk)
+      affinity_target_indices = get_affinity_target_indices(chunk)
       chunk.msgpack_each do |time, record|
         next unless record.is_a? Hash
 
         record = inject_chunk_id_to_record_if_needed(record, chunk_id)
 
         begin
-          meta, header, record = process_message(tag, meta, header, time, record, dynamic_target_indices, extracted_values)
+          meta, header, record = process_message(tag, meta, header, time, record, affinity_target_indices, extracted_values)
           info = if @include_index_in_url
                    RequestInfo.new(host, meta.delete("_index".freeze), meta["_index".freeze], meta.delete("_alias".freeze))
                  else
@@ -880,13 +880,13 @@ EOC
       end
     end
 
-    def dynamic_target_index_enabled?()
-      @dynamic_target_index && @logstash_format && @id_key && (@write_operation == UPDATE_OP || @write_operation == UPSERT_OP)
+    def target_index_affinity_enabled?()
+      @target_index_affinity && @logstash_format && @id_key && (@write_operation == UPDATE_OP || @write_operation == UPSERT_OP)
     end
 
-    def get_dynamic_target_indices(chunk)
+    def get_affinity_target_indices(chunk)
       indices = Hash.new
-      if dynamic_target_index_enabled?()
+      if target_index_affinity_enabled?()
         id_key_accessor = record_accessor_create(@id_key)
         ids = Set.new
         chunk.msgpack_each do |time, record|
@@ -895,7 +895,7 @@ EOC
             ids << id_key_accessor.call(record)
           end
         end
-        log.debug("Find target_indices by quering on ES (write_operation #{@write_operation}) for ids: #{ids.to_a}")
+        log.debug("Find affinity target_indices by quering on ES (write_operation #{@write_operation}) for ids: #{ids.to_a}")
         options = {
           :index => "#{logstash_prefix}#{@logstash_prefix_separator}*",
         }
@@ -928,7 +928,7 @@ EOC
       false
     end
 
-    def process_message(tag, meta, header, time, record, dynamic_target_indices, extracted_values)
+    def process_message(tag, meta, header, time, record, affinity_target_indices, extracted_values)
       logstash_prefix, logstash_dateformat, index_name, type_name, _template_name, _customize_template, _deflector_alias, application_name, pipeline, _ilm_policy_id = extracted_values
 
       if @flatten_hashes
@@ -969,12 +969,12 @@ EOC
         record[@tag_key] = tag
       end
 
-      # If dynamic target indices map has value for this particular id, use it as target_index
-      if !dynamic_target_indices.empty?
+      # If affinity target indices map has value for this particular id, use it as target_index
+      if !affinity_target_indices.empty?
         id_accessor = record_accessor_create(@id_key)
         id_value = id_accessor.call(record)
-        if dynamic_target_indices.key?(id_value)
-          target_index = dynamic_target_indices[id_value]
+        if affinity_target_indices.key?(id_value)
+          target_index = affinity_target_indices[id_value]
         end
       end
 

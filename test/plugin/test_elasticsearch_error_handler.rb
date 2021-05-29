@@ -27,11 +27,11 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
        @error_events << {:tag => tag, :time=>time, :record=>record, :error=>e}
     end
 
-    def process_message(tag, meta, header, time, record, dynamic_target_indices, extracted_values)
+    def process_message(tag, meta, header, time, record, affinity_target_indices, extracted_values)
       return [meta, header, record]
     end
 
-    def get_dynamic_target_indices(chunk)
+    def get_affinity_target_indices(chunk)
       indices = Hash.new
       indices
     end

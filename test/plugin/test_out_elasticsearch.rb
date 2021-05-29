@@ -4102,7 +4102,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     assert_equal(pipeline, index_cmds.first['index']['pipeline'])
   end
 
-  def stub_elastic_dynamic_target_index_search_with_body(url="http://localhost:9200/logstash-*/_search", ids, return_body_str)
+  def stub_elastic_affinity_target_index_search_with_body(url="http://localhost:9200/logstash-*/_search", ids, return_body_str)
     # Note: ids used in query is unique list of ids
     stub_request(:post, url)
       .with(
@@ -4122,7 +4122,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     end)
   end
 
-  def stub_elastic_dynamic_target_index_search(url="http://localhost:9200/logstash-*/_search", ids, indices)
+  def stub_elastic_affinity_target_index_search(url="http://localhost:9200/logstash-*/_search", ids, indices)
     # Example ids and indices arrays.
     #  [ "3408a2c8eecd4fbfb82e45012b54fa82", "2816fc6ef4524b3f8f7e869002005433"]
     #  [ "logstash-2021.04.28", "logstash-2021.04.29"]
@@ -4163,10 +4163,10 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
         ]
       }
     })
-    stub_elastic_dynamic_target_index_search_with_body(ids, body)
+    stub_elastic_affinity_target_index_search_with_body(ids, body)
   end
 
-  def stub_elastic_dynamic_target_index_search_return_empty(url="http://localhost:9200/logstash-*/_search", ids)
+  def stub_elastic_affinity_target_index_search_return_empty(url="http://localhost:9200/logstash-*/_search", ids)
     empty_body = %({
       "took" : 5,
       "timed_out" : false,
@@ -4185,11 +4185,11 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
         "hits" : [ ]
       }
     })
-    stub_elastic_dynamic_target_index_search_with_body(ids, empty_body)
+    stub_elastic_affinity_target_index_search_with_body(ids, empty_body)
   end
 
-  def test_writes_to_dynamic_target_index
-    driver.configure("dynamic_target_index true
+  def test_writes_to_affinity_target_index
+    driver.configure("target_index_affinity true
                       logstash_format true
                       id_key my_id
                       write_operation update")
@@ -4198,15 +4198,15 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     ids = [my_id_value]
     indices = ["logstash-2021.04.28"]
     stub_elastic
-    stub_elastic_dynamic_target_index_search(ids, indices)
+    stub_elastic_affinity_target_index_search(ids, indices)
     driver.run(default_tag: 'test') do
       driver.feed(sample_record('my_id' => my_id_value))
     end
     assert_equal('logstash-2021.04.28', index_cmds.first['update']['_index'])
   end
 
-  def test_writes_to_dynamic_target_index_write_operation_upsert
-    driver.configure("dynamic_target_index true
+  def test_writes_to_affinity_target_index_write_operation_upsert
+    driver.configure("target_index_affinity true
                       logstash_format true
                       id_key my_id
                       write_operation upsert")
@@ -4215,15 +4215,15 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     ids = [my_id_value]
     indices = ["logstash-2021.04.28"]
     stub_elastic
-    stub_elastic_dynamic_target_index_search(ids, indices)
+    stub_elastic_affinity_target_index_search(ids, indices)
     driver.run(default_tag: 'test') do
       driver.feed(sample_record('my_id' => my_id_value))
     end
     assert_equal('logstash-2021.04.28', index_cmds.first['update']['_index'])
   end
 
-  def test_writes_to_dynamic_target_index_index_not_exists_yet
-    driver.configure("dynamic_target_index true
+  def test_writes_to_affinity_target_index_index_not_exists_yet
+    driver.configure("target_index_affinity true
                       logstash_format true
                       id_key my_id
                       write_operation update")
@@ -4231,7 +4231,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     my_id_value = "3408a2c8eecd4fbfb82e45012b54fa82"
     ids = [my_id_value]
     stub_elastic
-    stub_elastic_dynamic_target_index_search_return_empty(ids)
+    stub_elastic_affinity_target_index_search_return_empty(ids)
     time = Time.parse Date.today.iso8601
     driver.run(default_tag: 'test') do
       driver.feed(time.to_i, sample_record('my_id' => my_id_value))
@@ -4239,8 +4239,8 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     assert_equal("logstash-#{time.utc.strftime("%Y.%m.%d")}", index_cmds.first['update']['_index'])
   end
 
-  def test_writes_to_dynamic_target_index_multiple_indices
-    driver.configure("dynamic_target_index true
+  def test_writes_to_affinity_target_index_multiple_indices
+    driver.configure("target_index_affinity true
                       logstash_format true
                       id_key my_id
                       write_operation update")
@@ -4250,7 +4250,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     ids = [my_id_value, my_id_value2]
     indices = ["logstash-2021.04.29", "logstash-2021.04.28"]
     stub_elastic_all_requests
-    stub_elastic_dynamic_target_index_search(ids, indices)
+    stub_elastic_affinity_target_index_search(ids, indices)
     driver.run(default_tag: 'test') do
       driver.feed(sample_record('my_id' => my_id_value))
       driver.feed(sample_record('my_id' => my_id_value2))
@@ -4262,8 +4262,8 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     assert_equal(my_id_value2, index_cmds_all_requests[1].first['update']['_id'])
   end
 
-  def test_writes_to_dynamic_target_index_same_id_dublicated_write_to_oldest_index
-    driver.configure("dynamic_target_index true
+  def test_writes_to_affinity_target_index_same_id_dublicated_write_to_oldest_index
+    driver.configure("target_index_affinity true
                       logstash_format true
                       id_key my_id
                       write_operation update")
@@ -4275,7 +4275,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     indices = ["logstash-2021.04.29", "logstash-2021.04.28"]
 
     stub_elastic_all_requests
-    stub_elastic_dynamic_target_index_search(ids, indices)
+    stub_elastic_affinity_target_index_search(ids, indices)
     driver.run(default_tag: 'test') do
       driver.feed(sample_record('my_id' => my_id_value))
       driver.feed(sample_record('my_id' => my_id_value))

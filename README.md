@@ -38,7 +38,7 @@ Current maintainers: @cosmo0920
   + [suppress_type_name](#suppress_type_name)
   + [target_index_key](#target_index_key)
   + [target_type_key](#target_type_key)
-  + [dynamic_target_index](#dynamic_target_index)
+  + [target_index_affinity](#target_index_affinity)
   + [template_name](#template_name)
   + [template_file](#template_file)
   + [template_overwrite](#template_overwrite)
@@ -455,12 +455,12 @@ and this record will be written to the specified index (`logstash-2014.12.19`) r
 
 Similar to `target_index_key` config, find the type name to write to in the record under this key (or nested record). If key not found in record - fallback to `type_name` (default "fluentd").
 
-### dynamic_target_index
+### target_index_affinity
 
 Enable plugin to dynamically select logstash time based target index in update/upsert operations based on already indexed data rather than current time of indexing.
 
 ```
-dynamic_target_index true # defaults to false
+target_index_affinity true # defaults to false
 ```
 
 By default plugin writes data of logstash format index based on current time. For example daily based index after mignight data is written to newly created index. This is normally ok when data is coming from single source and not updated after indexing.
@@ -487,7 +487,7 @@ Suppose you have the following situation where you have 2 different match to con
     logstash_format true
     logstash_dateformat %Y.%m.%d
     logstash_prefix myindexprefix
-    dynamic_target_index true
+    target_index_affinity true
     ...
 
   <match data2>
@@ -498,7 +498,7 @@ Suppose you have the following situation where you have 2 different match to con
     logstash_format true
     logstash_dateformat %Y.%m.%d
     logstash_prefix myindexprefix
-    dynamic_target_index true
+    target_index_affinity true
     ...
 ```
 
@@ -521,7 +521,7 @@ and your second (data2) input is:
 Date today is 10.05.2021 so data is written to index `myindexprefix-2021.05.10` when both data1 and data2 is consumed during today.
 But when we are close to index rotation and data1 is consumed and indexed at `2021-05-10T23:59:55.59707672Z` and data2
 is consumed a bit later at `2021-05-11T00:00:58.222079Z` i.e. logstash index has been rotated and normally data2 would have been written
-to index `myindexprefix-2021.05.11`. But with dynamic_target_index setting as value true, data2 is now written to index `myindexprefix-2021.05.10`
+to index `myindexprefix-2021.05.11`. But with target_index_affinity setting as value true, data2 is now written to index `myindexprefix-2021.05.10`
 into same document with data1 as wanted and duplicated document is avoided.
 
 ### template_name
