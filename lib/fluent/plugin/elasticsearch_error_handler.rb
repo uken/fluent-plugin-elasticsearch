@@ -43,13 +43,14 @@ class Fluent::Plugin::ElasticsearchErrorHandler
     stats = Hash.new(0)
     meta = {}
     header = {}
+    affinity_target_indices = @plugin.get_affinity_target_indices(chunk)
     chunk.msgpack_each do |time, rawrecord|
       bulk_message = ''
       next unless rawrecord.is_a? Hash
       begin
         # we need a deep copy for process_message to alter
         processrecord = Marshal.load(Marshal.dump(rawrecord))
-        meta, header, record = @plugin.process_message(tag, meta, header, time, processrecord, extracted_values)
+        meta, header, record = @plugin.process_message(tag, meta, header, time, processrecord, affinity_target_indices, extracted_values)
         next unless @plugin.append_record_to_messages(@plugin.write_operation, meta, header, record, bulk_message)
       rescue => e
         stats[:bad_chunk_record] += 1

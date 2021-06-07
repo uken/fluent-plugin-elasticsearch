@@ -10,7 +10,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
   include FlexMock::TestCase
   include Fluent::Test::Helpers
 
-  attr_accessor :index_cmds, :index_command_counts
+  attr_accessor :index_cmds, :index_command_counts, :index_cmds_all_requests
 
   def setup
     Fluent::Test.setup
@@ -67,6 +67,14 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
   def stub_elastic(url="http://localhost:9200/_bulk")
     stub_request(:post, url).with do |req|
       @index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
+    end
+  end
+
+  def stub_elastic_all_requests(url="http://localhost:9200/_bulk")
+    @index_cmds_all_requests = Array.new
+    stub_request(:post, url).with do |req|
+      @index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
+      @index_cmds_all_requests << @index_cmds
     end
   end
 
@@ -4092,6 +4100,191 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       driver.feed(sample_record)
     end
     assert_equal(pipeline, index_cmds.first['index']['pipeline'])
+  end
+
+  def stub_elastic_affinity_target_index_search_with_body(url="http://localhost:9200/logstash-*/_search", ids, return_body_str)
+    # Note: ids used in query is unique list of ids
+    stub_request(:post, url)
+      .with(
+        body: "{\"query\":{\"ids\":{\"values\":#{ids.uniq.to_json}}},\"_source\":false,\"sort\":[{\"_index\":{\"order\":\"desc\"}}]}",
+        headers: {
+              'Accept'=>'*/*',
+              'Content-Type'=>'application/json',
+              'Host'=>'localhost:9200',
+              'User-Agent'=>'elasticsearch-ruby/7.12.0 (RUBY_VERSION: 2.7.0; linux x86_64; Faraday v1.4.1)'
+        }
+      )
+      .to_return(lambda do |req|
+      { :status => 200,
+        :headers => { 'Content-Type' => 'json' },
+        :body => return_body_str
+      }
+    end)
+  end
+
+  def stub_elastic_affinity_target_index_search(url="http://localhost:9200/logstash-*/_search", ids, indices)
+    # Example ids and indices arrays.
+    #  [ "3408a2c8eecd4fbfb82e45012b54fa82", "2816fc6ef4524b3f8f7e869002005433"]
+    #  [ "logstash-2021.04.28", "logstash-2021.04.29"]
+    body = %({
+      "took" : 31,
+      "timed_out" : false,
+      "_shards" : {
+        "total" : 52,
+        "successful" : 52,
+        "skipped" : 48,
+        "failed" : 0
+      },
+      "hits" : {
+        "total" : {
+          "value" : 356,
+          "relation" : "eq"
+        },
+        "max_score" : null,
+        "hits" : [
+          {
+            "_index" : "#{indices[0]}",
+            "_type" : "_doc",
+            "_id" : "#{ids[0]}",
+            "_score" : null,
+            "sort" : [
+              "#{indices[0]}"
+            ]
+          },
+          {
+            "_index" : "#{indices[1]}",
+            "_type" : "_doc",
+            "_id" : "#{ids[1]}",
+            "_score" : null,
+            "sort" : [
+              "#{indices[1]}"
+            ]
+          }
+        ]
+      }
+    })
+    stub_elastic_affinity_target_index_search_with_body(ids, body)
+  end
+
+  def stub_elastic_affinity_target_index_search_return_empty(url="http://localhost:9200/logstash-*/_search", ids)
+    empty_body = %({
+      "took" : 5,
+      "timed_out" : false,
+      "_shards" : {
+        "total" : 54,
+        "successful" : 54,
+        "skipped" : 53,
+        "failed" : 0
+      },
+      "hits" : {
+        "total" : {
+          "value" : 0,
+          "relation" : "eq"
+        },
+        "max_score" : null,
+        "hits" : [ ]
+      }
+    })
+    stub_elastic_affinity_target_index_search_with_body(ids, empty_body)
+  end
+
+  def test_writes_to_affinity_target_index
+    driver.configure("target_index_affinity true
+                      logstash_format true
+                      id_key my_id
+                      write_operation update")
+
+    my_id_value = "3408a2c8eecd4fbfb82e45012b54fa82"
+    ids = [my_id_value]
+    indices = ["logstash-2021.04.28"]
+    stub_elastic
+    stub_elastic_affinity_target_index_search(ids, indices)
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record('my_id' => my_id_value))
+    end
+    assert_equal('logstash-2021.04.28', index_cmds.first['update']['_index'])
+  end
+
+  def test_writes_to_affinity_target_index_write_operation_upsert
+    driver.configure("target_index_affinity true
+                      logstash_format true
+                      id_key my_id
+                      write_operation upsert")
+
+    my_id_value = "3408a2c8eecd4fbfb82e45012b54fa82"
+    ids = [my_id_value]
+    indices = ["logstash-2021.04.28"]
+    stub_elastic
+    stub_elastic_affinity_target_index_search(ids, indices)
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record('my_id' => my_id_value))
+    end
+    assert_equal('logstash-2021.04.28', index_cmds.first['update']['_index'])
+  end
+
+  def test_writes_to_affinity_target_index_index_not_exists_yet
+    driver.configure("target_index_affinity true
+                      logstash_format true
+                      id_key my_id
+                      write_operation update")
+
+    my_id_value = "3408a2c8eecd4fbfb82e45012b54fa82"
+    ids = [my_id_value]
+    stub_elastic
+    stub_elastic_affinity_target_index_search_return_empty(ids)
+    time = Time.parse Date.today.iso8601
+    driver.run(default_tag: 'test') do
+      driver.feed(time.to_i, sample_record('my_id' => my_id_value))
+    end
+    assert_equal("logstash-#{time.utc.strftime("%Y.%m.%d")}", index_cmds.first['update']['_index'])
+  end
+
+  def test_writes_to_affinity_target_index_multiple_indices
+    driver.configure("target_index_affinity true
+                      logstash_format true
+                      id_key my_id
+                      write_operation update")
+
+    my_id_value = "2816fc6ef4524b3f8f7e869002005433"
+    my_id_value2 = "3408a2c8eecd4fbfb82e45012b54fa82"
+    ids = [my_id_value, my_id_value2]
+    indices = ["logstash-2021.04.29", "logstash-2021.04.28"]
+    stub_elastic_all_requests
+    stub_elastic_affinity_target_index_search(ids, indices)
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record('my_id' => my_id_value))
+      driver.feed(sample_record('my_id' => my_id_value2))
+    end
+    assert_equal(2, index_cmds_all_requests.count)
+    assert_equal('logstash-2021.04.29', index_cmds_all_requests[0].first['update']['_index'])
+    assert_equal(my_id_value, index_cmds_all_requests[0].first['update']['_id'])
+    assert_equal('logstash-2021.04.28', index_cmds_all_requests[1].first['update']['_index'])
+    assert_equal(my_id_value2, index_cmds_all_requests[1].first['update']['_id'])
+  end
+
+  def test_writes_to_affinity_target_index_same_id_dublicated_write_to_oldest_index
+    driver.configure("target_index_affinity true
+                      logstash_format true
+                      id_key my_id
+                      write_operation update")
+
+    my_id_value = "2816fc6ef4524b3f8f7e869002005433"
+    # It may happen than same id has inserted to two index while data inserted during rollover period
+    ids = [my_id_value, my_id_value]
+    # Simulate the used sorting here, as search sorts indices in DESC order to pick only oldest index per single _id
+    indices = ["logstash-2021.04.29", "logstash-2021.04.28"]
+
+    stub_elastic_all_requests
+    stub_elastic_affinity_target_index_search(ids, indices)
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record('my_id' => my_id_value))
+      driver.feed(sample_record('my_id' => my_id_value))
+    end
+    assert_equal('logstash-2021.04.28', index_cmds.first['update']['_index'])
+
+    assert_equal(1, index_cmds_all_requests.count)
+    assert_equal('logstash-2021.04.28', index_cmds_all_requests[0].first['update']['_index'])
+    assert_equal(my_id_value, index_cmds_all_requests[0].first['update']['_id'])
   end
 
   class PipelinePlaceholdersTest < self
