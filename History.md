@@ -1,6 +1,12 @@
 ## Changelog [[tags]](https://github.com/uken/fluent-plugin-elasticsearch/tags)
 
 ### [Unreleased]
+
+### 5.0.4
+- test: out_elasticsearch: Remove a needless headers from affinity stub (#888)
+- Target Index Affinity (#883)
+
+### 5.0.3
 - Fix use_legacy_template documentation (#880)
 - Add FAQ for dynamic index/template (#878)
 - Handle IPv6 address string on host and hosts parameters (#877)
