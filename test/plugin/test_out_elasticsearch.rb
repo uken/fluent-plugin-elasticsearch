@@ -4107,12 +4107,6 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     stub_request(:post, url)
       .with(
         body: "{\"query\":{\"ids\":{\"values\":#{ids.uniq.to_json}}},\"_source\":false,\"sort\":[{\"_index\":{\"order\":\"desc\"}}]}",
-        headers: {
-              'Accept'=>'*/*',
-              'Content-Type'=>'application/json',
-              'Host'=>'localhost:9200',
-              'User-Agent'=>'elasticsearch-ruby/7.12.0 (RUBY_VERSION: 2.7.0; linux x86_64; Faraday v1.4.1)'
-        }
       )
       .to_return(lambda do |req|
       { :status => 200,
