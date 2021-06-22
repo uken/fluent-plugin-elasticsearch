@@ -38,7 +38,7 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
 
     def append_record_to_messages(op, meta, header, record, msgs)
       if record.has_key?('raise') && record['raise']
-        raise Exception('process_message')
+        raise 'process_message'
       end
       return true
     end
@@ -307,7 +307,7 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
   def test_retry_error
     records = []
     error_records = Hash.new(false)
-    error_records.merge!({0=>true, 4=>true, 9=>true})
+    error_records.merge!({0=>true, 4=>true})
     10.times do |i|
       records << {time: 12345, record: {"message"=>"record #{i}","_id"=>i,"raise"=>error_records[i]}}
     end
@@ -391,6 +391,18 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
               "reason":"unrecognized error"
             }
           }
+        },
+        {
+          "create" : {
+            "_index" : "foo",
+            "_type"  : "bar",
+            "_id" : "9",
+            "status" : 500,
+            "error" : {
+              "type" : "json_parse_exception",
+              "reason":"Invalid UTF-8 start byte 0x92\\n at [Source: org.elasticsearch.transport.netty4.ByteBufStreamInput@204fe9c9; line: 1, column: 81]"
+            }
+          }
         }
       ]
     }))
@@ -405,12 +417,12 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
         next unless e.respond_to?(:retry_stream)
         e.retry_stream.each {|time, record| records << record}
       end
-      assert_equal 2, records.length
-      assert_equal 2, records[0]['_id']
-      assert_equal 8, records[1]['_id']
+      assert_equal 2, records.length, "Exp. retry_stream to contain records"
+      assert_equal 2, records[0]['_id'], "Exp record with given ID to in retry_stream"
+      assert_equal 8, records[1]['_id'], "Exp record with given ID to in retry_stream"
       error_ids = @plugin.error_events.collect {|h| h[:record]['_id']}
-      assert_equal 3, error_ids.length
-      assert_equal [5, 6, 7], error_ids
+      assert_equal 4, error_ids.length, "Exp. a certain number of records to be dropped from retry_stream"
+      assert_equal [5, 6, 7, 9], error_ids, "Exp. specific records to be dropped from retry_stream"
       @plugin.error_events.collect {|h| h[:error]}.each do |e|
         assert_true e.respond_to?(:backtrace)
       end
