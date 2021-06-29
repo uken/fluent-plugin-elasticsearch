@@ -23,6 +23,10 @@ class Fluent::Plugin::ElasticsearchErrorHandler
     unrecoverable_error_types.include?(type)
   end
 
+  def unrecoverable_record_error?(type)
+    ['json_parse_exception'].include?(type)
+  end
+
   def log_es_400_reason(&block)
     if @plugin.log_es_400_reason
       block.call
@@ -53,6 +57,7 @@ class Fluent::Plugin::ElasticsearchErrorHandler
         meta, header, record = @plugin.process_message(tag, meta, header, time, processrecord, affinity_target_indices, extracted_values)
         next unless @plugin.append_record_to_messages(@plugin.write_operation, meta, header, record, bulk_message)
       rescue => e
+        @plugin.log.debug("Exception in error handler during deep copy: #{e}")
         stats[:bad_chunk_record] += 1
         next
       end
@@ -106,9 +111,14 @@ class Fluent::Plugin::ElasticsearchErrorHandler
         elsif item[write_operation].has_key?('error') && item[write_operation]['error'].has_key?('type')
           type = item[write_operation]['error']['type']
           stats[type] += 1
-          retry_stream.add(time, rawrecord)
           if unrecoverable_error?(type)
             raise ElasticsearchRequestAbortError, "Rejected Elasticsearch due to #{type}"
+          end
+          if unrecoverable_record_error?(type)
+            @plugin.router.emit_error_event(tag, time, rawrecord, ElasticsearchError.new("#{status} - #{type}: #{reason}"))
+            next
+          else
+            retry_stream.add(time, rawrecord) unless unrecoverable_record_error?(type)
           end
         else
           # When we don't have a type field, something changed in the API
