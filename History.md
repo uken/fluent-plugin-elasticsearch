@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 5.0.5
+- Drop json_parse_exception messages for bulk failures (#900)
+- GitHub Actions: Drop Ruby 2.5 due to EOL (#894)
+
 ### 5.0.4
 - test: out_elasticsearch: Remove a needless headers from affinity stub (#888)
 - Target Index Affinity (#883)
