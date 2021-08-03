@@ -11,7 +11,7 @@ Send your logs to Elasticsearch (and search them with Kibana maybe?)
 
 Note: For Amazon Elasticsearch Service please consider using [fluent-plugin-aws-elasticsearch-service](https://github.com/atomita/fluent-plugin-aws-elasticsearch-service)
 
-Current maintainers: @cosmo0920
+Current maintainers: [Hiroshi Hatake | @cosmo0920](https://github.com/cosmo0920), [Kentaro Hayashi | @kenhys](https://github.com/kenhys)
 
 * [Installation](#installation)
 * [Usage](#usage)
