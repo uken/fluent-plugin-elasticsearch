@@ -19,7 +19,7 @@ class ElasticsearchFallbackSelectorTest < Test::Unit::TestCase
   end
 
   def stub_elastic_info(url="http://localhost:9200/", version="6.4.2")
-    body ="{\"version\":{\"number\":\"#{version}\"}}"
+    body ="{\"version\":{\"number\":\"#{version}\", \"build_flavor\":\"default\"},\"tagline\" : \"You Know, for Search\"}"
     stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'json' } })
   end
 
