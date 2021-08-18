@@ -34,6 +34,10 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     }.configure(conf)
   end
 
+  def elasticsearch_transport_layer_decoupling?
+    Gem::Version.create(::Elasticsearch::Transport::VERSION) >= Gem::Version.new("7.14.0")
+  end
+
   def default_type_name
     Fluent::Plugin::ElasticsearchOutput::DEFAULT_TYPE_NAME
   end
@@ -157,7 +161,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     }
     instance = driver(config).instance
 
-    if Gem::Version.create(::Elasticsearch::Transport::VERSION) >= Gem::Version.new("7.14.0")
+    if elasticsearch_transport_layer_decoupling?
       assert_equal nil, instance.client.transport.transport.options[:transport_options][:headers]["Content-Encoding"]
     else
       assert_equal nil, instance.client.transport.options[:transport_options][:headers]["Content-Encoding"]
@@ -171,7 +175,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     end
     compressable = instance.compressable_connection
 
-    if Gem::Version.create(::Elasticsearch::Transport::VERSION) >= Gem::Version.new("7.14.0")
+    if elasticsearch_transport_layer_decoupling?
       assert_equal "gzip", instance.client(nil, compressable).transport.transport.options[:transport_options][:headers]["Content-Encoding"]
     else
       assert_equal "gzip", instance.client(nil, compressable).transport.options[:transport_options][:headers]["Content-Encoding"]
@@ -186,7 +190,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     }
     instance = driver(config).instance
 
-    if Gem::Version.create(::Elasticsearch::Transport::VERSION) >= Gem::Version.new("7.14.0")
+    if elasticsearch_transport_layer_decoupling?
       assert_equal false, instance.client.transport.transport.options[:compression]
     else
       assert_equal false, instance.client.transport.options[:compression]
@@ -200,7 +204,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     end
     compressable = instance.compressable_connection
 
-    if Gem::Version.create(::Elasticsearch::Transport::VERSION) >= Gem::Version.new("7.14.0")
+    if elasticsearch_transport_layer_decoupling?
       assert_equal true, instance.client(nil, compressable).transport.transport.options[:compression]
     else
       assert_equal true, instance.client(nil, compressable).transport.options[:compression]
