@@ -498,9 +498,6 @@ EOC
       @_es_info ||= client.info
       begin
         unless version = @_es_info.dig("version", "number")
-          if version != @default_elasticsearch_version
-            log.warn "Elasticsearch version glitch exists. Actual #{version}, Expected: #{@default_elasticsearch_version}"
-          end
           version = @default_elasticsearch_version
         end
       rescue NoMethodError => e
