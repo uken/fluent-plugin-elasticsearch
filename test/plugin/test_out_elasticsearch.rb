@@ -265,7 +265,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     assert_true instance.verify_es_version_at_startup
     assert_equal Fluent::Plugin::ElasticsearchOutput::DEFAULT_ELASTICSEARCH_VERSION, instance.default_elasticsearch_version
     assert_false instance.log_es_400_reason
-    assert_equal 20 * 1024 * 1024, Fluent::Plugin::ElasticsearchOutput::TARGET_BULK_BYTES
+    assert_equal -1, Fluent::Plugin::ElasticsearchOutput::DEFAULT_TARGET_BULK_BYTES
     assert_false instance.compression
     assert_equal :no_compression, instance.compression_level
     assert_true instance.http_backend_excon_nonblock
