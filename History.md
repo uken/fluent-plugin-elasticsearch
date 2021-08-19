@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 5.1.0
+- Correct default target bytes value (#914)
+- Handle elasticsearch-ruby 7.14 properly (#913)
+
 ### 5.0.5
 - Drop json_parse_exception messages for bulk failures (#900)
 - GitHub Actions: Drop Ruby 2.5 due to EOL (#894)
