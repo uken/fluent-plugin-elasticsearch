@@ -91,7 +91,13 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     end
   end
 
-  def stub_default(name="foo")
+  def stub_elastic_info(url="http://localhost:9200/", version="7.9.0")
+    body ="{\"version\":{\"number\":\"#{version}\", \"build_flavor\":\"default\"},\"tagline\" : \"You Know, for Search\"}"
+    stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'json' } })
+  end
+
+  def stub_default(name="foo", host="http://localhost:9200")
+    stub_elastic_info(host)
     stub_ilm_policy(name)
     stub_index_template(name)
     stub_nonexistent_data_stream?(name)
@@ -214,6 +220,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_index_template
     stub_existent_data_stream?
     stub_data_stream
+    stub_elastic_info
     conf = config_element(
       'ROOT', '', {
         '@type' => ELASTIC_DATA_STREAM_TYPE,
@@ -327,6 +334,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       connection_resets += 1
       raise Faraday::ConnectionFailed, "Test message"
     end
+    stub_elastic_info("https://logs.google.com:778/")
 
     assert_raise(Fluent::Plugin::ElasticsearchError::RetryableOperationExhaustedFailure) do
       driver(config)

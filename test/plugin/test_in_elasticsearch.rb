@@ -31,6 +31,11 @@ class ElasticsearchInputTest < Test::Unit::TestCase
     @driver ||= Fluent::Test::Driver::Input.new(Fluent::Plugin::ElasticsearchInput).configure(conf)
   end
 
+  def stub_elastic_info(url="http://localhost:9200/", version="7.9.0")
+    body ="{\"version\":{\"number\":\"#{version}\", \"build_flavor\":\"default\"},\"tagline\" : \"You Know, for Search\"}"
+    stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'json' } })
+  end
+
   def sample_response(index_name="fluentd")
     {
       "took"=>4,
@@ -322,6 +327,7 @@ class ElasticsearchInputTest < Test::Unit::TestCase
       with(body: "{\"sort\":[\"_doc\"]}").
       to_return(status: 200, body: sample_response.to_s,
                 headers: {'Content-Type' => 'application/json'})
+    stub_elastic_info
 
     driver(CONFIG)
     driver.run(expect_emits: 1, timeout: 10)
@@ -337,6 +343,7 @@ class ElasticsearchInputTest < Test::Unit::TestCase
       with(body: "{\"sort\":[\"_doc\"]}").
       to_return(status: 200, body: sample_response(index_name).to_s,
                 headers: {'Content-Type' => 'application/json'})
+    stub_elastic_info
 
     driver(CONFIG + %[index_name #{index_name}])
     driver.run(expect_emits: 1, timeout: 10)
@@ -352,6 +359,7 @@ class ElasticsearchInputTest < Test::Unit::TestCase
       with(body: "{\"sort\":[\"_doc\"]}").
       to_return(status: 200, body: sample_response(index_name).to_s,
                 headers: {'Content-Type' => 'application/json'})
+    stub_elastic_info
 
     driver(CONFIG + %[parse_timestamp])
     driver.run(expect_emits: 1, timeout: 10)
@@ -370,6 +378,7 @@ class ElasticsearchInputTest < Test::Unit::TestCase
       with(body: "{\"sort\":[\"_doc\"]}").
       to_return(status: 200, body: sample_response(index_name).to_s,
                 headers: {'Content-Type' => 'application/json'})
+    stub_elastic_info
 
     driver(CONFIG + %[parse_timestamp true
                       timestamp_key_format %Y-%m-%dT%H:%M:%S.%N%z
@@ -389,6 +398,7 @@ class ElasticsearchInputTest < Test::Unit::TestCase
       with(body: "{\"sort\":[\"_doc\"]}").
       to_return(status: 200, body: sample_response.to_s,
                 headers: {'Content-Type' => 'application/json'})
+    stub_elastic_info
 
     driver(CONFIG + %[docinfo true])
     driver.run(expect_emits: 1, timeout: 10)
@@ -412,6 +422,7 @@ class ElasticsearchInputTest < Test::Unit::TestCase
       with(body: "{\"sort\":[\"_doc\"],\"slice\":{\"id\":1,\"max\":2}}").
       to_return(status: 200, body: sample_response.to_s,
                 headers: {'Content-Type' => 'application/json'})
+    stub_elastic_info
 
     driver(CONFIG + %[num_slices 2])
     driver.run(expect_emits: 1, timeout: 10)
@@ -434,6 +445,7 @@ class ElasticsearchInputTest < Test::Unit::TestCase
         body: "{\"scroll_id\":\"WomkoUKG0QPB679Ulo6TqQgh3pIGRUmrl9qXXGK3EeiQh9rbYNasTkspZQcJ01uz\"}") do
       connection += 1
     end
+    stub_elastic_info
     scroll_request.to_return(lambda do |req|
                                if connection <= 1
                                  {status: 200, body: sample_scroll_response_2.to_s,

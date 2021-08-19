@@ -32,13 +32,25 @@ module Fluent::ElasticsearchIndexTemplate
     return false
   end
 
+  def host_unreachable_exceptions
+    if Gem::Version.new(::Elasticsearch::Transport::VERSION) >= Gem::Version.new("7.14.0")
+      # elasticsearch-ruby 7.14.0's elasticsearch-transport does not extends
+      # Elasticsearch class on Transport.
+      # This is why #host_unreachable_exceptions is not callable directly
+      # via transport (not transport's transport instance accessor) any more.
+      client.transport.transport.host_unreachable_exceptions
+    else
+      client.transport.host_unreachable_exceptions
+    end
+  end
+
   def retry_operate(max_retries, fail_on_retry_exceed = true, catch_trasport_exceptions = true)
     return unless block_given?
     retries = 0
     transport_errors = Elasticsearch::Transport::Transport::Errors.constants.map{ |c| Elasticsearch::Transport::Transport::Errors.const_get c } if catch_trasport_exceptions
     begin
       yield
-    rescue *client.transport.host_unreachable_exceptions, *transport_errors, Timeout::Error => e
+    rescue *host_unreachable_exceptions, *transport_errors, Timeout::Error => e
       @_es = nil
       @_es_info = nil
       if retries < max_retries
