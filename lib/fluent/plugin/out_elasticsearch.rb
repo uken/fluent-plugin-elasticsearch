@@ -72,7 +72,7 @@ module Fluent::Plugin
     DEFAULT_TYPE_NAME_ES_7x = "_doc".freeze
     DEFAULT_TYPE_NAME = "fluentd".freeze
     DEFAULT_RELOAD_AFTER = -1
-    TARGET_BULK_BYTES = 20 * 1024 * 1024
+    DEFAULT_TARGET_BULK_BYTES = -1
     DEFAULT_POLICY_ID = "logstash-policy"
 
     config_param :host, :string,  :default => 'localhost'
@@ -166,7 +166,7 @@ EOC
     config_param :suppress_doc_wrap, :bool, :default => false
     config_param :ignore_exceptions, :array, :default => [], value_type: :string, :desc => "Ignorable exception list"
     config_param :exception_backup, :bool, :default => true, :desc => "Chunk backup flag when ignore exception occured"
-    config_param :bulk_message_request_threshold, :size, :default => TARGET_BULK_BYTES
+    config_param :bulk_message_request_threshold, :size, :default => DEFAULT_TARGET_BULK_BYTES
     config_param :compression_level, :enum, list: [:no_compression, :best_speed, :best_compression, :default_compression], :default => :no_compression
     config_param :enable_ilm, :bool, :default => false
     config_param :ilm_policy_id, :string, :default => DEFAULT_POLICY_ID
