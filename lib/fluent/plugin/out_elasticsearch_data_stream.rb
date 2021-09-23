@@ -1,3 +1,4 @@
+
 require_relative 'out_elasticsearch'
 
 module Fluent::Plugin
@@ -200,7 +201,7 @@ module Fluent::Plugin
           log.error "Could not bulk insert to Data Stream: #{data_stream_name} #{response}"
         end
       rescue => e
-        log.error "Could not bulk insert to Data Stream: #{data_stream_name} #{e.message}"
+        raise RecoverableRequestFailure, "could not push logs to Elasticsearch cluster (#{data_stream_name}): #{e.message}"
       end
     end
 
