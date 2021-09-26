@@ -21,4 +21,4 @@ require 'fluent/test'
 require 'minitest/pride'
 
 require 'webmock/test_unit'
-WebMock.enable_net_connect!
+WebMock.disable_net_connect!
