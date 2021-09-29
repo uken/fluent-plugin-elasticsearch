@@ -1,6 +1,4 @@
 require_relative 'out_elasticsearch'
-require_relative 'elasticsearch_index_template'
-require_relative 'elasticsearch_index_lifecycle_management'
 
 module Fluent::Plugin
   class ElasticsearchOutputDataStream < ElasticsearchOutput
@@ -40,8 +38,8 @@ module Fluent::Plugin
       unless @use_placeholder
         begin
           @data_stream_names = [@data_stream_name]
-          create_ilm_policy(@data_stream_name, @data_stream_template_name, @data_stream_ilm_name)
-          create_index_template(@data_stream_name, @data_stream_template_name, @data_stream_ilm_name)
+          create_ilm_policy(@data_stream_name, @data_stream_template_name, @data_stream_ilm_name, @host)
+          create_index_template(@data_stream_name, @data_stream_template_name, @data_stream_ilm_name, @host)
           create_data_stream(@data_stream_name)
         rescue => e
           raise Fluent::ConfigError, "Failed to create data stream: <#{@data_stream_name}> #{e.message}"
@@ -70,8 +68,8 @@ module Fluent::Plugin
       end
     end
 
-    def create_ilm_policy(ds_name, tpl_name, ilm_name)
-      return if data_stream_exist?(ds_name) or template_exists?(tpl_name) or ilm_policy_exists?(ilm_name)
+    def create_ilm_policy(ds_name, tpl_name, ilm_name, host)
+      return if data_stream_exist?(ds_name) or template_exists?(tpl_name, host) or ilm_policy_exists?(ilm_name)
       params = {
         policy_id: "#{ilm_name}_policy",
         body: File.read(File.join(File.dirname(__FILE__), "default-ilm-policy.json"))
@@ -83,8 +81,8 @@ module Fluent::Plugin
       end
     end
 
-    def create_index_template(ds_name, tpl_name, ilm_name)
-      return if data_stream_exist?(ds_name) or template_exists?(tpl_name)
+    def create_index_template(ds_name, tpl_name, ilm_name, host)
+      return if data_stream_exist?(ds_name) or template_exists?(tpl_name, host)
       body = {
         "index_patterns" => ["#{ds_name}*"],
         "data_stream" => {},
@@ -128,6 +126,26 @@ module Fluent::Plugin
                     @catch_transport_exception_on_retry) do
         @client.indices.create_data_stream(params)
       end
+    end
+
+    def ilm_policy_exists?(policy_id)
+      begin
+        @client.ilm.get_policy(policy_id: policy_id)
+        true
+      rescue
+        false
+      end
+    end
+
+    def template_exists?(name, host = nil)
+      if @use_legacy_template
+        client(host).indices.get_template(:name => name)
+      else
+        client(host).indices.get_index_template(:name => name)
+      end
+      return true
+    rescue Elasticsearch::Transport::Transport::Errors::NotFound
+      return false
     end
 
     def valid_data_stream_name?
@@ -176,15 +194,16 @@ module Fluent::Plugin
       data_stream_name = @data_stream_name
       data_stream_template_name = @data_stream_template_name
       data_stream_ilm_name = @data_stream_ilm_name
+      host = @host
       if @use_placeholder
         data_stream_name = extract_placeholders(@data_stream_name, chunk)
         data_stream_template_name = extract_placeholders(@data_stream_template_name, chunk)
         data_stream_ilm_name = extract_placeholders(@data_stream_ilm_name, chunk)
         unless @data_stream_names.include?(data_stream_name)
           begin
-            create_ilm_policy(data_stream_name, data_stream_template_name, data_stream_ilm_name)
-            create_index_template(data_stream_template_name, data_stream_template_name, data_stream_ilm_name)
             create_data_stream(data_stream_name)
+            create_ilm_policy(data_stream_name, data_stream_template_name, data_stream_ilm_name, host)
+            create_index_template(data_stream_name, data_stream_template_name, data_stream_ilm_name, host)
             @data_stream_names << data_stream_name
           rescue => e
             raise Fluent::ConfigError, "Failed to create data stream: <#{data_stream_name}> #{e.message}"
