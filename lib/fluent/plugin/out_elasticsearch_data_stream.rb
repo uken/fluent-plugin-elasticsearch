@@ -69,8 +69,8 @@ module Fluent::Plugin
       end
     end
 
-    def create_ilm_policy(ds_name, tpl_name, ilm_name, host)
-      return if data_stream_exist?(ds_name) or template_exists?(tpl_name, host) or ilm_policy_exists?(ilm_name)
+    def create_ilm_policy(datastream_name, template_name, ilm_name, host)
+      return if data_stream_exist?(datastream_name) or template_exists?(template_name, host) or ilm_policy_exists?(ilm_name)
       params = {
         policy_id: "#{ilm_name}_policy",
         body: File.read(File.join(File.dirname(__FILE__), "default-ilm-policy.json"))
@@ -82,10 +82,10 @@ module Fluent::Plugin
       end
     end
 
-    def create_index_template(ds_name, tpl_name, ilm_name, host)
-      return if data_stream_exist?(ds_name) or template_exists?(tpl_name, host)
+    def create_index_template(datastream_name, template_name, ilm_name, host)
+      return if data_stream_exist?(datastream_name) or template_exists?(template_name, host)
       body = {
-        "index_patterns" => ["#{ds_name}*"],
+        "index_patterns" => ["#{datastream_name}*"],
         "data_stream" => {},
         "template" => {
           "settings" => {
@@ -94,7 +94,7 @@ module Fluent::Plugin
         }
       }
       params = {
-        name: tpl_name,
+        name: template_name,
         body: body
       }
       retry_operate(@max_retry_putting_template,
@@ -104,9 +104,9 @@ module Fluent::Plugin
       end
     end
 
-    def data_stream_exist?(ds_name)
+    def data_stream_exist?(datastream_name)
       params = {
-        name: ds_name
+        name: datastream_name
       }
       begin
         response = @client.indices.get_data_stream(params)
@@ -117,10 +117,10 @@ module Fluent::Plugin
       end
     end
 
-    def create_data_stream(ds_name)
-      return if data_stream_exist?(ds_name)
+    def create_data_stream(datastream_name)
+      return if data_stream_exist?(datastream_name)
       params = {
-        name: ds_name
+        name: datastream_name
       }
       retry_operate(@max_retry_putting_template,
                     @fail_on_putting_template_retry_exceed,

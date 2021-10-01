@@ -98,8 +98,8 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_request(:get, "http://localhost:9200/_index_template/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
   end
 
-  def stub_bulk_feed(ds_name="foo", ilm_name="foo_ilm", tpl_name="foo_tpl")
-    stub_request(:post, "http://localhost:9200/#{ds_name}/_bulk").with do |req|
+  def stub_bulk_feed(datastream_name="foo", ilm_name="foo_ilm", template_name="foo_tpl")
+    stub_request(:post, "http://localhost:9200/#{datastream_name}/_bulk").with do |req|
       # bulk data must be pair of OP and records
       # {"create": {}}\nhttp://localhost:9200/_ilm/policy/foo_ilm_bar
       # {"@timestamp": ...}
@@ -111,7 +111,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       # {"@timestamp": ...}
       @bulk_records += req.body.split("\n").size / 2
     end
-    stub_request(:post, "http://localhost:9200/#{tpl_name}/_bulk").with do |req|
+    stub_request(:post, "http://localhost:9200/#{template_name}/_bulk").with do |req|
       # bulk data must be pair of OP and records
       # {"create": {}}\nhttp://localhost:9200/_ilm/policy/foo_ilm_bar
       # {"@timestamp": ...}
@@ -124,14 +124,14 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'json' } })
   end
 
-  def stub_default(ds_name="foo", ilm_name="foo_ilm", tpl_name="foo_tpl", host="http://localhost:9200")
+  def stub_default(datastream_name="foo", ilm_name="foo_ilm", template_name="foo_tpl", host="http://localhost:9200")
     stub_elastic_info(host)
     stub_nonexistent_ilm?(ilm_name)
     stub_ilm_policy(ilm_name)
-    stub_nonexistent_template?(tpl_name)
-    stub_index_template(tpl_name)
-    stub_nonexistent_data_stream?(ds_name)
-    stub_data_stream(ds_name)
+    stub_nonexistent_template?(template_name)
+    stub_index_template(template_name)
+    stub_nonexistent_data_stream?(datastream_name)
+    stub_data_stream(datastream_name)
   end
 
   def data_stream_supported?
