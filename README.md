@@ -1521,13 +1521,25 @@ You can enable this feature by specifying `@type elasticsearch_data_stream`.
 data_stream_name test
 ```
 
-When `@type elasticsearch_data_stream` is used, ILM default policy is set to the specified data stream.
+When `@type elasticsearch_data_stream` is used, unless specified with `data_stream_ilm_name` and `data_stream_template_name`, ILM default policy is set to the specified data stream.
 Then, the matching index template is also created automatically.
 
 ### data_stream_name
 
 You can specify Elasticsearch data stream name by this parameter.
 This parameter is mandatory for `elasticsearch_data_stream`.
+
+### data_stream_template_name
+
+You can specify an existing matching index template for the data stream. If not present, it creates a new matching index template. 
+
+Default value is `data_stream_name`.
+
+### data_stream_ilm_name
+
+You can specify the name of an existing ILM policy, which will be applied to the data stream. If not present, it creates a new ILM default policy (unless `data_stream_template_name` is defined, in that case the ILM will be set to the one specified in the matching index template).
+
+Default value is `data_stream_name`.
 
 There are some limitations about naming rule.
 

@@ -45,7 +45,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     {
       'data_streams': [
                         {
-                          'name' => 'my-data-stream',
+                          'name' => 'foo',
                           'timestamp_field' => {
                             'name' => '@timestamp'
                           }
@@ -62,11 +62,11 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   DUPLICATED_DATA_STREAM_EXCEPTION = {"error": {}, "status": 400}
   NONEXISTENT_DATA_STREAM_EXCEPTION = {"error": {}, "status": 404}
 
-  def stub_ilm_policy(name="foo")
+  def stub_ilm_policy(name="foo_ilm")
     stub_request(:put, "http://localhost:9200/_ilm/policy/#{name}_policy").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
-  def stub_index_template(name="foo")
+  def stub_index_template(name="foo_tpl")
     stub_request(:put, "http://localhost:9200/_index_template/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
@@ -78,14 +78,42 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_request(:get, "http://localhost:9200/_data_stream/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
+  def stub_existent_ilm?(name="foo_ilm")
+    stub_request(:get, "http://localhost:9200/_ilm/policy/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+  end
+
+  def stub_existent_template?(name="foo_tpl")
+    stub_request(:get, "http://localhost:9200/_index_template/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+  end
+
   def stub_nonexistent_data_stream?(name="foo")
     stub_request(:get, "http://localhost:9200/_data_stream/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
   end
 
-  def stub_bulk_feed(name="foo")
-    stub_request(:post, "http://localhost:9200/#{name}/_bulk").with do |req|
+  def stub_nonexistent_ilm?(name="foo_ilm")
+    stub_request(:get, "http://localhost:9200/_ilm/policy/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
+  end
+
+  def stub_nonexistent_template?(name="foo_tpl")
+    stub_request(:get, "http://localhost:9200/_index_template/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
+  end
+
+  def stub_bulk_feed(ds_name="foo", ilm_name="foo_ilm", tpl_name="foo_tpl")
+    stub_request(:post, "http://localhost:9200/#{ds_name}/_bulk").with do |req|
       # bulk data must be pair of OP and records
-      # {"create": {}}\n
+      # {"create": {}}\nhttp://localhost:9200/_ilm/policy/foo_ilm_bar
+      # {"@timestamp": ...}
+      @bulk_records += req.body.split("\n").size / 2
+    end
+    stub_request(:post, "http://localhost:9200/#{ilm_name}/_bulk").with do |req|
+      # bulk data must be pair of OP and records
+      # {"create": {}}\nhttp://localhost:9200/_ilm/policy/foo_ilm_bar
+      # {"@timestamp": ...}
+      @bulk_records += req.body.split("\n").size / 2
+    end
+    stub_request(:post, "http://localhost:9200/#{tpl_name}/_bulk").with do |req|
+      # bulk data must be pair of OP and records
+      # {"create": {}}\nhttp://localhost:9200/_ilm/policy/foo_ilm_bar
       # {"@timestamp": ...}
       @bulk_records += req.body.split("\n").size / 2
     end
@@ -96,12 +124,14 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'json' } })
   end
 
-  def stub_default(name="foo", host="http://localhost:9200")
+  def stub_default(ds_name="foo", ilm_name="foo_ilm", tpl_name="foo_tpl", host="http://localhost:9200")
     stub_elastic_info(host)
-    stub_ilm_policy(name)
-    stub_index_template(name)
-    stub_nonexistent_data_stream?(name)
-    stub_data_stream(name)
+    stub_nonexistent_ilm?(ilm_name)
+    stub_ilm_policy(ilm_name)
+    stub_nonexistent_template?(tpl_name)
+    stub_index_template(tpl_name)
+    stub_nonexistent_data_stream?(ds_name)
+    stub_data_stream(ds_name)
   end
 
   def data_stream_supported?
@@ -125,7 +155,9 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       conf = config_element(
         'ROOT', '', {
           '@type' => 'elasticsearch_datastream',
-          'data_stream_name' => 'TEST'
+          'data_stream_name' => 'TEST',
+          'data_stream_ilm_name' => 'TEST-ILM',
+          'data_stream_template_name' => 'TEST-TPL'
         })
       assert_raise Fluent::ConfigError.new("'data_stream_name' must be lowercase only: <TEST>") do
         driver(conf)
@@ -149,7 +181,9 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       conf = config_element(
         'ROOT', '', {
           '@type' => ELASTIC_DATA_STREAM_TYPE,
-          'data_stream_name' => "TEST#{c}"
+          'data_stream_name' => "TEST#{c}",
+          'data_stream_ilm_name' => "TEST#{c}",
+          'data_stream_template_name' => "TEST#{c}"
         })
       label = Fluent::Plugin::ElasticsearchOutputDataStream::INVALID_CHARACTERS.join(',')
       assert_raise Fluent::ConfigError.new("'data_stream_name' must not contain invalid characters #{label}: <TEST#{c}>") do
@@ -166,7 +200,9 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       conf = config_element(
         'ROOT', '', {
           '@type' => ELASTIC_DATA_STREAM_TYPE,
-          'data_stream_name' => "#{c}TEST"
+          'data_stream_name' => "#{c}TEST",
+          'data_stream_ilm_name' => "#{c}TEST",
+          'data_stream_template_name' => "#{c}TEST"
         })
       label = Fluent::Plugin::ElasticsearchOutputDataStream::INVALID_START_CHRACTERS.join(',')
       assert_raise Fluent::ConfigError.new("'data_stream_name' must not start with #{label}: <#{c}TEST>") do
@@ -181,7 +217,9 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       conf = config_element(
         'ROOT', '', {
           '@type' => ELASTIC_DATA_STREAM_TYPE,
-          'data_stream_name' => "#{c}"
+          'data_stream_name' => "#{c}",
+          'data_stream_ilm_name' => "#{c}",
+          'data_stream_template_name' => "#{c}"
         })
       assert_raise Fluent::ConfigError.new("'data_stream_name' must not be . or ..: <#{c}>") do
         driver(conf)
@@ -193,7 +231,9 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       conf = config_element(
         'ROOT', '', {
           '@type' => ELASTIC_DATA_STREAM_TYPE,
-          'data_stream_name' => "#{c}"
+          'data_stream_name' => "#{c}",
+          'data_stream_ilm_name' => "#{c}",
+          'data_stream_template_name' => "#{c}"
         })
       assert_raise Fluent::ConfigError.new("'data_stream_name' must not be longer than 255 bytes: <#{c}>") do
         driver(conf)
@@ -208,7 +248,9 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     conf = config_element(
       'ROOT', '', {
         '@type' => ELASTIC_DATA_STREAM_TYPE,
-        'data_stream_name' => 'foo'
+        'data_stream_name' => 'foo',
+        'data_stream_ilm_name' => "foo_ilm",
+        'data_stream_template_name' => "foo_tpl"
       })
     assert_equal "foo", driver(conf).instance.data_stream_name
   end
@@ -224,7 +266,9 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     conf = config_element(
       'ROOT', '', {
         '@type' => ELASTIC_DATA_STREAM_TYPE,
-        'data_stream_name' => 'foo'
+        'data_stream_name' => 'foo',
+        'data_stream_ilm_name' => "foo_ilm",
+        'data_stream_template_name' => "foo_tpl"
       })
     assert_equal "foo", driver(conf).instance.data_stream_name
   end
@@ -232,13 +276,17 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   def test_placeholder
     omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
 
-    name = "foo_test"
-    stub_default(name)
-    stub_bulk_feed(name)
+    dsname = "foo_test"
+    ilmname = "foo_ilm_test"
+    tplname = "foo_tpl_test"
+    stub_default(dsname, ilmname, tplname)
+    stub_bulk_feed(dsname, ilmname, tplname)
     conf = config_element(
       'ROOT', '', {
         '@type' => ELASTIC_DATA_STREAM_TYPE,
-        'data_stream_name' => 'foo_${tag}'
+        'data_stream_name' => 'foo_${tag}',
+        'data_stream_ilm_name' => "foo_ilm_${tag}",
+        'data_stream_template_name' => "foo_tpl_${tag}"
       })
     driver(conf).run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -250,13 +298,17 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
 
     time = Time.now
-    name = "foo_#{time.strftime("%Y%m%d")}"
-    stub_default(name)
-    stub_bulk_feed(name)
+    dsname = "foo_#{time.strftime("%Y%m%d")}"
+    ilmname = "foo_ilm_#{time.strftime("%Y%m%d")}"
+    tplname = "foo_tpl_#{time.strftime("%Y%m%d")}"
+    stub_default(dsname, ilmname, tplname)
+    stub_bulk_feed(dsname, ilmname, tplname)
     conf = config_element(
       'ROOT', '', {
         '@type' => ELASTIC_DATA_STREAM_TYPE,
-        'data_stream_name' => 'foo_%Y%m%d'
+        'data_stream_name' => 'foo_%Y%m%d',
+        'data_stream_ilm_name' => 'foo_ilm_%Y%m%d',
+        'data_stream_template_name' => 'foo_tpl_%Y%m%d'
       }, [config_element('buffer', 'time', {
                           'timekey' => '1d'
                         }, [])]
@@ -272,14 +324,18 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
 
     keys = ["bar", "baz"]
     keys.each do |key|
-      name = "foo_#{key}"
-      stub_default(name)
-      stub_bulk_feed(name)
+      dsname = "foo_#{key}"
+      ilmname = "foo_ilm_#{key}"
+      tplname = "foo_tpl_#{key}"
+      stub_default(dsname, ilmname, tplname)
+      stub_bulk_feed(dsname, ilmname, tplname)
     end
     conf = config_element(
       'ROOT', '', {
         '@type' => ELASTIC_DATA_STREAM_TYPE,
-        'data_stream_name' => 'foo_${key1}'
+        'data_stream_name' => 'foo_${key1}',
+        'data_stream_ilm_name' => 'foo_ilm_${key1}',
+        'data_stream_template_name' => 'foo_tpl_${key1}'
       }, [config_element('buffer', 'tag,key1', {
                           'timekey' => '1d'
                         }, [])]
@@ -301,7 +357,9 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     conf = config_element(
       'ROOT', '', {
         '@type' => ELASTIC_DATA_STREAM_TYPE,
-        'data_stream_name' => 'foo'
+        'data_stream_name' => 'foo',
+        'data_stream_ilm_name' => 'foo_ilm',
+        'data_stream_template_name' => 'foo_tpl'
       })
     driver(conf).run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -316,14 +374,16 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     template_file = File.join(cwd, 'test_index_template.json')
 
     config = %{
-      host            logs.google.com
-      port            778
-      scheme          https
-      data_stream_name foo
-      user            john
-      password        doe
-      template_name   logstash
-      template_file   #{template_file}
+      host                       logs.google.com
+      port                       778
+      scheme                     https
+      data_stream_name           foo
+      data_stream_ilm_name       foo_ilm
+      data_stream_template_name  foo_tpl
+      user                       john
+      password                   doe
+      template_name              logstash
+      template_file              #{template_file}
       max_retry_putting_template 3
     }
 
