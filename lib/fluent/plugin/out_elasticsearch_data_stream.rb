@@ -29,7 +29,7 @@ module Fluent::Plugin
 
       # ref. https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-create-data-stream.html
       unless placeholder?(:data_stream_name_placeholder, @data_stream_name)
-        validate_data_stream_name
+        validate_data_stream_parameters
       else
         @use_placeholder = true
         @data_stream_names = []
@@ -48,23 +48,27 @@ module Fluent::Plugin
       end
     end
 
-    def validate_data_stream_name
-      unless valid_data_stream_name?
-        unless start_with_valid_characters?
-          if not_dots?
-            raise Fluent::ConfigError, "'data_stream_name' must not start with #{INVALID_START_CHRACTERS.join(",")}: <#{@data_stream_name}>"
-          else
-            raise Fluent::ConfigError, "'data_stream_name' must not be . or ..: <#{@data_stream_name}>"
+    def validate_data_stream_parameters
+      {"data_stream_name" => @data_stream_name,
+       "data_stream_template_name"=> @data_stream_template_name,
+       "data_stream_ilm_name" => @data_stream_ilm_name}.each do |parameter, value|
+        unless valid_data_stream_parameters?(value)
+          unless start_with_valid_characters?(value)
+            if not_dots?(value)
+              raise Fluent::ConfigError, "'#{parameter}' must not start with #{INVALID_START_CHRACTERS.join(",")}: <#{value}>"
+            else
+              raise Fluent::ConfigError, "'#{parameter}' must not be . or ..: <#{value}>"
+            end
           end
-        end
-        unless valid_characters?
-          raise Fluent::ConfigError, "'data_stream_name' must not contain invalid characters #{INVALID_CHARACTERS.join(",")}: <#{@data_stream_name}>"
-        end
-        unless lowercase_only?
-          raise Fluent::ConfigError, "'data_stream_name' must be lowercase only: <#{@data_stream_name}>"
-        end
-        if @data_stream_name.bytes.size > 255
-          raise Fluent::ConfigError, "'data_stream_name' must not be longer than 255 bytes: <#{@data_stream_name}>"
+          unless valid_characters?(value)
+            raise Fluent::ConfigError, "'#{parameter}' must not contain invalid characters #{INVALID_CHARACTERS.join(",")}: <#{value}>"
+          end
+          unless lowercase_only?(value)
+            raise Fluent::ConfigError, "'#{parameter}' must be lowercase only: <#{value}>"
+          end
+          if value.bytes.size > 255
+            raise Fluent::ConfigError, "'#{parameter}' must not be longer than 255 bytes: <#{value}>"
+          end
         end
       end
     end
@@ -149,38 +153,28 @@ module Fluent::Plugin
       return false
     end
 
-    def valid_data_stream_name?
-      lowercase_only? and
-        valid_characters? and
-        start_with_valid_characters? and
-        not_dots? and
-        @data_stream_name.bytes.size <= 255 and
-        @data_stream_template_name.bytes.size <= 255 and
-        @data_stream_ilm_name.bytes.size <= 255
+    def valid_data_stream_parameters?(data_stream_parameter)
+      lowercase_only?(data_stream_parameter) and
+        valid_characters?(data_stream_parameter) and
+        start_with_valid_characters?(data_stream_parameter) and
+        not_dots?(data_stream_parameter) and
+        data_stream_parameter.bytes.size <= 255
     end
 
-    def lowercase_only?
-      @data_stream_name.downcase == @data_stream_name and
-      @data_stream_template_name.downcase == @data_stream_template_name and
-      @data_stream_ilm_name.downcase == @data_stream_ilm_name
+    def lowercase_only?(data_stream_parameter)
+      data_stream_parameter.downcase == data_stream_parameter
     end
 
-    def valid_characters?
-      not (INVALID_CHARACTERS.each.any? do |v| @data_stream_name.include?(v) end) and
-      not (INVALID_CHARACTERS.each.any? do |v| @data_stream_template_name.include?(v) end) and
-      not (INVALID_CHARACTERS.each.any? do |v| @data_stream_ilm_name.include?(v) end)
+    def valid_characters?(data_stream_parameter)
+      not (INVALID_CHARACTERS.each.any? do |v| data_stream_parameter.include?(v) end)
     end
 
-    def start_with_valid_characters?
-      not (INVALID_START_CHRACTERS.each.any? do |v| @data_stream_name.start_with?(v) end) and
-      not (INVALID_START_CHRACTERS.each.any? do |v| @data_stream_template_name.start_with?(v) end) and
-      not (INVALID_START_CHRACTERS.each.any? do |v| @data_stream_ilm_name.start_with?(v) end)
+    def start_with_valid_characters?(data_stream_parameter)
+      not (INVALID_START_CHRACTERS.each.any? do |v| data_stream_parameter.start_with?(v) end)
     end
 
-    def not_dots?
-      not (@data_stream_name == "." or @data_stream_name == "..") and
-      not (@data_stream_template_name == "." or @data_stream_template_name == "..") and
-      not (@data_stream_ilm_name == "." or @data_stream_ilm_name == "..")
+    def not_dots?(data_stream_parameter)
+      not (data_stream_parameter == "." or data_stream_parameter == "..")
     end
 
     def client_library_version

@@ -151,92 +151,274 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       end
     end
 
-    def test_invalid_uppercase
-      conf = config_element(
-        'ROOT', '', {
-          '@type' => 'elasticsearch_datastream',
-          'data_stream_name' => 'TEST',
-          'data_stream_ilm_name' => 'TEST-ILM',
-          'data_stream_template_name' => 'TEST-TPL'
-        })
-      assert_raise Fluent::ConfigError.new("'data_stream_name' must be lowercase only: <TEST>") do
-        driver(conf)
+    sub_test_case "invalid uppercase" do
+      def test_stream_name
+        conf = config_element(
+          'ROOT', '', {
+            '@type' => 'elasticsearch_datastream',
+            'data_stream_name' => 'TEST',
+            'data_stream_ilm_name' => 'default-policy',
+            'data_stream_template_name' => 'template'
+          })
+        assert_raise Fluent::ConfigError.new("'data_stream_name' must be lowercase only: <TEST>") do
+          driver(conf)
+        end
+      end
+      def test_stream_ilm_name
+        conf = config_element(
+          'ROOT', '', {
+            '@type' => 'elasticsearch_datastream',
+            'data_stream_name' => 'data_stream',
+            'data_stream_ilm_name' => 'TEST-ILM',
+            'data_stream_template_name' => 'template'
+          })
+        assert_raise Fluent::ConfigError.new("'data_stream_ilm_name' must be lowercase only: <TEST-ILM>") do
+          driver(conf)
+        end
+      end
+      def test_stream_template_name
+        conf = config_element(
+          'ROOT', '', {
+            '@type' => 'elasticsearch_datastream',
+            'data_stream_name' => 'default',
+            'data_stream_ilm_name' => 'default-policy',
+            'data_stream_template_name' => 'TEST-TPL'
+          })
+        assert_raise Fluent::ConfigError.new("'data_stream_template_name' must be lowercase only: <TEST-TPL>") do
+          driver(conf)
+        end
       end
     end
 
-    data("backslash" => "\\",
-         "slash" => "/",
-         "asterisk" => "*",
-         "question" => "?",
-         "doublequote" => "\"",
-         "lt" => "<",
-         "gt" => ">",
-         "bar" => "|",
-         "space" => " ",
-         "comma" => ",",
-         "sharp" => "#",
-         "colon" => ":")
-    def test_invalid_characters(data)
-      c, _ = data
-      conf = config_element(
-        'ROOT', '', {
-          '@type' => ELASTIC_DATA_STREAM_TYPE,
-          'data_stream_name' => "TEST#{c}",
-          'data_stream_ilm_name' => "TEST#{c}",
-          'data_stream_template_name' => "TEST#{c}"
-        })
-      label = Fluent::Plugin::ElasticsearchOutputDataStream::INVALID_CHARACTERS.join(',')
-      assert_raise Fluent::ConfigError.new("'data_stream_name' must not contain invalid characters #{label}: <TEST#{c}>") do
-        driver(conf)
+    sub_test_case "invalid parameters" do
+      data("backslash" => "\\",
+           "slash" => "/",
+           "asterisk" => "*",
+           "question" => "?",
+           "doublequote" => "\"",
+           "lt" => "<",
+           "gt" => ">",
+           "bar" => "|",
+           "space" => " ",
+           "comma" => ",",
+           "sharp" => "#",
+           "colon" => ":")
+      def test_stream_name(data)
+        c, _ = data
+        conf = config_element(
+          'ROOT', '', {
+            '@type' => ELASTIC_DATA_STREAM_TYPE,
+            'data_stream_name' => "TEST#{c}",
+            'data_stream_ilm_name' => "default_policy",
+            'data_stream_template_name' => "data_stream"
+          })
+        label = Fluent::Plugin::ElasticsearchOutputDataStream::INVALID_CHARACTERS.join(',')
+        assert_raise Fluent::ConfigError.new("'data_stream_name' must not contain invalid characters #{label}: <TEST#{c}>") do
+          driver(conf)
+        end
+      end
+
+      data("backslash" => "\\",
+           "slash" => "/",
+           "asterisk" => "*",
+           "question" => "?",
+           "doublequote" => "\"",
+           "lt" => "<",
+           "gt" => ">",
+           "bar" => "|",
+           "space" => " ",
+           "comma" => ",",
+           "sharp" => "#",
+           "colon" => ":")
+      def test_stream_ilm_name(data)
+        c, _ = data
+        conf = config_element(
+          'ROOT', '', {
+            '@type' => ELASTIC_DATA_STREAM_TYPE,
+            'data_stream_name' => "default",
+            'data_stream_ilm_name' => "TEST#{c}",
+            'data_stream_template_name' => "data_stream"
+          })
+        label = Fluent::Plugin::ElasticsearchOutputDataStream::INVALID_CHARACTERS.join(',')
+        assert_raise Fluent::ConfigError.new("'data_stream_ilm_name' must not contain invalid characters #{label}: <TEST#{c}>") do
+          driver(conf)
+        end
+      end
+
+      data("backslash" => "\\",
+           "slash" => "/",
+           "asterisk" => "*",
+           "question" => "?",
+           "doublequote" => "\"",
+           "lt" => "<",
+           "gt" => ">",
+           "bar" => "|",
+           "space" => " ",
+           "comma" => ",",
+           "sharp" => "#",
+           "colon" => ":")
+      def test_stream_template_name(data)
+        c, _ = data
+        conf = config_element(
+          'ROOT', '', {
+            '@type' => ELASTIC_DATA_STREAM_TYPE,
+            'data_stream_name' => "default",
+            'data_stream_ilm_name' => "default_policy",
+            'data_stream_template_name' => "TEST#{c}"
+          })
+        label = Fluent::Plugin::ElasticsearchOutputDataStream::INVALID_CHARACTERS.join(',')
+        assert_raise Fluent::ConfigError.new("'data_stream_template_name' must not contain invalid characters #{label}: <TEST#{c}>") do
+          driver(conf)
+        end
       end
     end
 
-    data("hyphen" => "-",
-         "underscore" => "_",
-         "plus" => "+",
-         "period" => ".")
-    def test_invalid_start_characters(data)
-      c, _ = data
-      conf = config_element(
-        'ROOT', '', {
-          '@type' => ELASTIC_DATA_STREAM_TYPE,
-          'data_stream_name' => "#{c}TEST",
-          'data_stream_ilm_name' => "#{c}TEST",
-          'data_stream_template_name' => "#{c}TEST"
-        })
-      label = Fluent::Plugin::ElasticsearchOutputDataStream::INVALID_START_CHRACTERS.join(',')
-      assert_raise Fluent::ConfigError.new("'data_stream_name' must not start with #{label}: <#{c}TEST>") do
-        driver(conf)
+    sub_test_case "invalid start characters" do
+      data("hyphen" => "-",
+           "underscore" => "_",
+           "plus" => "+",
+           "period" => ".")
+      def test_stream_name(data)
+        c, _ = data
+        conf = config_element(
+          'ROOT', '', {
+            '@type' => ELASTIC_DATA_STREAM_TYPE,
+            'data_stream_name' => "#{c}TEST",
+            'data_stream_ilm_name' => "default-policy",
+            'data_stream_template_name' => "template"
+          })
+        label = Fluent::Plugin::ElasticsearchOutputDataStream::INVALID_START_CHRACTERS.join(',')
+        assert_raise Fluent::ConfigError.new("'data_stream_name' must not start with #{label}: <#{c}TEST>") do
+          driver(conf)
+        end
+      end
+      data("hyphen" => "-",
+           "underscore" => "_",
+           "plus" => "+",
+           "period" => ".")
+      def test_stream_ilm_name(data)
+        c, _ = data
+        conf = config_element(
+          'ROOT', '', {
+            '@type' => ELASTIC_DATA_STREAM_TYPE,
+            'data_stream_name' => "default",
+            'data_stream_ilm_name' => "#{c}TEST",
+            'data_stream_template_name' => "template"
+          })
+        label = Fluent::Plugin::ElasticsearchOutputDataStream::INVALID_START_CHRACTERS.join(',')
+        assert_raise Fluent::ConfigError.new("'data_stream_ilm_name' must not start with #{label}: <#{c}TEST>") do
+          driver(conf)
+        end
+      end
+      data("hyphen" => "-",
+           "underscore" => "_",
+           "plus" => "+",
+           "period" => ".")
+      def test_stream_template_name(data)
+        c, _ = data
+        conf = config_element(
+          'ROOT', '', {
+            '@type' => ELASTIC_DATA_STREAM_TYPE,
+            'data_stream_name' => "default",
+            'data_stream_ilm_name' => "default-policy",
+            'data_stream_template_name' => "#{c}TEST"
+          })
+        label = Fluent::Plugin::ElasticsearchOutputDataStream::INVALID_START_CHRACTERS.join(',')
+        assert_raise Fluent::ConfigError.new("'data_stream_template_name' must not start with #{label}: <#{c}TEST>") do
+          driver(conf)
+        end
       end
     end
 
-    data("current" => ".",
-         "parents" => "..")
-    def test_invalid_dots
-      c, _ = data
-      conf = config_element(
-        'ROOT', '', {
-          '@type' => ELASTIC_DATA_STREAM_TYPE,
-          'data_stream_name' => "#{c}",
-          'data_stream_ilm_name' => "#{c}",
-          'data_stream_template_name' => "#{c}"
-        })
-      assert_raise Fluent::ConfigError.new("'data_stream_name' must not be . or ..: <#{c}>") do
-        driver(conf)
+    sub_test_case "invalid dots" do
+      data("current" => ".",
+           "parents" => "..")
+      def test_stream_name
+        c, _ = data
+        conf = config_element(
+          'ROOT', '', {
+            '@type' => ELASTIC_DATA_STREAM_TYPE,
+            'data_stream_name' => "#{c}",
+            'data_stream_ilm_name' => "default-policy",
+            'data_stream_template_name' => "template"
+          })
+        assert_raise Fluent::ConfigError.new("'data_stream_name' must not be . or ..: <#{c}>") do
+          driver(conf)
+        end
+      end
+
+      data("current" => ".",
+           "parents" => "..")
+      def test_stream_ilm_name
+        c, _ = data
+        conf = config_element(
+          'ROOT', '', {
+            '@type' => ELASTIC_DATA_STREAM_TYPE,
+            'data_stream_name' => "default",
+            'data_stream_ilm_name' => "#{c}",
+            'data_stream_template_name' => "template"
+          })
+        assert_raise Fluent::ConfigError.new("'data_stream_ilm_name' must not be . or ..: <#{c}>") do
+          driver(conf)
+        end
+      end
+
+      data("current" => ".",
+           "parents" => "..")
+      def test_stream_template_name
+        c, _ = data
+        conf = config_element(
+          'ROOT', '', {
+            '@type' => ELASTIC_DATA_STREAM_TYPE,
+            'data_stream_name' => "default",
+            'data_stream_ilm_name' => "default-policy",
+            'data_stream_template_name' => "#{c}"
+          })
+        assert_raise Fluent::ConfigError.new("'data_stream_template_name' must not be . or ..: <#{c}>") do
+          driver(conf)
+        end
       end
     end
 
-    def test_invalid_length
-      c = "a" * 256
-      conf = config_element(
-        'ROOT', '', {
-          '@type' => ELASTIC_DATA_STREAM_TYPE,
-          'data_stream_name' => "#{c}",
-          'data_stream_ilm_name' => "#{c}",
-          'data_stream_template_name' => "#{c}"
-        })
-      assert_raise Fluent::ConfigError.new("'data_stream_name' must not be longer than 255 bytes: <#{c}>") do
-        driver(conf)
+    sub_test_case "invalid length" do
+      def test_stream_name
+        c = "a" * 256
+        conf = config_element(
+          'ROOT', '', {
+            '@type' => ELASTIC_DATA_STREAM_TYPE,
+            'data_stream_name' => "#{c}",
+            'data_stream_ilm_name' => "default-policy",
+            'data_stream_template_name' => "template"
+          })
+        assert_raise Fluent::ConfigError.new("'data_stream_name' must not be longer than 255 bytes: <#{c}>") do
+          driver(conf)
+        end
+      end
+      def test_stream_ilm_name
+        c = "a" * 256
+        conf = config_element(
+          'ROOT', '', {
+            '@type' => ELASTIC_DATA_STREAM_TYPE,
+            'data_stream_name' => "default",
+            'data_stream_ilm_name' => "#{c}",
+            'data_stream_template_name' => "template"
+          })
+        assert_raise Fluent::ConfigError.new("'data_stream_ilm_name' must not be longer than 255 bytes: <#{c}>") do
+          driver(conf)
+        end
+      end
+      def test_stream_template_name
+        c = "a" * 256
+        conf = config_element(
+          'ROOT', '', {
+            '@type' => ELASTIC_DATA_STREAM_TYPE,
+            'data_stream_name' => "default",
+            'data_stream_ilm_name' => "default-policy",
+            'data_stream_template_name' => "#{c}"
+          })
+        assert_raise Fluent::ConfigError.new("'data_stream_template_name' must not be longer than 255 bytes: <#{c}>") do
+          driver(conf)
+        end
       end
     end
   end
