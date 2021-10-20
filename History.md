@@ -2,6 +2,11 @@
 
 ### [Unreleased]
 
+### 5.1.1
+-  Report appropriate error for data_stream parameters (#922)
+- Add ILM and template parameters for data streams (#920)
+- Support Buffer in Data Stream Output (#917)
+
 ### 5.1.0
 - Correct default target bytes value (#914)
 - Handle elasticsearch-ruby 7.14 properly (#913)
