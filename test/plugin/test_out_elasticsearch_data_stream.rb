@@ -455,6 +455,61 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     assert_equal "foo", driver(conf).instance.data_stream_name
   end
 
+  def test_template_unset
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    stub_ilm_policy
+    stub_index_template
+    stub_existent_data_stream?
+    stub_data_stream
+    stub_elastic_info
+    conf = config_element(
+      'ROOT', '', {
+        '@type' => ELASTIC_DATA_STREAM_TYPE,
+        'data_stream_name' => 'foo',
+        'data_stream_ilm_name' => "foo_ilm",
+      })
+    assert_equal "foo", driver(conf).instance.data_stream_name
+    assert_equal "foo_ilm", driver(conf).instance.data_stream_ilm_name
+    assert_equal "foo_template", driver(conf).instance.data_stream_template_name
+  end
+
+  def test_ilm_unset
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    stub_ilm_policy
+    stub_index_template
+    stub_existent_data_stream?
+    stub_data_stream
+    stub_elastic_info
+    conf = config_element(
+      'ROOT', '', {
+        '@type' => ELASTIC_DATA_STREAM_TYPE,
+        'data_stream_name' => 'foo',
+        'data_stream_template_name' => "foo_tpl"
+      })
+    assert_equal "foo", driver(conf).instance.data_stream_name
+    assert_equal "foo_tpl", driver(conf).instance.data_stream_template_name
+  end
+
+  def test_template_and_ilm_unset
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    stub_ilm_policy
+    stub_index_template
+    stub_existent_data_stream?
+    stub_data_stream
+    stub_elastic_info
+    conf = config_element(
+      'ROOT', '', {
+        '@type' => ELASTIC_DATA_STREAM_TYPE,
+        'data_stream_name' => 'foo',
+      })
+    assert_equal "foo", driver(conf).instance.data_stream_name
+    assert_equal "foo_template", driver(conf).instance.data_stream_template_name
+    assert_equal "foo_policy", driver(conf).instance.data_stream_ilm_name
+  end
+
   def test_placeholder
     omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
 
@@ -475,6 +530,26 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     end
     assert_equal 1, @bulk_records
   end
+
+  def test_placeholder_params_unset
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    dsname = "foo_test"
+    ilmname = "foo_test_policy"
+    tplname = "foo_test_template"
+    stub_default(dsname, ilmname, tplname)
+    stub_bulk_feed(dsname, ilmname, tplname)
+    conf = config_element(
+      'ROOT', '', {
+        '@type' => ELASTIC_DATA_STREAM_TYPE,
+        'data_stream_name' => 'foo_${tag}',
+      })
+    driver(conf).run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+    assert_equal 1, @bulk_records
+  end
+
 
   def test_time_placeholder
     omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?

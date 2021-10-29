@@ -9,8 +9,8 @@ module Fluent::Plugin
     helpers :event_emitter
 
     config_param :data_stream_name, :string
-    config_param :data_stream_ilm_name, :string, :default => :data_stream_name
-    config_param :data_stream_template_name, :string, :default => :data_stream_name
+    config_param :data_stream_ilm_name, :string, :default => nil
+    config_param :data_stream_template_name, :string, :default => nil
     # Elasticsearch 7.9 or later always support new style of index template.
     config_set_default :use_legacy_template, false
 
@@ -26,6 +26,9 @@ module Fluent::Plugin
       rescue LoadError
         raise Fluent::ConfigError, "'elasticsearch/api', 'elasticsearch/xpack' are required for <@elasticsearch_data_stream>."
       end
+
+      @data_stream_ilm_name = "#{@data_stream_name}_policy" if @data_stream_ilm_name.nil?
+      @data_stream_template_name = "#{@data_stream_name}_template" if @data_stream_template_name.nil?
 
       # ref. https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-create-data-stream.html
       unless placeholder?(:data_stream_name_placeholder, @data_stream_name)
@@ -93,7 +96,7 @@ module Fluent::Plugin
         "data_stream" => {},
         "template" => {
           "settings" => {
-            "index.lifecycle.name" => "#{ilm_name}_policy"
+            "index.lifecycle.name" => "#{ilm_name}"
           }
         }
       }
