@@ -2,8 +2,11 @@
 
 ### [Unreleased]
 
+### 5.1.2
+-  Fix default values of datastream parameters (#926)
+
 ### 5.1.1
--  Report appropriate error for data_stream parameters (#922)
+- Report appropriate error for data_stream parameters (#922)
 - Add ILM and template parameters for data streams (#920)
 - Support Buffer in Data Stream Output (#917)
 
