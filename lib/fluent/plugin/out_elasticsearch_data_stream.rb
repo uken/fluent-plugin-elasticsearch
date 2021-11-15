@@ -199,9 +199,9 @@ module Fluent::Plugin
         data_stream_ilm_name = extract_placeholders(@data_stream_ilm_name, chunk)
         unless @data_stream_names.include?(data_stream_name)
           begin
-            create_data_stream(data_stream_name)
             create_ilm_policy(data_stream_name, data_stream_template_name, data_stream_ilm_name, host)
             create_index_template(data_stream_name, data_stream_template_name, data_stream_ilm_name, host)
+            create_data_stream(data_stream_name)
             @data_stream_names << data_stream_name
           rescue => e
             raise Fluent::ConfigError, "Failed to create data stream: <#{data_stream_name}> #{e.message}"
