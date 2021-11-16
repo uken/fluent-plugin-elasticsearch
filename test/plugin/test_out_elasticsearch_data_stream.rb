@@ -62,8 +62,8 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   DUPLICATED_DATA_STREAM_EXCEPTION = {"error": {}, "status": 400}
   NONEXISTENT_DATA_STREAM_EXCEPTION = {"error": {}, "status": 404}
 
-  def stub_ilm_policy(name="foo_ilm")
-    stub_request(:put, "http://localhost:9200/_ilm/policy/#{name}_policy").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+  def stub_ilm_policy(name="foo_ilm_policy")
+    stub_request(:put, "http://localhost:9200/_ilm/policy/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
   def stub_index_template(name="foo_tpl")
@@ -78,7 +78,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_request(:get, "http://localhost:9200/_data_stream/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
-  def stub_existent_ilm?(name="foo_ilm")
+  def stub_existent_ilm?(name="foo_ilm_policy")
     stub_request(:get, "http://localhost:9200/_ilm/policy/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
@@ -90,7 +90,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_request(:get, "http://localhost:9200/_data_stream/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
   end
 
-  def stub_nonexistent_ilm?(name="foo_ilm")
+  def stub_nonexistent_ilm?(name="foo_ilm_policy")
     stub_request(:get, "http://localhost:9200/_ilm/policy/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
   end
 
@@ -98,7 +98,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_request(:get, "http://localhost:9200/_index_template/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
   end
 
-  def stub_bulk_feed(datastream_name="foo", ilm_name="foo_ilm", template_name="foo_tpl")
+  def stub_bulk_feed(datastream_name="foo", ilm_name="foo_ilm_policy", template_name="foo_tpl")
     stub_request(:post, "http://localhost:9200/#{datastream_name}/_bulk").with do |req|
       # bulk data must be pair of OP and records
       # {"create": {}}\nhttp://localhost:9200/_ilm/policy/foo_ilm_bar
@@ -124,7 +124,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'json' } })
   end
 
-  def stub_default(datastream_name="foo", ilm_name="foo_ilm", template_name="foo_tpl", host="http://localhost:9200")
+  def stub_default(datastream_name="foo", ilm_name="foo_ilm_policy", template_name="foo_tpl", host="http://localhost:9200")
     stub_elastic_info(host)
     stub_nonexistent_ilm?(ilm_name)
     stub_ilm_policy(ilm_name)
@@ -431,7 +431,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       'ROOT', '', {
         '@type' => ELASTIC_DATA_STREAM_TYPE,
         'data_stream_name' => 'foo',
-        'data_stream_ilm_name' => "foo_ilm",
+        'data_stream_ilm_name' => "foo_ilm_policy",
         'data_stream_template_name' => "foo_tpl"
       })
     assert_equal "foo", driver(conf).instance.data_stream_name
@@ -449,7 +449,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       'ROOT', '', {
         '@type' => ELASTIC_DATA_STREAM_TYPE,
         'data_stream_name' => 'foo',
-        'data_stream_ilm_name' => "foo_ilm",
+        'data_stream_ilm_name' => "foo_ilm_policy",
         'data_stream_template_name' => "foo_tpl"
       })
     assert_equal "foo", driver(conf).instance.data_stream_name
@@ -467,10 +467,10 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       'ROOT', '', {
         '@type' => ELASTIC_DATA_STREAM_TYPE,
         'data_stream_name' => 'foo',
-        'data_stream_ilm_name' => "foo_ilm",
+        'data_stream_ilm_name' => "foo_ilm_policy",
       })
     assert_equal "foo", driver(conf).instance.data_stream_name
-    assert_equal "foo_ilm", driver(conf).instance.data_stream_ilm_name
+    assert_equal "foo_ilm_policy", driver(conf).instance.data_stream_ilm_name
     assert_equal "foo_template", driver(conf).instance.data_stream_template_name
   end
 
@@ -615,7 +615,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       'ROOT', '', {
         '@type' => ELASTIC_DATA_STREAM_TYPE,
         'data_stream_name' => 'foo',
-        'data_stream_ilm_name' => 'foo_ilm',
+        'data_stream_ilm_name' => 'foo_ilm_policy',
         'data_stream_template_name' => 'foo_tpl'
       })
     driver(conf).run(default_tag: 'test') do
@@ -635,7 +635,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       port                       778
       scheme                     https
       data_stream_name           foo
-      data_stream_ilm_name       foo_ilm
+      data_stream_ilm_name       foo_ilm_policy
       data_stream_template_name  foo_tpl
       user                       john
       password                   doe
