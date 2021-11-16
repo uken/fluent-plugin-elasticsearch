@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 5.1.3
+-  fixing execution order for dynamic data stream creation (#928)
+
 ### 5.1.2
 -  Fix default values of datastream parameters (#926)
 
