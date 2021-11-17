@@ -79,7 +79,7 @@ module Fluent::Plugin
     def create_ilm_policy(datastream_name, template_name, ilm_name, host)
       return if data_stream_exist?(datastream_name) or template_exists?(template_name, host) or ilm_policy_exists?(ilm_name)
       params = {
-        policy_id: "#{ilm_name}_policy",
+        policy_id: ilm_name,
         body: File.read(File.join(File.dirname(__FILE__), "default-ilm-policy.json"))
       }
       retry_operate(@max_retry_putting_template,
