@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 5.1.4
+- Handle ES8 or above more strictly (#931)
+- fixing double "\_policy" in index lifecycle management policy for elasticsearch\_data\_stream output (#930)
+
 ### 5.1.3
 -  fixing execution order for dynamic data stream creation (#928)
 
