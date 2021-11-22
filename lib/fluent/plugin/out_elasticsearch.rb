@@ -987,12 +987,12 @@ EOC
         elsif @last_seen_major_version == 7
           log.warn "Detected ES 7.x: `_doc` will be used as the document `_type`."
           target_type = '_doc'.freeze
-        elsif @last_seen_major_version >=8
+        elsif @last_seen_major_version >= 8
           log.debug "Detected ES 8.x or above: document type will not be used."
           target_type = nil
         end
       else
-        if @suppress_type_name && @last_seen_major_version >= 7
+        if @suppress_type_name && @last_seen_major_version == 7
           target_type = nil
         elsif @last_seen_major_version == 7 && @type_name != DEFAULT_TYPE_NAME_ES_7x
           log.warn "Detected ES 7.x: `_doc` will be used as the document `_type`."
