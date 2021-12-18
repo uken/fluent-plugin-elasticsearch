@@ -1521,7 +1521,7 @@ You can enable this feature by specifying `@type elasticsearch_data_stream`.
 data_stream_name test
 ```
 
-When `@type elasticsearch_data_stream` is used, unless specified with `data_stream_ilm_name` and `data_stream_template_name`, ILM default policy is set to the specified data stream.
+When `@type elasticsearch_data_stream` is used, unless specified with `data_stream_ilm_name` and `data_stream_template_name` or `data_stream_ilm_policy`, ILM default policy is set to the specified data stream.
 Then, the matching index template is also created automatically.
 
 ### data_stream_name
@@ -1544,6 +1544,21 @@ Default value is `data_stream_name`.
 There are some limitations about naming rule.
 
 In more detail, please refer to the [Path parameters](https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-create-data-stream.html#indices-create-data-stream-api-path-params).
+
+
+### data_stream_ilm_policy
+
+You can specify the ILM policy contents as hash. If not present, it will apply the ILM default policy.
+
+**NOTE:** This parameter requests to install elasticsearch-xpack gem.
+
+### data_stream_ilm_policy_overwrite
+
+Specify whether the data stream ILM policy should be overwritten.
+
+Default value is `false`.
+
+**NOTE:** This parameter requests to install elasticsearch-xpack gem.
 
 ## Troubleshooting
 
