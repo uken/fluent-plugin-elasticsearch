@@ -659,4 +659,86 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
 
     assert_equal(4, connection_resets)
   end
+
+  def test_doesnt_update_ilm_policy_if_overwrite_unset
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    config = %{
+      data_stream_name                  foo
+      data_stream_ilm_name              foo_ilm_policy
+      data_stream_ilm_policy            {"policy":{"phases":{"hot":{"actions":{"rollover":{"max_age":"15d"}}}}}}
+    }
+
+    stub_elastic_info
+    stub_index_template
+    stub_existent_data_stream?
+    stub_existent_ilm?
+    stub_data_stream
+
+    stub_request(:put, "http://localhost:9200/_ilm/policy/foo_ilm_policy").
+      to_return(:status => 200, :body => "", :headers => {})
+
+    assert_nothing_raised {
+      driver(config)
+    }
+    assert_requested(:put, "http://localhost:9200/_ilm/policy/foo_ilm_policy", times: 0)
+  end
+
+  def test_updates_ilm_policy_if_overwrite_set
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    config = %{
+      data_stream_name                  foo
+      data_stream_ilm_name              foo_ilm_policy
+      data_stream_ilm_policy            {"policy":{"phases":{"hot":{"actions":{"rollover":{"max_age":"15d"}}}}}}
+      data_stream_ilm_policy_overwrite  true
+    }
+
+    stub_elastic_info
+    stub_index_template
+    stub_existent_data_stream?
+    stub_existent_ilm?
+    stub_data_stream
+
+    stub_request(:put, "http://localhost:9200/_ilm/policy/foo_ilm_policy").
+      to_return(:status => 200, :body => "", :headers => {})
+
+    assert_nothing_raised {
+      driver(config)
+    }
+
+    assert_requested(:put, "http://localhost:9200/_ilm/policy/foo_ilm_policy", times: 1)
+    assert_requested(:put, "http://localhost:9200/_ilm/policy/foo_ilm_policy",
+      body: '{"policy":{"phases":{"hot":{"actions":{"rollover":{"max_age":"15d"}}}}}}',
+      times: 1)
+  end
+
+  def test_creates_custom_ilm_policy_if_none_exists
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    config = %{
+      data_stream_name                  foo
+      data_stream_ilm_name              foo_ilm_policy
+      data_stream_ilm_policy            {"policy":{"phases":{"hot":{"actions":{"rollover":{"max_age":"15d"}}}}}}
+    }
+
+    stub_elastic_info
+    stub_index_template("foo_template")
+    stub_data_stream
+    stub_nonexistent_data_stream?
+    stub_nonexistent_ilm?
+    stub_nonexistent_template?("foo_template")
+
+    stub_request(:put, "http://localhost:9200/_ilm/policy/foo_ilm_policy").
+      to_return(:status => 200, :body => "", :headers => {})
+
+    assert_nothing_raised {
+      driver(config)
+    }
+
+    assert_requested(:put, "http://localhost:9200/_ilm/policy/foo_ilm_policy", times: 1)
+    assert_requested(:put, "http://localhost:9200/_ilm/policy/foo_ilm_policy",
+      body: '{"policy":{"phases":{"hot":{"actions":{"rollover":{"max_age":"15d"}}}}}}',
+      times: 1)
+  end
 end
