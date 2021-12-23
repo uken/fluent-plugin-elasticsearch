@@ -11,6 +11,9 @@ module Fluent::Plugin
     config_param :data_stream_name, :string
     config_param :data_stream_ilm_name, :string, :default => nil
     config_param :data_stream_template_name, :string, :default => nil
+    config_param :data_stream_ilm_policy, :string, :default => nil
+    config_param :data_stream_ilm_policy_overwrite, :bool, :default => false
+
     # Elasticsearch 7.9 or later always support new style of index template.
     config_set_default :use_legacy_template, false
 
@@ -29,6 +32,7 @@ module Fluent::Plugin
 
       @data_stream_ilm_name = "#{@data_stream_name}_policy" if @data_stream_ilm_name.nil?
       @data_stream_template_name = "#{@data_stream_name}_template" if @data_stream_template_name.nil?
+      @data_stream_ilm_policy = File.read(File.join(File.dirname(__FILE__), "default-ilm-policy.json")) if @data_stream_ilm_policy.nil?
 
       # ref. https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-create-data-stream.html
       unless placeholder?(:data_stream_name_placeholder, @data_stream_name)
@@ -77,10 +81,12 @@ module Fluent::Plugin
     end
 
     def create_ilm_policy(datastream_name, template_name, ilm_name, host)
-      return if data_stream_exist?(datastream_name) or template_exists?(template_name, host) or ilm_policy_exists?(ilm_name)
+      unless @data_stream_ilm_policy_overwrite
+        return if data_stream_exist?(datastream_name) or template_exists?(template_name, host) or ilm_policy_exists?(ilm_name)
+      end
       params = {
         policy_id: ilm_name,
-        body: File.read(File.join(File.dirname(__FILE__), "default-ilm-policy.json"))
+        body: @data_stream_ilm_policy
       }
       retry_operate(@max_retry_putting_template,
                     @fail_on_putting_template_retry_exceed,
