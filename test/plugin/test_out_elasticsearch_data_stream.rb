@@ -9,7 +9,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   include FlexMock::TestCase
   include Fluent::Test::Helpers
 
-  attr_accessor :bulk_record_count, :bulk_records
+  attr_accessor :bulk_records
 
   REQUIRED_ELASTIC_MESSAGE = "Elasticsearch 7.9.0 or later is needed."
   ELASTIC_DATA_STREAM_TYPE = "elasticsearch_data_stream"
@@ -19,7 +19,6 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     @driver = nil
     log = Fluent::Engine.log
     log.out.logs.slice!(0, log.out.logs.length)
-    @bulk_record_count = 0
     @bulk_records = []
   end
 
@@ -104,7 +103,6 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     # {"create": {}}\nhttp://localhost:9200/_ilm/policy/foo_ilm_bar
     # {"@timestamp": ...}
     ops = req_body.split("\n")
-    @bulk_record_count += ops.size / 2
     @bulk_records += ops.values_at(
       * ops.each_index.select {|i| i.odd? }
     ).map{ |i| JSON.parse(i) }
@@ -531,7 +529,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     driver(conf).run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal 1, @bulk_record_count
+    assert_equal 1, @bulk_records.length
   end
 
   def test_placeholder_params_unset
@@ -550,7 +548,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     driver(conf).run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal 1, @bulk_record_count
+    assert_equal 1, @bulk_records.length
   end
 
 
@@ -576,7 +574,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     driver(conf).run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal 1, @bulk_record_count
+    assert_equal 1, @bulk_records.length
   end
 
   def test_custom_record_placeholder
@@ -606,7 +604,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
         driver.feed(record)
       end
     end
-    assert_equal keys.count, @bulk_record_count
+    assert_equal keys.count, @bulk_records.length
   end
 
   def test_bulk_insert_feed
@@ -624,7 +622,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     driver(conf).run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal 1, @bulk_record_count
+    assert_equal 1, @bulk_records.length
   end
 
   def test_template_retry_install_fails
@@ -761,7 +759,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       driver.feed(sample_record)
     end
 
-    assert_equal(1, @bulk_record_count)
+    assert_equal(1, @bulk_records.length)
     assert_false(@bulk_records[0].has_key?('tag'))
   end
 
@@ -783,7 +781,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       driver.feed(sample_record)
     end
 
-    assert_equal(1, @bulk_record_count)
+    assert_equal(1, @bulk_records.length)
     assert(@bulk_records[0].has_key?('tag'))
     assert_equal('mytag', @bulk_records[0]['tag'])
   end
@@ -806,7 +804,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       driver.feed(sample_record)
     end
 
-    assert_equal(1, @bulk_record_count)
+    assert_equal(1, @bulk_records.length)
     assert(@bulk_records[0].has_key?('custom_tag_key'))
     assert_equal('mytag', @bulk_records[0]['custom_tag_key'])
   end
