@@ -9,7 +9,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   include FlexMock::TestCase
   include Fluent::Test::Helpers
 
-  attr_accessor :bulk_records
+  attr_accessor :bulk_record_count, :bulk_records
 
   REQUIRED_ELASTIC_MESSAGE = "Elasticsearch 7.9.0 or later is needed."
   ELASTIC_DATA_STREAM_TYPE = "elasticsearch_data_stream"
@@ -19,7 +19,8 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     @driver = nil
     log = Fluent::Engine.log
     log.out.logs.slice!(0, log.out.logs.length)
-    @bulk_records = 0
+    @bulk_record_count = 0
+    @bulk_records = []
   end
 
   def driver(conf='', es_version=5, client_version="\"5.0\"")
@@ -98,24 +99,26 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_request(:get, "http://localhost:9200/_index_template/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
   end
 
+  def push_bulk_request(req_body)
+    # bulk data must be pair of OP and records
+    # {"create": {}}\nhttp://localhost:9200/_ilm/policy/foo_ilm_bar
+    # {"@timestamp": ...}
+    ops = req_body.split("\n")
+    @bulk_record_count += ops.size / 2
+    @bulk_records += ops.values_at(
+      * ops.each_index.select {|i| i.odd? }
+    ).map{ |i| JSON.parse(i) }
+  end
+
   def stub_bulk_feed(datastream_name="foo", ilm_name="foo_ilm_policy", template_name="foo_tpl")
     stub_request(:post, "http://localhost:9200/#{datastream_name}/_bulk").with do |req|
-      # bulk data must be pair of OP and records
-      # {"create": {}}\nhttp://localhost:9200/_ilm/policy/foo_ilm_bar
-      # {"@timestamp": ...}
-      @bulk_records += req.body.split("\n").size / 2
+      push_bulk_request(req.body)
     end
     stub_request(:post, "http://localhost:9200/#{ilm_name}/_bulk").with do |req|
-      # bulk data must be pair of OP and records
-      # {"create": {}}\nhttp://localhost:9200/_ilm/policy/foo_ilm_bar
-      # {"@timestamp": ...}
-      @bulk_records += req.body.split("\n").size / 2
+      push_bulk_request(req.body)
     end
     stub_request(:post, "http://localhost:9200/#{template_name}/_bulk").with do |req|
-      # bulk data must be pair of OP and records
-      # {"create": {}}\nhttp://localhost:9200/_ilm/policy/foo_ilm_bar
-      # {"@timestamp": ...}
-      @bulk_records += req.body.split("\n").size / 2
+      push_bulk_request(req.body)
     end
   end
 
@@ -528,7 +531,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     driver(conf).run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal 1, @bulk_records
+    assert_equal 1, @bulk_record_count
   end
 
   def test_placeholder_params_unset
@@ -547,7 +550,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     driver(conf).run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal 1, @bulk_records
+    assert_equal 1, @bulk_record_count
   end
 
 
@@ -573,7 +576,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     driver(conf).run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal 1, @bulk_records
+    assert_equal 1, @bulk_record_count
   end
 
   def test_custom_record_placeholder
@@ -603,7 +606,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
         driver.feed(record)
       end
     end
-    assert_equal keys.count, @bulk_records
+    assert_equal keys.count, @bulk_record_count
   end
 
   def test_bulk_insert_feed
@@ -621,7 +624,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     driver(conf).run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal 1, @bulk_records
+    assert_equal 1, @bulk_record_count
   end
 
   def test_template_retry_install_fails
@@ -740,5 +743,71 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     assert_requested(:put, "http://localhost:9200/_ilm/policy/foo_ilm_policy",
       body: '{"policy":{"phases":{"hot":{"actions":{"rollover":{"max_age":"15d"}}}}}}',
       times: 1)
+  end
+
+  def test_doesnt_add_tag_key_when_not_configured
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    config = %{
+      data_stream_name           foo
+      data_stream_template_name  foo_tpl
+      data_stream_ilm_name       foo_ilm_policy
+    }
+
+    stub_default
+    stub_bulk_feed
+    driver(config)
+    driver.run(default_tag: 'mytag') do
+      driver.feed(sample_record)
+    end
+
+    assert_equal(1, @bulk_record_count)
+    assert_false(@bulk_records[0].has_key?('tag'))
+  end
+
+
+  def test_adds_tag_key_when_configured
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    config = %{
+      data_stream_name           foo
+      data_stream_template_name  foo_tpl
+      data_stream_ilm_name       foo_ilm_policy
+      include_tag_key            true
+    }
+
+    stub_default
+    stub_bulk_feed
+    driver(config)
+    driver.run(default_tag: 'mytag') do 
+      driver.feed(sample_record)
+    end
+
+    assert_equal(1, @bulk_record_count)
+    assert(@bulk_records[0].has_key?('tag'))
+    assert_equal('mytag', @bulk_records[0]['tag'])
+  end
+
+  def test_adds_custom_tag_key_when_configured
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    config = %{
+      data_stream_name           foo
+      data_stream_template_name  foo_tpl
+      data_stream_ilm_name       foo_ilm_policy
+      include_tag_key            true
+      tag_key                    custom_tag_key
+    }
+
+    stub_default
+    stub_bulk_feed
+    driver(config)
+    driver.run(default_tag: 'mytag') do 
+      driver.feed(sample_record)
+    end
+
+    assert_equal(1, @bulk_record_count)
+    assert(@bulk_records[0].has_key?('custom_tag_key'))
+    assert_equal('mytag', @bulk_records[0]['custom_tag_key'])
   end
 end
