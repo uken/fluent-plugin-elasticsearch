@@ -198,8 +198,9 @@ module Fluent::Plugin
       data_stream_name = @data_stream_name
       data_stream_template_name = @data_stream_template_name
       data_stream_ilm_name = @data_stream_ilm_name
-      host = @host
+      host = nil
       if @use_placeholder
+        host = extract_placeholders(@host, chunk)
         data_stream_name = extract_placeholders(@data_stream_name, chunk)
         data_stream_template_name = extract_placeholders(@data_stream_template_name, chunk)
         data_stream_ilm_name = extract_placeholders(@data_stream_ilm_name, chunk)
