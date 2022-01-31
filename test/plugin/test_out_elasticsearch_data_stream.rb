@@ -119,9 +119,9 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     end
   end
 
-  def stub_elastic_info(url="http://localhost:9200/", version="7.9.0")
+  def stub_elastic_info(url="http://localhost:9200/", version="7.9.0", headers={})
     body ="{\"version\":{\"number\":\"#{version}\", \"build_flavor\":\"default\"},\"tagline\" : \"You Know, for Search\"}"
-    stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'json' } })
+    stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'json' }.merge(headers) })
   end
 
   def stub_default(datastream_name="foo", ilm_name="foo_ilm_policy", template_name="foo_tpl", host="http://localhost:9200")
@@ -435,6 +435,38 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
         'data_stream_template_name' => "foo_tpl"
       })
     assert_equal "foo", driver(conf).instance.data_stream_name
+  end
+
+  def test_hosts_list_configure
+    config = %{
+      hosts            https://john:password@host1:443/elastic/,http://host2
+      path             /default_path
+      user             default_user
+      password         default_password
+      data_stream_name default
+    }
+    stub_elastic_info("https://host1:443/elastic//", "7.9.0",
+                         {'Authorization'=>'Basic am9objpwYXNzd29yZA=='})
+    stub_elastic_info("http://host2/default_path/_data_stream/default", "7.9.0",
+                         {'Authorization'=>'Basic am9objpwYXNzd29yZA=='})
+    stub_existent_data_stream?("default", "https://host1/elastic/")
+    instance = driver(config).instance
+
+    assert_equal 2, instance.get_connection_options[:hosts].length
+    host1, host2 = instance.get_connection_options[:hosts]
+
+    assert_equal 'host1', host1[:host]
+    assert_equal 443, host1[:port]
+    assert_equal 'https', host1[:scheme]
+    assert_equal 'john', host1[:user]
+    assert_equal 'password', host1[:password]
+    assert_equal '/elastic/', host1[:path]
+
+    assert_equal 'host2', host2[:host]
+    assert_equal 'http', host2[:scheme]
+    assert_equal 'default_user', host2[:user]
+    assert_equal 'default_password', host2[:password]
+    assert_equal '/default_path', host2[:path]
   end
 
   def test_existent_data_stream
