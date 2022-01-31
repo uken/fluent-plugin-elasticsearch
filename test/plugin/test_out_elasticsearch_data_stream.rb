@@ -446,9 +446,9 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       data_stream_name default
     }
     stub_elastic_info("https://host1:443/elastic//", "7.9.0",
-                         {'Authorization'=>'Basic am9objpwYXNzd29yZA=='})
+                         {'Authorization'=>"Basic #{Base64.encode64('john:password').split.first}"})
     stub_elastic_info("http://host2/default_path/_data_stream/default", "7.9.0",
-                         {'Authorization'=>'Basic am9objpwYXNzd29yZA=='})
+                         {'Authorization'=>"Basic #{Base64.encode64('john:password').split.first}"})
     stub_existent_data_stream?("default", "https://host1/elastic/")
     instance = driver(config).instance
 
