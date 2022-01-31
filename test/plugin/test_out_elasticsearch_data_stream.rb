@@ -62,56 +62,56 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   DUPLICATED_DATA_STREAM_EXCEPTION = {"error": {}, "status": 400}
   NONEXISTENT_DATA_STREAM_EXCEPTION = {"error": {}, "status": 404}
 
-  def stub_ilm_policy(name="foo_ilm_policy")
-    stub_request(:put, "http://localhost:9200/_ilm/policy/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+  def stub_ilm_policy(name="foo_ilm_policy", url="http://localhost:9200")
+    stub_request(:put, "#{url}/_ilm/policy/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
-  def stub_index_template(name="foo_tpl")
-    stub_request(:put, "http://localhost:9200/_index_template/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+  def stub_index_template(name="foo_tpl", url="http://localhost:9200")
+    stub_request(:put, "#{url}/_index_template/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
-  def stub_data_stream(name="foo")
-    stub_request(:put, "http://localhost:9200/_data_stream/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+  def stub_data_stream(name="foo", url="http://localhost:9200")
+    stub_request(:put, "#{url}/_data_stream/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
-  def stub_existent_data_stream?(name="foo")
-    stub_request(:get, "http://localhost:9200/_data_stream/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+  def stub_existent_data_stream?(name="foo", url="http://localhost:9200")
+    stub_request(:get, "#{url}/_data_stream/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
-  def stub_existent_ilm?(name="foo_ilm_policy")
-    stub_request(:get, "http://localhost:9200/_ilm/policy/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+  def stub_existent_ilm?(name="foo_ilm_policy", url="http://localhost:9200")
+    stub_request(:get, "#{url}/_ilm/policy/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
-  def stub_existent_template?(name="foo_tpl")
-    stub_request(:get, "http://localhost:9200/_index_template/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+  def stub_existent_template?(name="foo_tpl", url="http://localhost:9200")
+    stub_request(:get, "#{url}/_index_template/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
-  def stub_nonexistent_data_stream?(name="foo")
-    stub_request(:get, "http://localhost:9200/_data_stream/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
+  def stub_nonexistent_data_stream?(name="foo", url="http://localhost:9200")
+    stub_request(:get, "#{url}/_data_stream/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
   end
 
-  def stub_nonexistent_ilm?(name="foo_ilm_policy")
-    stub_request(:get, "http://localhost:9200/_ilm/policy/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
+  def stub_nonexistent_ilm?(name="foo_ilm_policy", url="http://localhost:9200")
+    stub_request(:get, "#{url}/_ilm/policy/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
   end
 
-  def stub_nonexistent_template?(name="foo_tpl")
-    stub_request(:get, "http://localhost:9200/_index_template/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
+  def stub_nonexistent_template?(name="foo_tpl", url="http://localhost:9200")
+    stub_request(:get, "#{url}/_index_template/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
   end
 
-  def stub_bulk_feed(datastream_name="foo", ilm_name="foo_ilm_policy", template_name="foo_tpl")
-    stub_request(:post, "http://localhost:9200/#{datastream_name}/_bulk").with do |req|
+  def stub_bulk_feed(datastream_name="foo", ilm_name="foo_ilm_policy", template_name="foo_tpl", url="http://localhost:9200")
+    stub_request(:post, "#{url}/#{datastream_name}/_bulk").with do |req|
       # bulk data must be pair of OP and records
       # {"create": {}}\nhttp://localhost:9200/_ilm/policy/foo_ilm_bar
       # {"@timestamp": ...}
       @bulk_records += req.body.split("\n").size / 2
     end
-    stub_request(:post, "http://localhost:9200/#{ilm_name}/_bulk").with do |req|
+    stub_request(:post, "#{url}/#{ilm_name}/_bulk").with do |req|
       # bulk data must be pair of OP and records
       # {"create": {}}\nhttp://localhost:9200/_ilm/policy/foo_ilm_bar
       # {"@timestamp": ...}
       @bulk_records += req.body.split("\n").size / 2
     end
-    stub_request(:post, "http://localhost:9200/#{template_name}/_bulk").with do |req|
+    stub_request(:post, "#{url}/#{template_name}/_bulk").with do |req|
       # bulk data must be pair of OP and records
       # {"create": {}}\nhttp://localhost:9200/_ilm/policy/foo_ilm_bar
       # {"@timestamp": ...}
