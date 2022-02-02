@@ -2,6 +2,11 @@
 
 ### [Unreleased]
 
+### 5.1.5
+- Make retryable DataStreams creation at configure phase (#943)
+- Handle @hosts parameter on data_stream plugin (#942)
+- allow specifying custom ILM policies for data streams (#933)
+
 ### 5.1.4
 - Handle ES8 or above more strictly (#931)
 - fixing double "\_policy" in index lifecycle management policy for elasticsearch\_data\_stream output (#930)
