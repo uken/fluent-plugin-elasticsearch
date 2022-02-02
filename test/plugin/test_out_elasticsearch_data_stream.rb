@@ -98,6 +98,11 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_request(:get, "#{url}/_index_template/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
   end
 
+  def stub_nonexistent_template_retry?(name="foo_tpl", url="http://localhost:9200")
+    stub_request(:get, "#{url}/_index_template/#{name}").
+      to_return({ status: 500, body: 'Internal Server Error' }, { status: 404, body: '{}' })
+  end
+
   def stub_bulk_feed(datastream_name="foo", ilm_name="foo_ilm_policy", template_name="foo_tpl", url="http://localhost:9200")
     stub_request(:post, "#{url}/#{datastream_name}/_bulk").with do |req|
       # bulk data must be pair of OP and records
@@ -434,6 +439,24 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
         'data_stream_ilm_name' => "foo_ilm_policy",
         'data_stream_template_name' => "foo_tpl"
       })
+    assert_equal "foo", driver(conf).instance.data_stream_name
+  end
+
+  def test_datastream_configure_retry
+    stub_elastic_info
+    stub_nonexistent_ilm?
+    stub_ilm_policy
+    stub_nonexistent_template_retry?
+    stub_index_template
+    stub_nonexistent_data_stream?
+    stub_data_stream
+    conf = config_element(
+      'ROOT', '', {
+      '@type' => ELASTIC_DATA_STREAM_TYPE,
+      'data_stream_name' => 'foo',
+      'data_stream_ilm_name' => "foo_ilm_policy",
+      'data_stream_template_name' => "foo_tpl"
+    })
     assert_equal "foo", driver(conf).instance.data_stream_name
   end
 
