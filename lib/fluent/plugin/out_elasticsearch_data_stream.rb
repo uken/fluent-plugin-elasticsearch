@@ -42,12 +42,11 @@ module Fluent::Plugin
         @data_stream_names = []
       end
 
-      @client = client
       unless @use_placeholder
         begin
           @data_stream_names = [@data_stream_name]
-          create_ilm_policy(@data_stream_name, @data_stream_template_name, @data_stream_ilm_name, @host)
-          create_index_template(@data_stream_name, @data_stream_template_name, @data_stream_ilm_name, @host)
+          create_ilm_policy(@data_stream_name, @data_stream_template_name, @data_stream_ilm_name)
+          create_index_template(@data_stream_name, @data_stream_template_name, @data_stream_ilm_name)
           create_data_stream(@data_stream_name)
         rescue => e
           raise Fluent::ConfigError, "Failed to create data stream: <#{@data_stream_name}> #{e.message}"
@@ -80,10 +79,11 @@ module Fluent::Plugin
       end
     end
 
-    def create_ilm_policy(datastream_name, template_name, ilm_name, host)
+    def create_ilm_policy(datastream_name, template_name, ilm_name, host = nil)
       unless @data_stream_ilm_policy_overwrite
-        return if data_stream_exist?(datastream_name) or template_exists?(template_name, host) or ilm_policy_exists?(ilm_name)
+        return if data_stream_exist?(datastream_name, host) or template_exists?(template_name, host) or ilm_policy_exists?(ilm_name, host)
       end
+
       params = {
         policy_id: ilm_name,
         body: @data_stream_ilm_policy
@@ -91,12 +91,12 @@ module Fluent::Plugin
       retry_operate(@max_retry_putting_template,
                     @fail_on_putting_template_retry_exceed,
                     @catch_transport_exception_on_retry) do
-        @client.xpack.ilm.put_policy(params)
+        client(host).xpack.ilm.put_policy(params)
       end
     end
 
-    def create_index_template(datastream_name, template_name, ilm_name, host)
-      return if data_stream_exist?(datastream_name) or template_exists?(template_name, host)
+    def create_index_template(datastream_name, template_name, ilm_name, host = nil)
+      return if data_stream_exist?(datastream_name, host) or template_exists?(template_name, host)
       body = {
         "index_patterns" => ["#{datastream_name}*"],
         "data_stream" => {},
@@ -113,16 +113,16 @@ module Fluent::Plugin
       retry_operate(@max_retry_putting_template,
                     @fail_on_putting_template_retry_exceed,
                     @catch_transport_exception_on_retry) do
-        @client.indices.put_index_template(params)
+        client(host).indices.put_index_template(params)
       end
     end
 
-    def data_stream_exist?(datastream_name)
+    def data_stream_exist?(datastream_name, host = nil)
       params = {
         name: datastream_name
       }
       begin
-        response = @client.indices.get_data_stream(params)
+        response = client(host).indices.get_data_stream(params)
         return (not response.is_a?(Elasticsearch::Transport::Transport::Errors::NotFound))
       rescue Elasticsearch::Transport::Transport::Errors::NotFound => e
         log.info "Specified data stream does not exist. Will be created: <#{e}>"
@@ -130,21 +130,21 @@ module Fluent::Plugin
       end
     end
 
-    def create_data_stream(datastream_name)
-      return if data_stream_exist?(datastream_name)
+    def create_data_stream(datastream_name, host = nil)
+      return if data_stream_exist?(datastream_name, host)
       params = {
         name: datastream_name
       }
       retry_operate(@max_retry_putting_template,
                     @fail_on_putting_template_retry_exceed,
                     @catch_transport_exception_on_retry) do
-        @client.indices.create_data_stream(params)
+        client(host).indices.create_data_stream(params)
       end
     end
 
-    def ilm_policy_exists?(policy_id)
+    def ilm_policy_exists?(policy_id, host = nil)
       begin
-        @client.ilm.get_policy(policy_id: policy_id)
+        client(host).ilm.get_policy(policy_id: policy_id)
         true
       rescue
         false
@@ -198,8 +198,9 @@ module Fluent::Plugin
       data_stream_name = @data_stream_name
       data_stream_template_name = @data_stream_template_name
       data_stream_ilm_name = @data_stream_ilm_name
-      host = @host
+      host = nil
       if @use_placeholder
+        host = extract_placeholders(@host, chunk)
         data_stream_name = extract_placeholders(@data_stream_name, chunk)
         data_stream_template_name = extract_placeholders(@data_stream_template_name, chunk)
         data_stream_ilm_name = extract_placeholders(@data_stream_ilm_name, chunk)
@@ -236,7 +237,7 @@ module Fluent::Plugin
         body: bulk_message
       }
       begin
-        response = @client.bulk(params)
+        response = client(host).bulk(params)
         if response['errors']
           log.error "Could not bulk insert to Data Stream: #{data_stream_name} #{response}"
         end
