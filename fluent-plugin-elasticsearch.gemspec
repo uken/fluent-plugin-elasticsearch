@@ -24,7 +24,7 @@ Gem::Specification.new do |s|
 
   s.add_runtime_dependency 'fluentd', '>= 0.14.22'
   s.add_runtime_dependency 'excon', '>= 0'
-  s.add_runtime_dependency 'elasticsearch'
+  s.add_runtime_dependency 'elasticsearch', '~> 7.17.0'
 
 
   s.add_development_dependency 'rake', '>= 0'
