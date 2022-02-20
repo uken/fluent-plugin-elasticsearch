@@ -53,7 +53,7 @@ module Fluent::Plugin
                        end
         headers = { 'Content-Type' => @content_type.to_s, }.merge(gzip_headers)
         ssl_options = { verify: @ssl_verify, ca_file: @ca_file}.merge(@ssl_version_options)
-        transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(connection_options.merge(
+        transport = TRANSPORT_CLASS::Transport::HTTP::Faraday.new(connection_options.merge(
                                                                             options: {
                                                                               reload_connections: @reload_connections,
                                                                               reload_on_failure: @reload_on_failure,

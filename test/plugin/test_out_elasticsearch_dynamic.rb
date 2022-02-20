@@ -16,7 +16,15 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     @driver = nil
   end
 
-  def driver(conf='', es_version=5)
+  def elasticsearch_version
+    if Gem::Version.new(TRANSPORT_CLASS::VERSION) >= Gem::Version.new("7.14.0")
+      TRANSPORT_CLASS::VERSION
+    else
+      '6.4.2'.freeze
+    end
+  end
+
+  def driver(conf='', es_version=elasticsearch_version.to_i)
     # For request stub to detect compatibility.
     @es_version ||= es_version
     Fluent::Plugin::ElasticsearchOutputDynamic.module_eval(<<-CODE)
@@ -35,7 +43,11 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   end
 
   def elasticsearch_transport_layer_decoupling?
-    Gem::Version.create(::Elasticsearch::Transport::VERSION) >= Gem::Version.new("7.14.0")
+    Gem::Version.create(::TRANSPORT_CLASS::VERSION) >= Gem::Version.new("7.14.0")
+  end
+
+  def elastic_transport_layer?
+    Gem::Version.create(::TRANSPORT_CLASS::VERSION) >= Gem::Version.new("8.0.0")
   end
 
   def default_type_name
@@ -58,9 +70,9 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     end
   end
 
-  def stub_elastic_info(url="http://localhost:9200/", version="6.4.2")
+  def stub_elastic_info(url="http://localhost:9200/", version=elasticsearch_version)
     body ="{\"version\":{\"number\":\"#{version}\", \"build_flavor\":\"default\"},\"tagline\" : \"You Know, for Search\"}"
-    stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'json' } })
+    stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch' } })
   end
 
   def stub_elastic_unavailable(url="http://localhost:9200/_bulk")
@@ -132,7 +144,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   end
 
   test 'configure compression' do
-    omit "elastisearch-ruby v7.2.0 or later is needed." if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.2.0")
+    omit "elastisearch-ruby v7.2.0 or later is needed." if Gem::Version.create(::TRANSPORT_CLASS::VERSION) < Gem::Version.create("7.2.0")
 
     config = %{
       compression_level best_compression
@@ -143,7 +155,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   end
 
   test 'check compression strategy' do
-    omit "elastisearch-ruby v7.2.0 or later is needed." if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.2.0")
+    omit "elastisearch-ruby v7.2.0 or later is needed." if Gem::Version.create(::TRANSPORT_CLASS::VERSION) < Gem::Version.create("7.2.0")
 
     config = %{
       compression_level best_speed
@@ -154,14 +166,16 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   end
 
   test 'check content-encoding header with compression' do
-    omit "elastisearch-ruby v7.2.0 or later is needed." if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.2.0")
+    omit "elastisearch-ruby v7.2.0 or later is needed." if Gem::Version.create(::TRANSPORT_CLASS::VERSION) < Gem::Version.create("7.2.0")
 
     config = %{
       compression_level best_compression
     }
     instance = driver(config).instance
 
-    if elasticsearch_transport_layer_decoupling?
+    if elastic_transport_layer?
+      assert_equal nil, instance.client.transport.options[:transport_options][:headers]["Content-Encoding"]
+    elsif elasticsearch_transport_layer_decoupling?
       assert_equal nil, instance.client.transport.transport.options[:transport_options][:headers]["Content-Encoding"]
     else
       assert_equal nil, instance.client.transport.options[:transport_options][:headers]["Content-Encoding"]
@@ -175,7 +189,9 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     end
     compressable = instance.compressable_connection
 
-    if elasticsearch_transport_layer_decoupling?
+    if elastic_transport_layer?
+      assert_equal "gzip", instance.client(nil, compressable).transport.options[:transport_options][:headers]["Content-Encoding"]
+    elsif elasticsearch_transport_layer_decoupling?
       assert_equal "gzip", instance.client(nil, compressable).transport.transport.options[:transport_options][:headers]["Content-Encoding"]
     else
       assert_equal "gzip", instance.client(nil, compressable).transport.options[:transport_options][:headers]["Content-Encoding"]
@@ -183,14 +199,16 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   end
 
   test 'check compression option is passed to transport' do
-    omit "elastisearch-ruby v7.2.0 or later is needed." if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.2.0")
+    omit "elastisearch-ruby v7.2.0 or later is needed." if Gem::Version.create(::TRANSPORT_CLASS::VERSION) < Gem::Version.create("7.2.0")
 
     config = %{
       compression_level best_compression
     }
     instance = driver(config).instance
 
-    if elasticsearch_transport_layer_decoupling?
+    if elastic_transport_layer?
+      assert_equal false, instance.client.transport.options[:compression]
+    elsif elasticsearch_transport_layer_decoupling?
       assert_equal false, instance.client.transport.transport.options[:compression]
     else
       assert_equal false, instance.client.transport.options[:compression]
@@ -204,7 +222,9 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     end
     compressable = instance.compressable_connection
 
-    if elasticsearch_transport_layer_decoupling?
+    if elastic_transport_layer?
+      assert_equal true, instance.client(nil, compressable).transport.options[:compression]
+    elsif elasticsearch_transport_layer_decoupling?
       assert_equal true, instance.client(nil, compressable).transport.transport.options[:compression]
     else
       assert_equal true, instance.client(nil, compressable).transport.options[:compression]
@@ -402,7 +422,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   end
 
   def test_writes_to_default_index_with_compression
-    omit "elastisearch-ruby v7.2.0 or later is needed." if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.2.0")
+    omit "elastisearch-ruby v7.2.0 or later is needed." if Gem::Version.create(::TRANSPORT_CLASS::VERSION) < Gem::Version.create("7.2.0")
 
     config = %[
       compression_level default_compression
@@ -441,7 +461,13 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal(default_type_name, index_cmds.first['index']['_type'])
+    if Gem::Version.new(TRANSPORT_CLASS::VERSION) >= Gem::Version.new("8.0.0")
+      assert_nil(index_cmds.first['index']['_type'])
+    elsif Gem::Version.new(TRANSPORT_CLASS::VERSION) >= Gem::Version.new("7.0.0")
+      assert_equal("_doc", index_cmds.first['index']['_type'])
+    else
+      assert_equal("fluentd", index_cmds.first['index']['_type'])
+    end
   end
 
   def test_writes_to_specified_index
@@ -471,7 +497,13 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert_equal('mytype', index_cmds.first['index']['_type'])
+    if Gem::Version.new(TRANSPORT_CLASS::VERSION) >= Gem::Version.new("8.0.0")
+      assert_nil(index_cmds.first['index']['_type'])
+    elsif Gem::Version.new(TRANSPORT_CLASS::VERSION) >= Gem::Version.new("7.0.0")
+      assert_equal("_doc", index_cmds.first['index']['_type'])
+    else
+      assert_equal("mytype", index_cmds.first['index']['_type'])
+    end
   end
 
   def test_writes_to_specified_host
@@ -971,7 +1003,8 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
       end
-      assert_equal('routing', index_cmds[0]['index']['_routing'])
+      routing_key = driver.instance.instance_variable_get(:@routing_key_name)
+      assert_equal('routing', index_cmds[0]['index'][routing_key])
     end
 
     def test_adds_nested_routing_key_with_dollar_dot
@@ -981,7 +1014,8 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
       end
-      assert_equal('routing', index_cmds[0]['index']['_routing'])
+      routing_key = driver.instance.instance_variable_get(:@routing_key_name)
+      assert_equal('routing', index_cmds[0]['index'][routing_key])
     end
 
     def test_adds_nested_routing_key_with_bracket
@@ -991,7 +1025,8 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
       driver.run(default_tag: 'test') do
         driver.feed(nested_sample_record)
       end
-      assert_equal('routing', index_cmds[0]['index']['_routing'])
+      routing_key = driver.instance.instance_variable_get(:@routing_key_name)
+      assert_equal('routing', index_cmds[0]['index'][routing_key])
     end
   end
 
@@ -1002,7 +1037,8 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert(!index_cmds[0]['index'].has_key?('_routing'))
+    routing_key = driver.instance.instance_variable_get(:@routing_key_name)
+    assert(!index_cmds[0]['index'].has_key?(routing_key))
   end
 
   def test_adds_routing_key_when_not_configured
@@ -1011,7 +1047,8 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
     end
-    assert(!index_cmds[0]['index'].has_key?('_routing'))
+    routing_key = driver.instance.instance_variable_get(:@routing_key_name)
+    assert(!index_cmds[0]['index'].has_key?(routing_key))
   end
 
   def test_remove_one_key

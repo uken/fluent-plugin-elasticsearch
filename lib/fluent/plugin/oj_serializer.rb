@@ -1,10 +1,11 @@
 require 'oj'
+require_relative 'elasticsearch_compat'
 
 module Fluent::Plugin
   module Serializer
 
     class Oj
-      include Elasticsearch::Transport::Transport::Serializer::Base
+      include TRANSPORT_CLASS::Transport::Serializer::Base
 
       # De-serialize a Hash from JSON string
       #

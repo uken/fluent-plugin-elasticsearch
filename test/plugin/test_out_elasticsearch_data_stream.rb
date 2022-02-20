@@ -22,7 +22,23 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     @bulk_records = 0
   end
 
-  def driver(conf='', es_version=5, client_version="\"5.0\"")
+  def elasticsearch_version
+    if Gem::Version.new(TRANSPORT_CLASS::VERSION) >= Gem::Version.new("7.14.0")
+      TRANSPORT_CLASS::VERSION
+    else
+      '5.0.0'.freeze
+    end
+  end
+
+  def ilm_endpoint
+    if Gem::Version.new(TRANSPORT_CLASS::VERSION) >= Gem::Version.new("8.0.0")
+      '_enrich'.freeze
+    else
+      '_ilm'.freeze
+    end
+  end
+
+  def driver(conf='', es_version=elasticsearch_version.to_i, client_version=elasticsearch_version)
     # For request stub to detect compatibility.
     @es_version ||= es_version
     @client_version ||= client_version
@@ -63,7 +79,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   NONEXISTENT_DATA_STREAM_EXCEPTION = {"error": {}, "status": 404}
 
   def stub_ilm_policy(name="foo_ilm_policy", url="http://localhost:9200")
-    stub_request(:put, "#{url}/_ilm/policy/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+    stub_request(:put, "#{url}/#{ilm_endpoint}/policy/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
   def stub_index_template(name="foo_tpl", url="http://localhost:9200")
@@ -79,7 +95,8 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   end
 
   def stub_existent_ilm?(name="foo_ilm_policy", url="http://localhost:9200")
-    stub_request(:get, "#{url}/_ilm/policy/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+
+    stub_request(:get, "#{url}/#{ilm_endpoint}/policy/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
   end
 
   def stub_existent_template?(name="foo_tpl", url="http://localhost:9200")
@@ -87,15 +104,15 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   end
 
   def stub_nonexistent_data_stream?(name="foo", url="http://localhost:9200")
-    stub_request(:get, "#{url}/_data_stream/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
+    stub_request(:get, "#{url}/_data_stream/#{name}").to_return(:status => [404, TRANSPORT_CLASS::Transport::Errors::NotFound])
   end
 
   def stub_nonexistent_ilm?(name="foo_ilm_policy", url="http://localhost:9200")
-    stub_request(:get, "#{url}/_ilm/policy/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
+    stub_request(:get, "#{url}/#{ilm_endpoint}/policy/#{name}").to_return(:status => [404, TRANSPORT_CLASS::Transport::Errors::NotFound])
   end
 
   def stub_nonexistent_template?(name="foo_tpl", url="http://localhost:9200")
-    stub_request(:get, "#{url}/_index_template/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
+    stub_request(:get, "#{url}/_index_template/#{name}").to_return(:status => [404, TRANSPORT_CLASS::Transport::Errors::NotFound])
   end
 
   def stub_nonexistent_template_retry?(name="foo_tpl", url="http://localhost:9200")
@@ -124,9 +141,9 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     end
   end
 
-  def stub_elastic_info(url="http://localhost:9200/", version="7.9.0", headers={})
+  def stub_elastic_info(url="http://localhost:9200/", version=elasticsearch_version, headers={})
     body ="{\"version\":{\"number\":\"#{version}\", \"build_flavor\":\"default\"},\"tagline\" : \"You Know, for Search\"}"
-    stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'json' }.merge(headers) })
+    stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch' }.merge(headers) })
   end
 
   def stub_default(datastream_name="foo", ilm_name="foo_ilm_policy", template_name="foo_tpl", host="http://localhost:9200")
@@ -140,7 +157,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   end
 
   def data_stream_supported?
-    Gem::Version.create(::Elasticsearch::Transport::VERSION) >= Gem::Version.create("7.9.0")
+    Gem::Version.create(::TRANSPORT_CLASS::VERSION) >= Gem::Version.create("7.9.0")
   end
 
   # ref. https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-create-data-stream.html
@@ -468,9 +485,9 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       password         default_password
       data_stream_name default
     }
-    stub_elastic_info("https://host1:443/elastic//", "7.9.0",
+    stub_elastic_info("https://host1:443/elastic//", elasticsearch_version,
                          {'Authorization'=>"Basic #{Base64.encode64('john:password').split.first}"})
-    stub_elastic_info("http://host2/default_path/_data_stream/default", "7.9.0",
+    stub_elastic_info("http://host2/default_path/_data_stream/default", elasticsearch_version,
                          {'Authorization'=>"Basic #{Base64.encode64('john:password').split.first}"})
     stub_existent_data_stream?("default", "https://host1/elastic/")
     instance = driver(config).instance
@@ -730,13 +747,13 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_existent_ilm?
     stub_data_stream
 
-    stub_request(:put, "http://localhost:9200/_ilm/policy/foo_ilm_policy").
+    stub_request(:put, "http://localhost:9200/#{ilm_endpoint}/policy/foo_ilm_policy").
       to_return(:status => 200, :body => "", :headers => {})
 
     assert_nothing_raised {
       driver(config)
     }
-    assert_requested(:put, "http://localhost:9200/_ilm/policy/foo_ilm_policy", times: 0)
+    assert_requested(:put, "http://localhost:9200/#{ilm_endpoint}/policy/foo_ilm_policy", times: 0)
   end
 
   def test_updates_ilm_policy_if_overwrite_set
@@ -755,15 +772,15 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_existent_ilm?
     stub_data_stream
 
-    stub_request(:put, "http://localhost:9200/_ilm/policy/foo_ilm_policy").
+    stub_request(:put, "http://localhost:9200/#{ilm_endpoint}/policy/foo_ilm_policy").
       to_return(:status => 200, :body => "", :headers => {})
 
     assert_nothing_raised {
       driver(config)
     }
 
-    assert_requested(:put, "http://localhost:9200/_ilm/policy/foo_ilm_policy", times: 1)
-    assert_requested(:put, "http://localhost:9200/_ilm/policy/foo_ilm_policy",
+    assert_requested(:put, "http://localhost:9200/#{ilm_endpoint}/policy/foo_ilm_policy", times: 1)
+    assert_requested(:put, "http://localhost:9200/#{ilm_endpoint}/policy/foo_ilm_policy",
       body: '{"policy":{"phases":{"hot":{"actions":{"rollover":{"max_age":"15d"}}}}}}',
       times: 1)
   end
@@ -784,15 +801,15 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_nonexistent_ilm?
     stub_nonexistent_template?("foo_template")
 
-    stub_request(:put, "http://localhost:9200/_ilm/policy/foo_ilm_policy").
+    stub_request(:put, "http://localhost:9200/#{ilm_endpoint}/policy/foo_ilm_policy").
       to_return(:status => 200, :body => "", :headers => {})
 
     assert_nothing_raised {
       driver(config)
     }
 
-    assert_requested(:put, "http://localhost:9200/_ilm/policy/foo_ilm_policy", times: 1)
-    assert_requested(:put, "http://localhost:9200/_ilm/policy/foo_ilm_policy",
+    assert_requested(:put, "http://localhost:9200/#{ilm_endpoint}/policy/foo_ilm_policy", times: 1)
+    assert_requested(:put, "http://localhost:9200/#{ilm_endpoint}/policy/foo_ilm_policy",
       body: '{"policy":{"phases":{"hot":{"actions":{"rollover":{"max_age":"15d"}}}}}}',
       times: 1)
   end
