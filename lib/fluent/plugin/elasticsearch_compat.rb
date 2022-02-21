@@ -1,0 +1,27 @@
+begin
+  require 'elastic/transport'
+  ::TRANSPORT_CLASS = Elastic::Transport
+rescue LoadError
+end
+begin
+  require 'elasticsearch/transport'
+  ::TRANSPORT_CLASS = Elasticsearch::Transport
+rescue LoadError
+end
+if Gem::Version.new(Elasticsearch::VERSION) < Gem::Version.new("8.0.0")
+  begin
+    require 'elasticsearch/xpack'
+  rescue LoadError
+  end
+end
+
+begin
+  require 'elastic/transport/transport/connections/selector'
+  ::SELECTOR_CLASS = Elastic::Transport::Transport::Connections::Selector
+rescue LoadError
+end
+begin
+  require 'elasticsearch/transport/transport/connections/selector'
+  ::SELECTOR_CLASS = Elasticsearch::Transport::Transport::Connections::Selector
+rescue LoadError
+end

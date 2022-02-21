@@ -31,9 +31,17 @@ class ElasticsearchInputTest < Test::Unit::TestCase
     @driver ||= Fluent::Test::Driver::Input.new(Fluent::Plugin::ElasticsearchInput).configure(conf)
   end
 
-  def stub_elastic_info(url="http://localhost:9200/", version="7.9.0")
+  def elasticsearch_version
+    if Gem::Version.new(TRANSPORT_CLASS::VERSION) >= Gem::Version.new("7.14.0")
+      TRANSPORT_CLASS::VERSION
+    else
+      '7.9.0'.freeze
+    end
+  end
+
+  def stub_elastic_info(url="http://localhost:9200/", version=elasticsearch_version)
     body ="{\"version\":{\"number\":\"#{version}\", \"build_flavor\":\"default\"},\"tagline\" : \"You Know, for Search\"}"
-    stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'json' } })
+    stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch' } })
   end
 
   def sample_response(index_name="fluentd")

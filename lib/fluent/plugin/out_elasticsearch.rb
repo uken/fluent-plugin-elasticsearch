@@ -3,10 +3,6 @@ require 'date'
 require 'excon'
 require 'elasticsearch'
 require 'set'
-begin
-  require 'elasticsearch/xpack'
-rescue LoadError
-end
 require 'json'
 require 'uri'
 require 'base64'
@@ -23,6 +19,7 @@ require 'fluent/time'
 require 'fluent/unique_id'
 require 'fluent/log-ext'
 require 'zlib'
+require_relative 'elasticsearch_compat'
 require_relative 'elasticsearch_constants'
 require_relative 'elasticsearch_error'
 require_relative 'elasticsearch_error_handler'
@@ -413,11 +410,11 @@ EOC
         end
       end
 
-      if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.2.0")
+      if Gem::Version.create(::TRANSPORT_CLASS::VERSION) < Gem::Version.create("7.2.0")
         if compression
           raise Fluent::ConfigError, <<-EOC
             Cannot use compression with elasticsearch-transport plugin version < 7.2.0
-            Your elasticsearch-transport plugin version version is #{Elasticsearch::Transport::VERSION}.
+            Your elasticsearch-transport plugin version version is #{TRANSPORT_CLASS::VERSION}.
             Please consider to upgrade ES client.
           EOC
         end
@@ -613,7 +610,7 @@ EOC
                     .merge(gzip_headers)
         ssl_options = { verify: @ssl_verify, ca_file: @ca_file}.merge(@ssl_version_options)
 
-        transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(connection_options.merge(
+        transport = TRANSPORT_CLASS::Transport::HTTP::Faraday.new(connection_options.merge(
                                                                             options: {
                                                                               reload_connections: local_reload_connections,
                                                                               reload_on_failure: @reload_on_failure,

@@ -1,3 +1,5 @@
+require_relative 'elasticsearch_compat'
+
 module Fluent::Plugin::ElasticsearchIndexLifecycleManagement
   ILM_DEFAULT_POLICY_PATH = "default-ilm-policy.json"
 
@@ -21,7 +23,7 @@ module Fluent::Plugin::ElasticsearchIndexLifecycleManagement
       raise Fluent::ConfigError, "Index Lifecycle management is enabled in Fluentd, but not available in your Elasticsearch" unless ilm['available']
       raise Fluent::ConfigError, "Index Lifecycle management is enabled in Fluentd, but not enabled in your Elasticsearch" unless ilm['enabled']
 
-    rescue Elasticsearch::Transport::Transport::Error => e
+    rescue ::TRANSPORT_CLASS::Transport::Error => e
       raise Fluent::ConfigError, "Index Lifecycle management is enabled in Fluentd, but not installed on your Elasticsearch", error: e
     end
   end
@@ -43,12 +45,20 @@ module Fluent::Plugin::ElasticsearchIndexLifecycleManagement
   end
 
   def get_ilm_policy
-    client.ilm.get_policy
+    if Gem::Version.new(TRANSPORT_CLASS::VERSION) < Gem::Version.new("8.0.0")
+      client.ilm.get_policy
+    else
+      client.enrich.get_policy
+    end
   end
 
   def ilm_policy_exists?(policy_id)
     begin
-      client.ilm.get_policy(policy_id: policy_id)
+      if Gem::Version.new(TRANSPORT_CLASS::VERSION) < Gem::Version.new("8.0.0")
+        client.ilm.get_policy(policy_id: policy_id)
+      else
+        client.enrich.get_policy(name: policy_id)
+      end
       true
     rescue
       false
@@ -57,7 +67,11 @@ module Fluent::Plugin::ElasticsearchIndexLifecycleManagement
 
   def ilm_policy_put(policy_id, policy)
     log.info("Installing ILM policy: #{policy}")
-    client.ilm.put_policy(policy_id: policy_id, body: policy)
+    if Gem::Version.new(TRANSPORT_CLASS::VERSION) < Gem::Version.new("8.0.0")
+      client.ilm.put_policy(policy_id: policy_id, body: policy)
+    else
+      client.enrich.put_policy(name: policy_id, body: policy)
+    end
   end
 
   def default_policy_payload

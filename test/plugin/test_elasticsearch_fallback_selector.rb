@@ -18,17 +18,25 @@ class ElasticsearchFallbackSelectorTest < Test::Unit::TestCase
     end
   end
 
-  def stub_elastic_info(url="http://localhost:9200/", version="6.4.2")
+  def elasticsearch_version
+    if Gem::Version.new(TRANSPORT_CLASS::VERSION) >= Gem::Version.new("7.14.0")
+      TRANSPORT_CLASS::VERSION
+    else
+      '6.4.2'.freeze
+    end
+  end
+
+  def stub_elastic_info(url="http://localhost:9200/", version=elasticsearch_version)
     body ="{\"version\":{\"number\":\"#{version}\", \"build_flavor\":\"default\"},\"tagline\" : \"You Know, for Search\"}"
-    stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'json' } })
+    stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch' } })
   end
 
-  def stub_elastic_info_not_found(url="http://localhost:9200/", version="6.4.2")
-    stub_request(:get, url).to_return(:status => [404, "Not Found"])
+  def stub_elastic_info_not_found(url="http://localhost:9200/", version=elasticsearch_version)
+    stub_request(:get, url).to_return(:status => [404, "Not Found"], headers: {'x-elastic-product' => 'Elasticsearch' })
   end
 
-  def stub_elastic_info_unavailable(url="http://localhost:9200/", version="6.4.2")
-    stub_request(:get, url).to_return(:status => [503, "Service Unavailable"])
+  def stub_elastic_info_unavailable(url="http://localhost:9200/", version=elasticsearch_version)
+    stub_request(:get, url).to_return(:status => [503, "Service Unavailable"], headers: {'x-elastic-product' => 'Elasticsearch' })
   end
 
   def sample_record(content={})
@@ -60,7 +68,7 @@ class ElasticsearchFallbackSelectorTest < Test::Unit::TestCase
       reload_after 10
       catch_transport_exception_on_retry false # For fallback testing
     ]
-    assert_raise(Elasticsearch::Transport::Transport::Errors::NotFound) do
+    assert_raise(TRANSPORT_CLASS::Transport::Errors::NotFound) do
       driver(config)
     end
     driver.run(default_tag: 'test') do

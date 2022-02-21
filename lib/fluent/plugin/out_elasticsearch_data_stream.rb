@@ -23,11 +23,19 @@ module Fluent::Plugin
     def configure(conf)
       super
 
-      begin
-        require 'elasticsearch/api'
-        require 'elasticsearch/xpack'
-      rescue LoadError
-        raise Fluent::ConfigError, "'elasticsearch/api', 'elasticsearch/xpack' are required for <@elasticsearch_data_stream>."
+      if Gem::Version.new(TRANSPORT_CLASS::VERSION) < Gem::Version.new("8.0.0")
+        begin
+          require 'elasticsearch/api'
+          require 'elasticsearch/xpack'
+        rescue LoadError
+          raise Fluent::ConfigError, "'elasticsearch/api', 'elasticsearch/xpack' are required for <@elasticsearch_data_stream>."
+        end
+      else
+        begin
+          require 'elasticsearch/api'
+        rescue LoadError
+          raise Fluent::ConfigError, "'elasticsearch/api is required for <@elasticsearch_data_stream>."
+        end
       end
 
       @data_stream_ilm_name = "#{@data_stream_name}_policy" if @data_stream_ilm_name.nil?
@@ -89,13 +97,16 @@ module Fluent::Plugin
       end
 
       params = {
-        policy_id: ilm_name,
         body: @data_stream_ilm_policy
       }
       retry_operate(@max_retry_putting_template,
                     @fail_on_putting_template_retry_exceed,
                     @catch_transport_exception_on_retry) do
-        client(host).xpack.ilm.put_policy(params)
+        if Gem::Version.new(TRANSPORT_CLASS::VERSION) >= Gem::Version.new("8.0.0")
+          client(host).enrich.put_policy(params.merge(name: ilm_name))
+        else
+          client(host).xpack.ilm.put_policy(params.merge(policy_id: ilm_name))
+        end
       end
     end
 
@@ -127,8 +138,8 @@ module Fluent::Plugin
       }
       begin
         response = client(host).indices.get_data_stream(params)
-        return (not response.is_a?(Elasticsearch::Transport::Transport::Errors::NotFound))
-      rescue Elasticsearch::Transport::Transport::Errors::NotFound => e
+        return (not response.is_a?(TRANSPORT_CLASS::Transport::Errors::NotFound))
+      rescue TRANSPORT_CLASS::Transport::Errors::NotFound => e
         log.info "Specified data stream does not exist. Will be created: <#{e}>"
         return false
       end
@@ -148,7 +159,11 @@ module Fluent::Plugin
 
     def ilm_policy_exists?(policy_id, host = nil)
       begin
-        client(host).ilm.get_policy(policy_id: policy_id)
+        if Gem::Version.new(TRANSPORT_CLASS::VERSION) >= Gem::Version.new("8.0.0")
+          client(host).enrich.get_policy(name: policy_id)
+        else
+          client(host).ilm.get_policy(policy_id: policy_id)
+        end
         true
       rescue
         false
@@ -162,7 +177,7 @@ module Fluent::Plugin
         client(host).indices.get_index_template(:name => name)
       end
       return true
-    rescue Elasticsearch::Transport::Transport::Errors::NotFound
+    rescue TRANSPORT_CLASS::Transport::Errors::NotFound
       return false
     end
 
