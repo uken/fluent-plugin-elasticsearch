@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 5.2.0
+-  Migrate to handle Elasticsearch 8 (#949)
+
 ### 5.1.5
 - Make retryable DataStreams creation at configure phase (#943)
 - Handle @hosts parameter on data_stream plugin (#942)
