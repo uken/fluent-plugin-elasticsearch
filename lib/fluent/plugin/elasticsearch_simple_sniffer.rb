@@ -1,6 +1,6 @@
 require 'elasticsearch'
 
-class Fluent::Plugin::ElasticsearchSimpleSniffer < Elasticsearch::Transport::Transport::Sniffer
+class Fluent::Plugin::ElasticsearchSimpleSniffer < Elastic::Transport::Transport::Sniffer
 
   def hosts
     @transport.logger.debug "In Fluent::Plugin::ElasticsearchSimpleSniffer hosts #{@transport.hosts}" if @transport.logger

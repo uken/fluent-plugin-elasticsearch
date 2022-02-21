@@ -218,7 +218,7 @@ module Fluent::Plugin
 
         headers = { 'Content-Type' => "application/json" }.merge(@custom_headers)
 
-        transport = Elasticsearch::Transport::Transport::HTTP::Faraday.new(
+        transport = Elastic::Transport::Transport::HTTP::Faraday.new(
           connection_options.merge(
             options: {
               reload_connections: local_reload_connections,

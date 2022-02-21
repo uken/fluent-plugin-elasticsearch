@@ -10,8 +10,8 @@ class TestElasticsearchIndexLifecycleManagement < Test::Unit::TestCase
       require "elasticsearch/xpack"
     rescue LoadError
       omit "ILM testcase needs elasticsearch-xpack gem."
-    end
-    if Gem::Version.create(::Elasticsearch::Transport::VERSION) < Gem::Version.create("7.4.0")
+    end if Gem.loaded_specs["elasticsearch"].version < Gem::Version.new("8.0.0")
+    if Gem::Version.create(::Elastic::Transport::VERSION) < Gem::Version.create("7.4.0")
       omit "elastisearch-ruby v7.4.0 or later is needed for ILM."
     end
     Fluent::Plugin::ElasticsearchIndexLifecycleManagement.module_eval(<<-CODE)

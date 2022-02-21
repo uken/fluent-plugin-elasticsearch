@@ -28,12 +28,12 @@ module Fluent::ElasticsearchIndexTemplate
       client(host).indices.get_index_template(:name => name)
     end
     return true
-  rescue Elasticsearch::Transport::Transport::Errors::NotFound
+  rescue Elastic::Transport::Transport::Errors::NotFound
     return false
   end
 
   def host_unreachable_exceptions
-    if Gem::Version.new(::Elasticsearch::Transport::VERSION) >= Gem::Version.new("7.14.0")
+    if Gem::Version.new(::Elastic::Transport::VERSION) >= Gem::Version.new("7.14.0")
       # elasticsearch-ruby 7.14.0's elasticsearch-transport does not extends
       # Elasticsearch class on Transport.
       # This is why #host_unreachable_exceptions is not callable directly
@@ -47,7 +47,7 @@ module Fluent::ElasticsearchIndexTemplate
   def retry_operate(max_retries, fail_on_retry_exceed = true, catch_trasport_exceptions = true)
     return unless block_given?
     retries = 0
-    transport_errors = Elasticsearch::Transport::Transport::Errors.constants.map{ |c| Elasticsearch::Transport::Transport::Errors.const_get c } if catch_trasport_exceptions
+    transport_errors = Elastic::Transport::Transport::Errors.constants.map{ |c| Elastic::Transport::Transport::Errors.const_get c } if catch_trasport_exceptions
     begin
       yield
     rescue *host_unreachable_exceptions, *transport_errors, Timeout::Error => e
@@ -78,7 +78,7 @@ module Fluent::ElasticsearchIndexTemplate
 
   def indexcreation(index_name, host = nil)
     client(host).indices.create(:index => index_name)
-  rescue Elasticsearch::Transport::Transport::Error => e
+  rescue Elastic::Transport::Transport::Error => e
     if e.message =~ /"already exists"/ || e.message =~ /resource_already_exists_exception/
       log.debug("Index #{index_name} already exists")
     else

@@ -15,99 +15,99 @@ Current maintainers: [Hiroshi Hatake | @cosmo0920](https://github.com/cosmo0920)
 
 * [Installation](#installation)
 * [Usage](#usage)
-  + [Index templates](#index-templates)
+  * [Index templates](#index-templates)
 * [Configuration](#configuration)
-  + [host](#host)
-  + [port](#port)
-  + [cloud_id](#cloud_id)
-  + [cloud_auth](#cloud_auth)
-  + [emit_error_for_missing_id](#emit_error_for_missing_id)
-  + [hosts](#hosts)
-  + [user, password, path, scheme, ssl_verify](#user-password-path-scheme-ssl_verify)
-  + [logstash_format](#logstash_format)
-  + [logstash_prefix](#logstash_prefix)
-  + [logstash_prefix_separator](#logstash_prefix_separator)
-  + [logstash_dateformat](#logstash_dateformat)
-  + [pipeline](#pipeline)
-  + [time_key_format](#time_key_format)
-  + [time_precision](#time_precision)
-  + [time_key](#time_key)
-  + [time_key_exclude_timestamp](#time_key_exclude_timestamp)
-  + [include_timestamp](#include_timestamp)
-  + [utc_index](#utc_index)
-  + [suppress_type_name](#suppress_type_name)
-  + [target_index_key](#target_index_key)
-  + [target_type_key](#target_type_key)
-  + [target_index_affinity](#target_index_affinity)
-  + [template_name](#template_name)
-  + [template_file](#template_file)
-  + [template_overwrite](#template_overwrite)
-  + [customize_template](#customize_template)
-  + [rollover_index](#rollover_index)
-  + [index_date_pattern](#index_date_pattern)
-  + [deflector_alias](#deflector_alias)
-  + [application_name](#application_name)
-  + [index_prefix](#index_prefix)
-  + [templates](#templates)
-  + [max_retry_putting_template](#max_retry_putting_template)
-  + [fail_on_putting_template_retry_exceed](#fail_on_putting_template_retry_exceed)
-  + [fail_on_detecting_es_version_retry_exceed](#fail_on_detecting_es_version_retry_exceed)
-  + [max_retry_get_es_version](#max_retry_get_es_version)
-  + [request_timeout](#request_timeout)
-  + [reload_connections](#reload_connections)
-  + [reload_on_failure](#reload_on_failure)
-  + [resurrect_after](#resurrect_after)
-  + [include_tag_key, tag_key](#include_tag_key-tag_key)
-  + [id_key](#id_key)
-  + [parent_key](#parent_key)
-  + [routing_key](#routing_key)
-  + [remove_keys](#remove_keys)
-  + [remove_keys_on_update](#remove_keys_on_update)
-  + [remove_keys_on_update_key](#remove_keys_on_update_key)
-  + [retry_tag](#retry_tag)
-  + [write_operation](#write_operation)
-  + [time_parse_error_tag](#time_parse_error_tag)
-  + [reconnect_on_error](#reconnect_on_error)
-  + [with_transporter_log](#with_transporter_log)
-  + [content_type](#content_type)
-  + [include_index_in_url](#include_index_in_url)
-  + [http_backend](#http_backend)
-  + [http_backend_excon_nonblock](#http_backend_excon_nonblock)
-  + [prefer_oj_serializer](#prefer_oj_serializer)
-  + [compression_level](#compression_level)
-  + [Client/host certificate options](#clienthost-certificate-options)
-  + [Proxy Support](#proxy-support)
-  + [Buffer options](#buffer-options)
-  + [Hash flattening](#hash-flattening)
-  + [Generate Hash ID](#generate-hash-id)
-  + [sniffer_class_name](#sniffer-class-name)
-  + [selector_class_name](#selector-class-name)
-  + [reload_after](#reload-after)
-  + [validate_client_version](#validate-client-version)
-  + [unrecoverable_error_types](#unrecoverable-error-types)
-  + [verify_es version at startup](#verify_es_version_at_startup)
-  + [default_elasticsearch_version](#default_elasticsearch_version)
-  + [custom_headers](#custom_headers)
-  + [api_key](#api_key)
-  + [Not seeing a config you need?](#not-seeing-a-config-you-need)
-  + [Dynamic configuration](#dynamic-configuration)
-  + [Placeholders](#placeholders)
-  + [Multi workers](#multi-workers)
-  + [log_es_400_reason](#log_es_400_reason)
-  + [suppress_doc_wrap](#suppress_doc_wrap)
-  + [ignore_exceptions](#ignore_exceptions)
-  + [exception_backup](#exception_backup)
-  + [bulk_message_request_threshold](#bulk_message_request_threshold)
-  + [enable_ilm](#enable_ilm)
-  + [ilm_policy_id](#ilm_policy_id)
-  + [ilm_policy](#ilm_policy)
-  + [ilm_policies](#ilm_policies)
-  + [ilm_policy_overwrite](#ilm_policy_overwrite)
-  + [truncate_caches_interval](#truncate_caches_interval)
-  + [use_legacy_template](#use_legacy_template)
-  + [metadata section](#metadata-section)
-    + [include_chunk_id](#include_chunk_id)
-    + [chunk_id_key](#chunk_id_key)
+  * [host](#host)
+  * [port](#port)
+  * [cloud_id](#cloud_id)
+  * [cloud_auth](#cloud_auth)
+  * [emit_error_for_missing_id](#emit_error_for_missing_id)
+  * [hosts](#hosts)
+  * [user, password, path, scheme, ssl_verify](#user-password-path-scheme-ssl_verify)
+  * [logstash_format](#logstash_format)
+  * [logstash_prefix](#logstash_prefix)
+  * [logstash_prefix_separator](#logstash_prefix_separator)
+  * [logstash_dateformat](#logstash_dateformat)
+  * [pipeline](#pipeline)
+  * [time_key_format](#time_key_format)
+  * [time_precision](#time_precision)
+  * [time_key](#time_key)
+  * [time_key_exclude_timestamp](#time_key_exclude_timestamp)
+  * [include_timestamp](#include_timestamp)
+  * [utc_index](#utc_index)
+  * [suppress_type_name](#suppress_type_name)
+  * [target_index_key](#target_index_key)
+  * [target_type_key](#target_type_key)
+  * [target_index_affinity](#target_index_affinity)
+  * [template_name](#template_name)
+  * [template_file](#template_file)
+  * [template_overwrite](#template_overwrite)
+  * [customize_template](#customize_template)
+  * [rollover_index](#rollover_index)
+  * [index_date_pattern](#index_date_pattern)
+  * [deflector_alias](#deflector_alias)
+  * [application_name](#application_name)
+  * [index_prefix](#index_prefix)
+  * [templates](#templates)
+  * [max_retry_putting_template](#max_retry_putting_template)
+  * [fail_on_putting_template_retry_exceed](#fail_on_putting_template_retry_exceed)
+  * [fail_on_detecting_es_version_retry_exceed](#fail_on_detecting_es_version_retry_exceed)
+  * [max_retry_get_es_version](#max_retry_get_es_version)
+  * [request_timeout](#request_timeout)
+  * [reload_connections](#reload_connections)
+  * [reload_on_failure](#reload_on_failure)
+  * [resurrect_after](#resurrect_after)
+  * [include_tag_key, tag_key](#include_tag_key-tag_key)
+  * [id_key](#id_key)
+  * [parent_key](#parent_key)
+  * [routing_key](#routing_key)
+  * [remove_keys](#remove_keys)
+  * [remove_keys_on_update](#remove_keys_on_update)
+  * [remove_keys_on_update_key](#remove_keys_on_update_key)
+  * [retry_tag](#retry_tag)
+  * [write_operation](#write_operation)
+  * [time_parse_error_tag](#time_parse_error_tag)
+  * [reconnect_on_error](#reconnect_on_error)
+  * [with_transporter_log](#with_transporter_log)
+  * [content_type](#content_type)
+  * [include_index_in_url](#include_index_in_url)
+  * [http_backend](#http_backend)
+  * [http_backend_excon_nonblock](#http_backend_excon_nonblock)
+  * [prefer_oj_serializer](#prefer_oj_serializer)
+  * [compression_level](#compression_level)
+  * [Client/host certificate options](#clienthost-certificate-options)
+  * [Proxy Support](#proxy-support)
+  * [Buffer options](#buffer-options)
+  * [Hash flattening](#hash-flattening)
+  * [Generate Hash ID](#generate-hash-id)
+  * [sniffer_class_name](#sniffer-class-name)
+  * [selector_class_name](#selector-class-name)
+  * [reload_after](#reload-after)
+  * [validate_client_version](#validate-client-version)
+  * [unrecoverable_error_types](#unrecoverable-error-types)
+  * [verify_es version at startup](#verify_es_version_at_startup)
+  * [default_elasticsearch_version](#default_elasticsearch_version)
+  * [custom_headers](#custom_headers)
+  * [api_key](#api_key)
+  * [Not seeing a config you need?](#not-seeing-a-config-you-need)
+  * [Dynamic configuration](#dynamic-configuration)
+  * [Placeholders](#placeholders)
+  * [Multi workers](#multi-workers)
+  * [log_es_400_reason](#log_es_400_reason)
+  * [suppress_doc_wrap](#suppress_doc_wrap)
+  * [ignore_exceptions](#ignore_exceptions)
+  * [exception_backup](#exception_backup)
+  * [bulk_message_request_threshold](#bulk_message_request_threshold)
+  * [enable_ilm](#enable_ilm)
+  * [ilm_policy_id](#ilm_policy_id)
+  * [ilm_policy](#ilm_policy)
+  * [ilm_policies](#ilm_policies)
+  * [ilm_policy_overwrite](#ilm_policy_overwrite)
+  * [truncate_caches_interval](#truncate_caches_interval)
+  * [use_legacy_template](#use_legacy_template)
+  * [metadata section](#metadata-section)
+    * [include_chunk_id](#include_chunk_id)
+    * [chunk_id_key](#chunk_id_key)
 * [Configuration - Elasticsearch Input](#configuration---elasticsearch-input)
 * [Configuration - Elasticsearch Filter GenID](#configuration---elasticsearch-filter-genid)
 * [Configuration - Elasticsearch Output Data Stream](#configuration---elasticsearch-output-data-stream)
@@ -135,7 +135,7 @@ NOTE: Using Index Lifecycle management(ILM) feature needs to install elasticsear
 ## Installation
 
 ```sh
-$ gem install fluent-plugin-elasticsearch
+gem install fluent-plugin-elasticsearch
 ```
 
 ## Usage
@@ -201,7 +201,7 @@ You can specify Elasticsearch port by this parameter.
 ### cloud_id
 
 ```
-cloud_id test-dep:ZXVyb3BlLXdlc3QxLmdjcC5jbG91ZC5lcy5pbyRiYZTA1Ng== 
+cloud_id test-dep:ZXVyb3BlLXdlc3QxLmdjcC5jbG91ZC5lcy5pbyRiYZTA1Ng==
 ```
 
 You can specify Elasticsearch cloud_id by this parameter.
@@ -217,12 +217,12 @@ cloud_auth 'elastic:slkjdaooewkd87iqQ2O8EQYV'
 
 You can specify Elasticsearch cloud_auth by this parameter.
 
-
 ### emit_error_for_missing_id
 
 ```
 emit_error_for_missing_id true
 ```
+
 When  `write_operation` is configured to anything other then `index`, setting this value to `true` will
 cause the plugin to `emit_error_event` of any records which do not include an `_id` field.  The default (`false`)
 behavior is to silently drop the records.
@@ -370,6 +370,7 @@ time_key vtm
 ```
 
 Your input is:
+
 ```
 {
   "title": "developer",
@@ -378,6 +379,7 @@ Your input is:
 ```
 
 The output will be
+
 ```
 {
   "title": "developer",
@@ -432,6 +434,7 @@ index_name fallback
 ```
 
 If your input is:
+
 ```
 {
   "title": "developer",
@@ -470,6 +473,7 @@ But if you have a use case where data is also updated after indexing and `id_key
 This setting will search existing data by using elastic search's [id query](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-ids-query.html) using `id_key` value (with logstash_prefix and logstash_prefix_separator index pattarn e.g. `logstash-*`). The index of found data is used for update/upsert. When no data is found, data is written to current logstash index as normally.
 
 This setting requires following other settings:
+
 ```
 logstash_format true
 id_key myId  # Some field on your data to identify the data uniquely
@@ -503,6 +507,7 @@ Suppose you have the following situation where you have 2 different match to con
 ```
 
 If your first (data1) input is:
+
 ```
 {
   "myId": "myuniqueId1",
@@ -511,6 +516,7 @@ If your first (data1) input is:
 ```
 
 and your second (data2) input is:
+
 ```
 {
   "myId": "myuniqueId1",
@@ -564,6 +570,7 @@ If [template_file](#template_file) and [template_name](#template_name) are set, 
 Specify this as true when an index with rollover capability needs to be created. It creates an index with the format <logstash-default-{now/d}-000001> where logstash denotes the index_prefix and default denotes the application_name which can be set.
 'deflector_alias' is a required field for rollover_index set to true.
 'index_prefix' and 'application_name' are optional and defaults to logstash and default respectively.
+
 ```
 rollover_index true # defaults to false
 ```
@@ -590,6 +597,7 @@ If [customize_template](#customize_template) is set, then this parameter will be
 ### deflector_alias
 
 Specify the deflector alias which would be assigned to the rollover index created. This is useful in case of using the Elasticsearch rollover API
+
 ```
 deflector_alias test-current
 ```
@@ -607,6 +615,7 @@ When specifying `logstash_format` as true, consider to use [logstash_prefix](#lo
 ### application_name
 
 Specify the application name for the rollover index to be created.
+
 ```
 application_name default # defaults to "default"
 ```
@@ -751,6 +760,7 @@ id_key _hash
 ```
 
 Example configuration for [fluent-plugin-genhashvalue](https://github.com/mtakemi/fluent-plugin-genhashvalue) (review the documentation of the plugin for more details)
+
 ```
 <filter logs.**>
   @type genhashvalue
@@ -799,6 +809,7 @@ parent_key a_parent # use "a_parent" field value to set _parent in elasticsearch
 ```
 
 If your input is
+
 ```
 { "name": "Johnny", "a_parent": "my_parent" }
 ```
@@ -881,6 +892,7 @@ with the specified tag:
 ```
 retry_tag 'retry_es'
 ```
+
 **NOTE:** `retry_tag` is optional. If you would rather use labels to reroute retries, add a label (e.g '@label @SOMELABEL') to your fluent
 elasticsearch plugin configuration. Retry records are, by default, submitted for retry to the ROOT label, which means
 records will flow through your fluentd pipeline from the beginning.  This may nor may not be a problem if the pipeline
@@ -908,9 +920,11 @@ Default value is `Fluent::ElasticsearchOutput::TimeParser.error` for backward co
 We will change default value to `.` separated tag.
 
 ### reconnect_on_error
+
 Indicates that the plugin should reset connection on any error (reconnect on next send).
 By default it will reconnect only on "host unreachable exceptions".
 We recommended to set this true in the presence of elasticsearch shield.
+
 ```
 reconnect_on_error true # defaults to false
 ```
@@ -961,10 +975,10 @@ http_backend typhoeus
 
 With `http_backend_excon_nonblock false`, elasticsearch plugin use excon with nonblock=false.
 If you use elasticsearch plugin with jRuby for https, you may need to consider to set `false` to avoid follwoing problems.
-- https://github.com/geemus/excon/issues/106
-- https://github.com/jruby/jruby-ossl/issues/19
+* <https://github.com/geemus/excon/issues/106>
+* <https://github.com/jruby/jruby-ossl/issues/19>
 
-But for all other case, it strongly reccomend to set `true` to avoid process hangin problem reported in https://github.com/uken/fluent-plugin-elasticsearch/issues/732
+But for all other case, it strongly reccomend to set `true` to avoid process hangin problem reported in <https://github.com/uken/fluent-plugin-elasticsearch/issues/732>
 
 Default value is `true`.
 
@@ -973,8 +987,10 @@ http_backend_excon_nonblock false
 ```
 
 ### compression_level
+
 You can add gzip compression of output data. In this case `default_compression`, `best_compression` or `best speed` option should be chosen.
 By default there is no compression, default value for this option is `no_compression`
+
 ```
 compression_level best_compression
 ```
@@ -994,11 +1010,13 @@ prefer_oj_serializer true
 ### Client/host certificate options
 
 Need to verify Elasticsearch's certificate?  You can use the following parameter to specify a CA instead of using an environment variable.
+
 ```
 ca_file /path/to/your/ca/cert
 ```
 
 Does your Elasticsearch cluster want to verify client connections?  You can specify the following parameters to use your client certificate, key, and key password for your connection.
+
 ```
 client_cert /path/to/your/client/cert
 client_key /path/to/your/private/key
@@ -1006,6 +1024,7 @@ client_key_pass password
 ```
 
 If you want to configure SSL/TLS version, you can specify ssl\_version parameter.
+
 ```
 ssl_version TLSv1_2 # or [SSLv23, TLSv1, TLSv1_1]
 ```
@@ -1027,10 +1046,9 @@ In Elasticsearch plugin v4.0.8 or later with Ruby 2.5 or later environment, `ssl
 
 From Elasticsearch plugin v4.0.4 to v4.0.7 with Ruby 2.5 or later environment, the value of `ssl_version` will be *used in `ssl_max_version` and `ssl_min_version`*.
 
-
 ### Proxy Support
 
-Starting with version 0.8.0, this gem uses excon, which supports proxy with environment variables - https://github.com/excon/excon#proxy-support
+Starting with version 0.8.0, this gem uses excon, which supports proxy with environment variables - <https://github.com/excon/excon#proxy-support>
 
 ### Buffer options
 
@@ -1071,7 +1089,7 @@ Note that the flattener does not deal with arrays at this time.
 
 ### Generate Hash ID
 
-By default, the fluentd elasticsearch plugin does not emit records with a _id field, leaving it to Elasticsearch to generate a unique _id as the record is indexed. When an Elasticsearch cluster is congested and begins to take longer to respond than the configured request_timeout, the fluentd elasticsearch plugin will re-send the same bulk request. Since Elasticsearch can't tell its actually the same request, all documents in the request are indexed again resulting in duplicate data. In certain scenarios, this can result in essentially and infinite loop generating multiple copies of the same data.
+By default, the fluentd elasticsearch plugin does not emit records with a _id field, leaving it to Elasticsearch to generate a unique_id as the record is indexed. When an Elasticsearch cluster is congested and begins to take longer to respond than the configured request_timeout, the fluentd elasticsearch plugin will re-send the same bulk request. Since Elasticsearch can't tell its actually the same request, all documents in the request are indexed again resulting in duplicate data. In certain scenarios, this can result in essentially and infinite loop generating multiple copies of the same data.
 
 The bundled elasticsearch_genid filter can generate a unique _hash key for each record, this key may be passed to the id_key parameter in the elasticsearch plugin to communicate to Elasticsearch the uniqueness of the requests so that duplicates will be rejected or simply replace the existing records.
 Here is a sample config:
@@ -1350,10 +1368,10 @@ Default value is `false`.
 A list of exception that will be ignored - when the exception occurs the chunk will be discarded and the buffer retry mechanism won't be called. It is possible also to specify classes at higher level in the hierarchy. For example
 
 ```
-ignore_exceptions ["Elasticsearch::Transport::Transport::ServerError"]
+ignore_exceptions ["Elastic::Transport::Transport::ServerError"]
 ```
 
-will match all subclasses of `ServerError` - `Elasticsearch::Transport::Transport::Errors::BadRequest`, `Elasticsearch::Transport::Transport::Errors::ServiceUnavailable`, etc.
+will match all subclasses of `ServerError` - `Elastic::Transport::Transport::Errors::BadRequest`, `Elastic::Transport::Transport::Errors::ServiceUnavailable`, etc.
 
 Default value is empty list (no exception is ignored).
 
@@ -1460,7 +1478,6 @@ Whether including `chunk_id` for not. Default value is `false`.
 </match>
 ```
 
-
 ### chunk_id_key
 
 Specify `chunk_id_key` to store `chunk_id` information into records. Default value is `chunk_id`.
@@ -1502,9 +1519,9 @@ The set of required permissions are the following:
 
 These permissions can be narrowed down by:
 
-- Setting a more specific pattern for indices under the `names` field
-- Removing the `manage_index_templates` cluster permission when not using the feature within your plugin configuration
-- Removing the `manage_ilm` cluster permission and the `manage` and `manage_ilm` indices privileges when not using ilm
+* Setting a more specific pattern for indices under the `names` field
+* Removing the `manage_index_templates` cluster permission when not using the feature within your plugin configuration
+* Removing the `manage_ilm` cluster permission and the `manage` and `manage_ilm` indices privileges when not using ilm
 features in the plugin configuration
 
 The list of privileges along with their description can be found in
@@ -1531,7 +1548,7 @@ This parameter is mandatory for `elasticsearch_data_stream`.
 
 ### data_stream_template_name
 
-You can specify an existing matching index template for the data stream. If not present, it creates a new matching index template. 
+You can specify an existing matching index template for the data stream. If not present, it creates a new matching index template.
 
 Default value is `data_stream_name`.
 
@@ -1544,7 +1561,6 @@ Default value is `data_stream_name`.
 There are some limitations about naming rule.
 
 In more detail, please refer to the [Path parameters](https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-create-data-stream.html#indices-create-data-stream-api-path-params).
-
 
 ### data_stream_ilm_policy
 

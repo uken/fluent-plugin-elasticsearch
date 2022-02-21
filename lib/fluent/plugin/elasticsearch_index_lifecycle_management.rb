@@ -21,7 +21,7 @@ module Fluent::Plugin::ElasticsearchIndexLifecycleManagement
       raise Fluent::ConfigError, "Index Lifecycle management is enabled in Fluentd, but not available in your Elasticsearch" unless ilm['available']
       raise Fluent::ConfigError, "Index Lifecycle management is enabled in Fluentd, but not enabled in your Elasticsearch" unless ilm['enabled']
 
-    rescue Elasticsearch::Transport::Transport::Error => e
+    rescue Elastic::Transport::Transport::Error => e
       raise Fluent::ConfigError, "Index Lifecycle management is enabled in Fluentd, but not installed on your Elasticsearch", error: e
     end
   end

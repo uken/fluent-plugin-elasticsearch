@@ -1,7 +1,7 @@
-require 'elasticsearch/transport/transport/connections/selector'
+require 'elastic/transport/transport/connections/selector'
 
 class Fluent::Plugin::ElasticseatchFallbackSelector
-  include Elasticsearch::Transport::Transport::Connections::Selector::Base
+  include Elastic::Transport::Transport::Connections::Selector::Base
 
   def select(options={})
     connections.first

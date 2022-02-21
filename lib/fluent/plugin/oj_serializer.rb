@@ -4,7 +4,7 @@ module Fluent::Plugin
   module Serializer
 
     class Oj
-      include Elasticsearch::Transport::Transport::Serializer::Base
+      include Elastic::Transport::Transport::Serializer::Base
 
       # De-serialize a Hash from JSON string
       #

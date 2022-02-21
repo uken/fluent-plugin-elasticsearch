@@ -23,11 +23,19 @@ module Fluent::Plugin
     def configure(conf)
       super
 
-      begin
-        require 'elasticsearch/api'
-        require 'elasticsearch/xpack'
-      rescue LoadError
-        raise Fluent::ConfigError, "'elasticsearch/api', 'elasticsearch/xpack' are required for <@elasticsearch_data_stream>."
+      if Gem.loaded_specs["elasticsearch"].version < Gem::Version.new("8.0.0")
+        begin
+          require 'elasticsearch/api'
+          require 'elasticsearch/xpack'
+        rescue LoadError
+          raise Fluent::ConfigError, "'elasticsearch/api', 'elasticsearch/xpack' are required for <@elasticsearch_data_stream>."
+        end
+      else
+        begin
+          require 'elasticsearch/api'
+        rescue LoadError
+          raise Fluent::ConfigError, "'elasticsearch/api' is required for <@elasticsearch_data_stream>."
+        end
       end
 
       @data_stream_ilm_name = "#{@data_stream_name}_policy" if @data_stream_ilm_name.nil?
@@ -127,8 +135,8 @@ module Fluent::Plugin
       }
       begin
         response = client(host).indices.get_data_stream(params)
-        return (not response.is_a?(Elasticsearch::Transport::Transport::Errors::NotFound))
-      rescue Elasticsearch::Transport::Transport::Errors::NotFound => e
+        return (not response.is_a?(Elastic::Transport::Transport::Errors::NotFound))
+      rescue Elastic::Transport::Transport::Errors::NotFound => e
         log.info "Specified data stream does not exist. Will be created: <#{e}>"
         return false
       end
@@ -162,7 +170,7 @@ module Fluent::Plugin
         client(host).indices.get_index_template(:name => name)
       end
       return true
-    rescue Elasticsearch::Transport::Transport::Errors::NotFound
+    rescue Elastic::Transport::Transport::Errors::NotFound
       return false
     end
 

@@ -87,15 +87,15 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   end
 
   def stub_nonexistent_data_stream?(name="foo", url="http://localhost:9200")
-    stub_request(:get, "#{url}/_data_stream/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
+    stub_request(:get, "#{url}/_data_stream/#{name}").to_return(:status => [404, Elastic::Transport::Transport::Errors::NotFound])
   end
 
   def stub_nonexistent_ilm?(name="foo_ilm_policy", url="http://localhost:9200")
-    stub_request(:get, "#{url}/_ilm/policy/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
+    stub_request(:get, "#{url}/_ilm/policy/#{name}").to_return(:status => [404, Elastic::Transport::Transport::Errors::NotFound])
   end
 
   def stub_nonexistent_template?(name="foo_tpl", url="http://localhost:9200")
-    stub_request(:get, "#{url}/_index_template/#{name}").to_return(:status => [404, Elasticsearch::Transport::Transport::Errors::NotFound])
+    stub_request(:get, "#{url}/_index_template/#{name}").to_return(:status => [404, Elastic::Transport::Transport::Errors::NotFound])
   end
 
   def stub_nonexistent_template_retry?(name="foo_tpl", url="http://localhost:9200")
@@ -140,7 +140,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   end
 
   def data_stream_supported?
-    Gem::Version.create(::Elasticsearch::Transport::VERSION) >= Gem::Version.create("7.9.0")
+    Gem::Version.create(::Elastic::Transport::VERSION) >= Gem::Version.create("7.9.0")
   end
 
   # ref. https://www.elastic.co/guide/en/elasticsearch/reference/master/indices-create-data-stream.html
