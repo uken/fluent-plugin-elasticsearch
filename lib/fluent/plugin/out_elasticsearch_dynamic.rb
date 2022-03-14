@@ -28,6 +28,8 @@ module Fluent::Plugin
         @dynamic_config[key] = value.to_s
       }
       # end eval all configs
+
+      log.warn "Elasticsearch dynamic plugin will be deprecated and removed in the future. Please consider to use normal Elasticsearch plugin"
     end
 
     def create_meta_config_map
