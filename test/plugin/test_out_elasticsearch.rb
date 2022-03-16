@@ -920,6 +920,67 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     end
   end
 
+  class GetElasticsearchIncompatibleVersionTest < self
+    def create_driver(conf='', client_version="7.14")
+      # For request stub to detect compatibility.
+      @client_version ||= client_version
+      # Ensure original implementation existence.
+      Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
+        def detect_es_major_version
+          begin
+            @_es_info ||= client.info
+          rescue Elasticsearch::UnsupportedProductError => e
+            raise Fluent::ConfigError, "Using Elasticsearch client #{@client_version} is not compatible for your Elasticsearch server. Please check your using elasticsearch gem version and Elasticsearch server."
+          end
+          begin
+            unless version = @_es_info.dig("version", "number")
+              version = @default_elasticsearch_version
+            end
+          rescue NoMethodError => e
+            log.warn "#{@_es_info} can not dig version information. Assuming Elasticsearch #{@default_elasticsearch_version}", error: e
+            version = @default_elasticsearch_version
+          end
+          version.to_i
+        end
+      CODE
+      Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
+        def client_library_version
+          #{@client_version}
+        end
+      CODE
+      Fluent::Test::Driver::Output.new(Fluent::Plugin::ElasticsearchOutput).configure(conf)
+    end
+
+    def test_incompatible_es_version
+      if Gem::Version.create(::TRANSPORT_CLASS::VERSION) < Gem::Version.create("7.14.0")
+        omit "This test is not effective before elasticsearch 7.14"
+      end
+      config = %{
+        host            logs.google.com
+        port            778
+        scheme          https
+        path            /es/
+        user            john
+        password        doe
+        verify_es_version_at_startup true
+        max_retry_get_es_version 1
+      }
+
+      connection_resets = 0
+      stub_request(:get, "https://logs.google.com:778/es//").
+        with(basic_auth: ['john', 'doe']) do |req|
+        connection_resets += 1
+        raise Elasticsearch::UnsupportedProductError
+      end
+
+      assert_raise(Fluent::ConfigError) do
+        create_driver(config)
+      end
+
+      assert_equal(1, connection_resets)
+    end
+  end
+
   class GetElasticsearchVersionWithFallbackTest < self
     def create_driver(conf='', client_version="\"5.0\"")
       # For request stub to detect compatibility.

@@ -492,7 +492,11 @@ EOC
     end
 
     def detect_es_major_version
-      @_es_info ||= client.info
+      begin
+        @_es_info ||= client.info
+      rescue Elasticsearch::UnsupportedProductError => e
+        raise Fluent::ConfigError, "Using Elasticsearch client #{client_library_version} is not compatible for your Elasticsearch server. Please check your using elasticsearch gem version and Elasticsearch server."
+      end
       begin
         unless version = @_es_info.dig("version", "number")
           version = @default_elasticsearch_version
