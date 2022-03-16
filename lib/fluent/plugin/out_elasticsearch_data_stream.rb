@@ -243,6 +243,10 @@ module Fluent::Plugin
       chunk.msgpack_each do |time, record|
         next unless record.is_a? Hash
 
+        if @include_tag_key
+          record[@tag_key] = tag
+        end
+
         begin
           record.merge!({"@timestamp" => Time.at(time).iso8601(@time_precision)})
           bulk_message = append_record_to_messages(CREATE_OP, {}, headers, record, bulk_message)
