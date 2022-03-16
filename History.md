@@ -2,6 +2,11 @@
 
 ### [Unreleased]
 
+### 5.2.1
+- respect include\_tag\_key and tag\_key setting when using data streams (#936)
+- Handle unsupported version error (#956)
+- Display deprecated warning on ES dynamic plugin (#955)
+
 ### 5.2.0
 -  Migrate to handle Elasticsearch 8 (#949)
 
