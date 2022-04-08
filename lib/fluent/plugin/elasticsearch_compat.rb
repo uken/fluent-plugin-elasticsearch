@@ -25,6 +25,6 @@ begin
   ::SELECTOR_CLASS = Elasticsearch::Transport::Transport::Connections::Selector
 rescue LoadError
 end
-unless defined?(Elasticsearch::UnsupportedProductError)
-  class Elasticsearch::UnsupportedProductError < StandardError; end
+unless defined?(::Elasticsearch::UnsupportedProductError)
+  class ::Elasticsearch::UnsupportedProductError < StandardError; end
 end

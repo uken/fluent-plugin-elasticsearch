@@ -929,7 +929,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
         def detect_es_major_version
           begin
             @_es_info ||= client.info
-          rescue Elasticsearch::UnsupportedProductError => e
+          rescue ::Elasticsearch::UnsupportedProductError => e
             raise Fluent::ConfigError, "Using Elasticsearch client #{@client_version} is not compatible for your Elasticsearch server. Please check your using elasticsearch gem version and Elasticsearch server."
           end
           begin
@@ -970,7 +970,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       stub_request(:get, "https://logs.google.com:778/es//").
         with(basic_auth: ['john', 'doe']) do |req|
         connection_resets += 1
-        raise Elasticsearch::UnsupportedProductError
+        raise ::Elasticsearch::UnsupportedProductError
       end
 
       assert_raise(Fluent::ConfigError) do
