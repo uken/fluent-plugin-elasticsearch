@@ -132,10 +132,10 @@ class ElasticsearchGenidFilterTest < Test::Unit::TestCase
   end
 
   class UseEntireRecordAsSeedTest < self
-    data("md5" => ["md5", "MuMU0gHOP1cWvvg/J4aEFg=="],
-         "sha1" => ["sha1", "GZ6Iup9Ywyk5spCWtPQbtZnfK0U="],
-         "sha256" => ["sha256", "O4YN0RiXCUAYeaR97UUULRLxgra/R2dvTV47viir5l4="],
-         "sha512" => ["sha512", "FtbwO1xsLUq0KcO0mj0l80rbwFH5rGE3vL+Vgh90+4R/9j+/Ni/ipwhiOoUcetDxj1r5Vf/92B54La+QTu3eMA=="],)
+    data("md5" => ["md5", "OAod7J0DR9s9/rOQnkeSFw=="],
+         "sha1" => ["sha1", "0CT4aMJ4gxMT3TKaYPCYApiVsq8="],
+         "sha256" => ["sha256", "mbAuKF5can0TTj/JBk71AXtOyoVqw5W5gMPUxx6pxLk="],
+         "sha512" => ["sha512", "f7kz5KVuDy+riENePDzqBjGQfbuRNpRBSQMzT2/6hrljXbYtBy3YFmxB86ofIf3zz4ZBao2QM2W7YvcwbRtK1w=="],)
     def test_record
       hash_type, expected = data
       d = create_driver(%[
@@ -151,10 +151,10 @@ class ElasticsearchGenidFilterTest < Test::Unit::TestCase
                    d.filtered.map {|e| e.last}.first[d.instance.hash_id_key])
     end
 
-    data("md5" => ["md5", "GJfpWe8ofiGzn97bc9Gh0Q=="],
-         "sha1" => ["sha1", "AVaK67Tz0bEJ8xNEzjOQ6r9fAu4="],
-         "sha256" => ["sha256", "WIXWAuf/Z94Uw95mudloo2bgjhSsSduQIwkKTQsNFgU="],
-         "sha512" => ["sha512", "yjMGGxy8uc7gCrPgm8W6MzJGLFk0GtUwJ6w/91laf6WNywuvG/7T6kNHLagAV8rSW8xzxmtEfyValBO5scuoKw=="],)
+    data("md5" => ["md5", "Hb0jwxofNQP+ufQTKK1U4g=="],
+         "sha1" => ["sha1", "BakTtlotl/u+yOON6YcViTz6nms="],
+         "sha256" => ["sha256", "eLuTCsFqDlk6PfABNyD39r36+yNIBeDTHyNKfJ8fZQw="],
+         "sha512" => ["sha512", "PhPCNGalM4H4xT19DnCBnpwr56lbvCo8wJGyCiH9dWcyhn1nA5l1diYSZlF2fNiq1+wzMqfGvJILIjgQrlAPcg=="],)
     def test_record_with_tag
       hash_type, expected = data
       d = create_driver(%[
@@ -171,10 +171,10 @@ class ElasticsearchGenidFilterTest < Test::Unit::TestCase
                    d.filtered.map {|e| e.last}.first[d.instance.hash_id_key])
     end
 
-    data("md5" => ["md5", "5nQSaJ4F1p9rDFign13Lfg=="],
-         "sha1" => ["sha1", "hyo9+0ZFBpizKl2NShs3C8yQcGw="],
-         "sha256" => ["sha256", "romVsZSIksbqYsOSnUzolZQw76ankcy0DgvDZ3CayTo="],
-         "sha512" => ["sha512", "RPU7K2Pt0iVyvV7p5usqcUIIOmfTajD1aa7pkR9qZ89UARH/lpm6ESY9iwuYJj92lxOUuF5OxlEwvV7uXJ07iA=="],)
+    data("md5" => ["md5", "C8vfhC4kecNCNutFCuC6MA=="],
+         "sha1" => ["sha1", "+YWVqUEL90wpKJRrionUJwNgXHg="],
+         "sha256" => ["sha256", "eSqGZqjnO6Uum/4CNfJaolX49+2XKogiGMHGNHiO91Q="],
+         "sha512" => ["sha512", "iVmuD0D+i/WtBwNza09ZXSIW8Xg8/yrUwK/M/EZaCMjz/x5FyyCiVkb1VVKsgNnJy0SYt4w21dhHewu1aXM6HA=="],)
     def test_record_with_time
       hash_type, expected = data
       d = create_driver(%[
@@ -191,10 +191,10 @@ class ElasticsearchGenidFilterTest < Test::Unit::TestCase
                    d.filtered.map {|e| e.last}.first[d.instance.hash_id_key])
     end
 
-    data("md5" => ["md5", "zGQF35KlMUibJAcgkgQDtw=="],
-         "sha1" => ["sha1", "1x9RZO1xEuWps090qq4DUIsU9x8="],
-         "sha256" => ["sha256", "eulMz0eF56lBEf31aIs0OG2TGCH/aoPfZbRqfEOkAwk="],
-         "sha512" => ["sha512", "mIiYATtpdUFEFCIZg1FdKssIs7oWY0gJjhSSbet0ddUmqB+CiQAcAMTmrXO6AVSH0vsMvao/8vtC8AsIPfF1fA=="],)
+    data("md5" => ["md5", "lU7d4EiF+2M1zxWcsmBbjg=="],
+         "sha1" => ["sha1", "nghmz1y3KTEFxalfS2/Oe4n4yfQ="],
+         "sha256" => ["sha256", "d0le9UOnUeuGPF/2yEBRM1YzOYeHtxYOE1UU6JgJrvU="],
+         "sha512" => ["sha512", "n7rhisGHUBne6c4Cs9DRMbPror8O5Y/vYajDqAtOaiUTys/Z1EKBMnZQA0iVNFw7joX33cenBW3Yyccct3xSew=="],)
     def test_record_with_tag_and_time
       hash_type, expected = data
       d = create_driver(%[

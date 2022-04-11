@@ -53,7 +53,7 @@ module Fluent::Plugin
       seed += tag + separator if @include_tag_in_seed
       seed += time.to_s + separator if @include_time_in_seed
       if @use_entire_record
-        record.each {|k,v| seed += "|#{k}|#{v}"}
+        record.keys.sort.each {|k| seed += "|#{k}|#{record[k]}"}
       else
         seed += record_keys.map {|k| record[k]}.join(separator)
       end
