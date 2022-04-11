@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 5.2.2
+-  Add missing top level class markers (#961)
+- Ensure use_record_as_seed for same records (#960)
+
 ### 5.2.1
 - respect include\_tag\_key and tag\_key setting when using data streams (#936)
 - Handle unsupported version error (#956)
