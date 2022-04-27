@@ -827,6 +827,7 @@ EOC
       bulk_message = Hash.new { |h,k| h[k] = '' }
       header = {}
       meta = {}
+      unpackedMsgArr = {}
 
       tag = chunk.metadata.tag
       chunk_id = dump_unique_id_hex(chunk.unique_id)
@@ -851,9 +852,13 @@ EOC
                    RequestInfo.new(host, nil, meta["_index".freeze], meta.delete("_alias".freeze))
                  end
 
+          unpackedMsgArr[info] = [] if unpackedMsgArr[info].nil?
+          unpackedMsgArr[info] << {:time => time, :record => record}
+
           if split_request?(bulk_message, info)
             bulk_message.each do |info, msgs|
-              send_bulk(msgs, tag, chunk, bulk_message_count[info], extracted_values, info) unless msgs.empty?
+              send_bulk(msgs, tag, chunk, bulk_message_count[info], extracted_values, info, unpackedMsgArr[info]) unless msgs.empty?
+              unpackedMsgArr[info].clear
               msgs.clear
               # Clear bulk_message_count for this info.
               bulk_message_count[info] = 0;
@@ -876,7 +881,9 @@ EOC
       end
 
       bulk_message.each do |info, msgs|
-        send_bulk(msgs, tag, chunk, bulk_message_count[info], extracted_values, info) unless msgs.empty?
+        send_bulk(msgs, tag, chunk, bulk_message_count[info], extracted_values, info, unpackedMsgArr[info]) unless msgs.empty?
+
+        unpackedMsgArr[info].clear
         msgs.clear
       end
     end
@@ -1090,7 +1097,7 @@ EOC
 
     # send_bulk given a specific bulk request, the original tag,
     # chunk, and bulk_message_count
-    def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, info)
+    def send_bulk(data, tag, chunk, bulk_message_count, extracted_values, info, unpacked_msg_arr)
       _logstash_prefix, _logstash_dateformat, index_name, _type_name, template_name, customize_template, deflector_alias, application_name, _pipeline, ilm_policy_id = extracted_values
       if deflector_alias
         template_installation(deflector_alias, template_name, customize_template, application_name, index_name, ilm_policy_id, info.host)
@@ -1113,7 +1120,7 @@ EOC
 
         if response['errors']
           error = Fluent::Plugin::ElasticsearchErrorHandler.new(self)
-          error.handle_error(response, tag, chunk, bulk_message_count, extracted_values)
+          error.handle_error(response, tag, chunk, bulk_message_count, extracted_values, unpacked_msg_arr)
         end
       rescue RetryStreamError => e
         log.trace "router.emit_stream for retry stream doing..."
