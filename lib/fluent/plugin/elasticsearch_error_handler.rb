@@ -35,7 +35,7 @@ class Fluent::Plugin::ElasticsearchErrorHandler
     end
   end
 
-  def handle_error(response, tag, chunk, bulk_message_count, extracted_values)
+  def handle_error(response, tag, chunk, bulk_message_count, extracted_values, unpacked_msg_arr)
     items = response['items']
     if items.nil? || !items.is_a?(Array)
       raise ElasticsearchVersionMismatch, "The response format was unrecognized: #{response}"
@@ -48,7 +48,11 @@ class Fluent::Plugin::ElasticsearchErrorHandler
     meta = {}
     header = {}
     affinity_target_indices = @plugin.get_affinity_target_indices(chunk)
-    chunk.msgpack_each do |time, rawrecord|
+
+    unpacked_msg_arr.each do |msg|
+      time = msg[:time]
+      rawrecord = msg[:record]
+
       bulk_message = ''
       next unless rawrecord.is_a? Hash
       begin

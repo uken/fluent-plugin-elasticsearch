@@ -2,6 +2,7 @@ require_relative '../helper'
 require 'fluent/plugin/out_elasticsearch'
 require 'fluent/plugin/elasticsearch_error_handler'
 require 'json'
+require 'msgpack'
 
 class TestElasticsearchErrorHandler < Test::Unit::TestCase
 
@@ -54,6 +55,27 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
     end
   end
 
+  class MockMsgpackChunk
+    def initialize(chunk)
+      @chunk = chunk
+      @factory = MessagePack::Factory.new
+      @factory.register_type(Fluent::EventTime::TYPE, Fluent::EventTime)
+    end
+
+    def msgpack_each
+      @factory.unpacker(@chunk).each { |time, record| yield(time, record) }
+    end
+  end
+
+  class MockUnpackedMsg
+    def initialize(records)
+      @records = records
+    end
+    def each
+      @records.each { |item| yield({:time => item[:time], :record => item[:record]}) }
+    end
+  end
+
   def setup
     Fluent::Test.setup
     @log_device = Fluent::Test::DummyLogDevice.new
@@ -98,8 +120,9 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
       ]
      }))
       chunk = MockChunk.new(records)
+      unpacked_msg_arr = MockUnpackedMsg.new(records)
       dummy_extracted_values = []
-      @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values)
+      @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values, unpacked_msg_arr)
       assert_equal(1, @plugin.error_events.size)
       expected_log = "failed to parse"
       exception_message = @plugin.error_events.first[:error].message
@@ -140,8 +163,9 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
       ]
      }))
       chunk = MockChunk.new(records)
+      unpacked_msg_arr = MockUnpackedMsg.new(records)
       dummy_extracted_values = []
-      @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values)
+      @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values, unpacked_msg_arr)
       assert_equal(1, @plugin.error_events.size)
       expected_log = "failed to parse"
       exception_message = @plugin.error_events.first[:error].message
@@ -159,8 +183,9 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
       "items" : [{}]
      }))
     chunk = MockChunk.new(records)
+    unpacked_msg_arr = MockUnpackedMsg.new(records)
     dummy_extracted_values = []
-    @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values)
+    @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values, unpacked_msg_arr)
     assert_equal(0, @plugin.error_events.size)
     assert_nil(@plugin.error_events[0])
   end
@@ -181,8 +206,9 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
       ]
      }))
     chunk = MockChunk.new(records)
+    unpacked_msg_arr = MockUnpackedMsg.new(records)
     dummy_extracted_values = []
-    @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values)
+    @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values, unpacked_msg_arr)
     assert_equal(1, @plugin.error_events.size)
     assert_true(@plugin.error_events[0][:error].respond_to?(:backtrace))
   end
@@ -204,8 +230,9 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
       ]
      }))
     chunk = MockChunk.new(records)
+    unpacked_msg_arr = MockUnpackedMsg.new(records)
     dummy_extracted_values = []
-    @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values)
+    @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values, unpacked_msg_arr)
     assert_equal(1, @plugin.error_events.size)
     assert_true(@plugin.error_events[0][:error].respond_to?(:backtrace))
   end
@@ -230,10 +257,11 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
       ]
      }))
 
-      chunk = MockChunk.new(records)
-      dummy_extracted_values = []
+    chunk = MockChunk.new(records)
+    unpacked_msg_arr = MockUnpackedMsg.new(records)
+    dummy_extracted_values = []
     assert_raise(Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchRequestAbortError) do
-      @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values)
+      @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values, unpacked_msg_arr)
     end
   end
 
@@ -257,10 +285,11 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
       ]
      }))
 
-      chunk = MockChunk.new(records)
-      dummy_extracted_values = []
+    chunk = MockChunk.new(records)
+    unpacked_msg_arr = MockUnpackedMsg.new(records)
+    dummy_extracted_values = []
     assert_raise(Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchRequestAbortError) do
-      @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values)
+      @handler.handle_error(response, 'atag', chunk, records.length, dummy_extracted_values, unpacked_msg_arr)
     end
   end
 
@@ -290,8 +319,9 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
     begin
       failed = false
       chunk = MockChunk.new(records)
+      unpacked_msg_arr = MockUnpackedMsg.new(records)
       dummy_extracted_values = []
-      handler.handle_error(response, 'atag', chunk, response['items'].length, dummy_extracted_values)
+      handler.handle_error(response, 'atag', chunk, response['items'].length, dummy_extracted_values, unpacked_msg_arr)
     rescue Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchRequestAbortError, Fluent::Plugin::ElasticsearchOutput::RetryStreamError=>e
       failed = true
       records = [].tap do |records|
@@ -312,6 +342,7 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
       records << {time: 12345, record: {"message"=>"record #{i}","_id"=>i,"raise"=>error_records[i]}}
     end
     chunk = MockChunk.new(records)
+    unpacked_msg_arr = MockUnpackedMsg.new(records)
 
     response = parse_response(%({
       "took" : 1,
@@ -410,7 +441,7 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
     begin
       failed = false
       dummy_extracted_values = []
-      @handler.handle_error(response, 'atag', chunk, response['items'].length, dummy_extracted_values)
+      @handler.handle_error(response, 'atag', chunk, response['items'].length, dummy_extracted_values, unpacked_msg_arr)
     rescue Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchRequestAbortError, Fluent::Plugin::ElasticsearchOutput::RetryStreamError=>e
       failed = true
       records = [].tap do |records|
@@ -439,6 +470,7 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
       records << {time: 12345, record: {"message"=>"record #{i}","_id"=>i,"raise"=>error_records[i]}}
     end
     chunk = MockChunk.new(records)
+    unpacked_msg_arr = MockUnpackedMsg.new(records)
 
     response = parse_response(%({
       "took" : 1,
@@ -526,7 +558,7 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
     begin
       failed = false
       dummy_extracted_values = []
-      @handler.handle_error(response, 'atag', chunk, response['items'].length, dummy_extracted_values)
+      @handler.handle_error(response, 'atag', chunk, response['items'].length, dummy_extracted_values, unpacked_msg_arr)
     rescue Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchRequestAbortError, Fluent::Plugin::ElasticsearchOutput::RetryStreamError=>e
       failed = true
       records = [].tap do |records|
@@ -549,6 +581,7 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
       records << {time: 12345, record: {"message"=>"record #{i}","_id"=>i,"raise"=>error_records[i]}}
     end
     chunk = MockChunk.new(records)
+    unpacked_msg_arr = MockUnpackedMsg.new(records)
 
     response = parse_response(%({
       "took" : 1,
@@ -639,7 +672,7 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
     begin
       failed = false
       dummy_extracted_values = []
-      @handler.handle_error(response, 'atag', chunk, response['items'].length, dummy_extracted_values)
+      @handler.handle_error(response, 'atag', chunk, response['items'].length, dummy_extracted_values, unpacked_msg_arr)
     rescue Fluent::Plugin::ElasticsearchErrorHandler::ElasticsearchRequestAbortError, Fluent::Plugin::ElasticsearchOutput::RetryStreamError=>e
       failed = true
       records = [].tap do |records|
@@ -659,5 +692,62 @@ class TestElasticsearchErrorHandler < Test::Unit::TestCase
       end
     end
     assert_true failed
+  end
+
+  def test_nested_msgpack_each
+    cwd = File.dirname(__FILE__)
+    chunk_path = File.join(cwd, 'mock_chunk.dat')
+    chunk_file = File.open(chunk_path, 'rb', 0644)
+    chunk_file.seek(0, IO::SEEK_SET)
+
+    chunk = MockMsgpackChunk.new(chunk_file)
+
+    unpacked_msg_arr = []
+    msg_count = 0
+    count_to_trigger_error_handle = 0
+    chunk.msgpack_each do |time, record|
+      next unless record.is_a? Hash
+
+      unpacked_msg_arr << {:time => time, :record => record}
+      msg_count += 1
+
+      record.each_key do |k|
+        if k != 'aaa' && k != 'bbb' && k != 'ccc' && k != 'log_path'
+          assert_equal(:impossible, k)
+        end
+      end
+
+      if msg_count % 55 == 0
+        if count_to_trigger_error_handle == 1
+          begin
+            response = {}
+            response['errors'] = true
+            response['items'] = []
+            item = {}
+            item['index'] = {}
+            item['index']['status'] = 429
+            item['index']['error'] = {}
+            item['index']['error']['type'] = "es_rejected_execution_exception"
+            abc = 0
+            while abc < unpacked_msg_arr.length
+              abc += 1
+              response['items'] << item
+            end
+
+            dummy_extracted_values = []
+            @handler.handle_error(response, 'atag', chunk, unpacked_msg_arr.length, dummy_extracted_values, unpacked_msg_arr)
+            assert_equal(0, @plugin.error_events.size)
+            assert_nil(@plugin.error_events[0])
+          rescue => e
+            # capture ElasticsearchRequestAbortError, beacuse es_rejected_execution_exception is unrecoverable.
+          end
+        end
+
+        count_to_trigger_error_handle += 1
+        unpacked_msg_arr.clear
+      end # end if
+    end # end chunk.msgpack_each
+
+    chunk_file.close
   end
 end
