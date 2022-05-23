@@ -70,8 +70,13 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     }
   end
 
+  SAMPLE_RECORD_TIMESTAMP = Time.now.iso8601
   def sample_record
-    {'@timestamp' => Time.now.iso8601, 'message' => 'Sample record'}
+    {'@timestamp' => SAMPLE_RECORD_TIMESTAMP, 'message' => 'Sample record'}
+  end
+
+  def sample_record_no_timestamp
+    {'message' => 'Sample record no timestamp'}
   end
 
   RESPONSE_ACKNOWLEDGED = {"acknowledged": true}
@@ -859,7 +864,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_default
     stub_bulk_feed
     driver(config)
-    driver.run(default_tag: 'mytag') do 
+    driver.run(default_tag: 'mytag') do
       driver.feed(sample_record)
     end
 
@@ -882,12 +887,51 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_default
     stub_bulk_feed
     driver(config)
-    driver.run(default_tag: 'mytag') do 
+    driver.run(default_tag: 'mytag') do
       driver.feed(sample_record)
     end
 
     assert_equal(1, @bulk_records.length)
     assert(@bulk_records[0].has_key?('custom_tag_key'))
     assert_equal('mytag', @bulk_records[0]['custom_tag_key'])
+  end
+
+  def test_use_record_timestamp_if_present
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    stub_default
+    stub_bulk_feed
+    conf = config_element(
+      'ROOT', '', {
+        '@type' => ELASTIC_DATA_STREAM_TYPE,
+        'data_stream_name' => 'foo',
+        'data_stream_ilm_name' => 'foo_ilm_policy',
+        'data_stream_template_name' => 'foo_tpl'
+      })
+    driver(conf).run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+    assert_equal 1, @bulk_records.length
+    assert(@bulk_records[0].has_key?('@timestamp'))
+    assert_equal SAMPLE_RECORD_TIMESTAMP, @bulk_records[0]['@timestamp']
+  end
+
+  def test_add_timestamp_if_not_present_in_record
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    stub_default
+    stub_bulk_feed
+    conf = config_element(
+      'ROOT', '', {
+        '@type' => ELASTIC_DATA_STREAM_TYPE,
+        'data_stream_name' => 'foo',
+        'data_stream_ilm_name' => 'foo_ilm_policy',
+        'data_stream_template_name' => 'foo_tpl'
+      })
+    driver(conf).run(default_tag: 'test') do
+      driver.feed(sample_record_no_timestamp)
+    end
+    assert_equal 1, @bulk_records.length
+    assert(@bulk_records[0].has_key?('@timestamp'))
   end
 end
