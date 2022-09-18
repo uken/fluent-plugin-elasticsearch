@@ -265,6 +265,7 @@ module Fluent::Plugin
         response = client(host).bulk(params)
         if response['errors']
           log.error "Could not bulk insert to Data Stream: #{data_stream_name} #{response}"
+          @num_errors_metrics.inc
         end
       rescue => e
         raise RecoverableRequestFailure, "could not push logs to Elasticsearch cluster (#{data_stream_name}): #{e.message}"
