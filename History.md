@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 5.2.4
+- Pin Faraday 1.10 (#987)
+- Increase errors metric on error response in data stream (#986)
+
 ### 5.2.3
 - Bump actions/checkout from 2 to 3 (#978)
 - chore: Included githubactions in the dependabot config (#977)
