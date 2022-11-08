@@ -57,6 +57,14 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     }.configure(conf)
   end
 
+  def elasticsearch_transport_layer_decoupling?
+    Gem::Version.create(::TRANSPORT_CLASS::VERSION) >= Gem::Version.new("7.14.0")
+  end
+
+  def elastic_transport_layer?
+    Gem::Version.create(::TRANSPORT_CLASS::VERSION) >= Gem::Version.new("8.0.0")
+  end
+
   def sample_data_stream
     {
       'data_streams': [
@@ -525,6 +533,114 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     assert_equal '/default_path', host2[:path]
   end
 
+  def test_configure_compression
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    config = %{
+      data_stream_name           foo
+      data_stream_template_name  foo_tpl
+      data_stream_ilm_name       foo_ilm_policy
+      compression_level          best_compression
+    }
+
+    stub_default
+
+    assert_equal true, driver(config).instance.compression
+  end
+
+  def test_check_compression_strategy
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    config = %{
+      data_stream_name           foo
+      data_stream_template_name  foo_tpl
+      data_stream_ilm_name       foo_ilm_policy
+      compression_level          best_speed
+    }
+
+    stub_default
+    stub_bulk_feed
+
+    assert_equal Zlib::BEST_SPEED, driver(config).instance.compression_strategy
+  end
+
+  def test_check_content_encoding_header_with_compression
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    config = %{
+      data_stream_name           foo
+      data_stream_template_name  foo_tpl
+      data_stream_ilm_name       foo_ilm_policy
+      compression_level          best_compression
+    }
+
+    stub_default
+    stub_request(:post, "http://localhost:9200/foo/_bulk").
+      to_return(status: 200, body: "", headers: {})
+
+    instance = driver(config).instance
+
+    if elastic_transport_layer?
+      assert_equal nil, instance.client.transport.options[:transport_options][:headers]["Content-Encoding"]
+    elsif elasticsearch_transport_layer_decoupling?
+      assert_equal nil, instance.client.transport.transport.options[:transport_options][:headers]["Content-Encoding"]
+    else
+      assert_equal nil, instance.client.transport.options[:transport_options][:headers]["Content-Encoding"]
+    end
+
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+    compressable = instance.compressable_connection
+
+    if elastic_transport_layer?
+      assert_equal "gzip", instance.client(nil, compressable).transport.options[:transport_options][:headers]["Content-Encoding"]
+    elsif elasticsearch_transport_layer_decoupling?
+      assert_equal "gzip", instance.client(nil, compressable).transport.transport.options[:transport_options][:headers]["Content-Encoding"]
+    else
+      assert_equal "gzip", instance.client(nil, compressable).transport.options[:transport_options][:headers]["Content-Encoding"]
+    end
+  end
+
+  def test_check_compression_option_is_passed_to_transport
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    config = %{
+      data_stream_name           foo
+      data_stream_template_name  foo_tpl
+      data_stream_ilm_name       foo_ilm_policy
+      compression_level          best_compression
+    }
+
+    stub_default
+    stub_request(:post, "http://localhost:9200/foo/_bulk").
+      to_return(status: 200, body: "", headers: {})
+
+    instance = driver(config).instance
+
+    if elastic_transport_layer?
+      assert_equal false, instance.client.transport.options[:compression]
+    elsif elasticsearch_transport_layer_decoupling?
+      assert_equal false, instance.client.transport.transport.options[:compression]
+    else
+      assert_equal false, instance.client.transport.options[:compression]
+    end
+
+
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+    compressable = instance.compressable_connection
+
+    if elastic_transport_layer?
+      assert_equal true, instance.client(nil, compressable).transport.options[:compression]
+    elsif elasticsearch_transport_layer_decoupling?
+      assert_equal true, instance.client(nil, compressable).transport.transport.options[:compression]
+    else
+      assert_equal true, instance.client(nil, compressable).transport.options[:compression]
+    end
+  end
+
   def test_existent_data_stream
     omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
 
@@ -710,6 +826,52 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       driver.feed(sample_record)
     end
     assert_equal 1, @bulk_records.length
+  end
+
+  # gzip compress data
+  def gzip(string, strategy)
+    wio = StringIO.new("w")
+    w_gz = Zlib::GzipWriter.new(wio, strategy = strategy)
+    w_gz.write(string)
+    w_gz.close
+    wio.string
+  end
+
+  def test_writes_to_data_stream_with_compression
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    config = %{
+      data_stream_name           foo
+      data_stream_template_name  foo_tpl
+      data_stream_ilm_name       foo_ilm_policy
+      compression_level          default_compression
+    }
+
+    bodystr = %({
+          "took" : 500,
+          "errors" : false,
+          "items" : [
+            {
+              "create": {
+                "_index" : "fluentd",
+                "_type"  : "fluentd"
+              }
+            }
+           ]
+        })
+
+    compressed_body = gzip(bodystr, Zlib::DEFAULT_COMPRESSION)
+
+    stub_default
+    elastic_request = stub_request(:post, "http://localhost:9200/foo/_bulk").
+        to_return(:status => 200, :headers => {'Content-Type' => 'application/json'}, :body => compressed_body)
+
+    driver(config)
+    driver.run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+
+    assert_requested(elastic_request)
   end
 
   def test_template_retry_install_fails
