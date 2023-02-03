@@ -3,7 +3,7 @@ require_relative './elasticsearch_error'
 
 module Fluent::ElasticsearchIndexTemplate
   def get_template(template_file)
-    if !File.exists?(template_file)
+    if !File.exist?(template_file)
       raise "If you specify a template_name you must specify a valid template file (checked '#{template_file}')!"
     end
     file_contents = IO.read(template_file).gsub(/\n/,'')
@@ -11,7 +11,7 @@ module Fluent::ElasticsearchIndexTemplate
   end
 
   def get_custom_template(template_file, customize_template)
-    if !File.exists?(template_file)
+    if !File.exist?(template_file)
       raise "If you specify a template_name you must specify a valid template file (checked '#{template_file}')!"
     end
     file_contents = IO.read(template_file).gsub(/\n/,'')
