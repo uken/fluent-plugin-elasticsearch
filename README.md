@@ -201,7 +201,7 @@ You can specify Elasticsearch port by this parameter.
 ### cloud_id
 
 ```
-cloud_id test-dep:ZXVyb3BlLXdlc3QxLmdjcC5jbG91ZC5lcy5pbyRiYZTA1Ng== 
+cloud_id test-dep:ZXVyb3BlLXdlc3QxLmdjcC5jbG91ZC5lcy5pbyRiYZTA1Ng==
 ```
 
 You can specify Elasticsearch cloud_id by this parameter.
@@ -1179,11 +1179,11 @@ Advanced users can increase its capacity, but normal users should follow default
 
 If you want to increase it and forcibly retrying bulk request, please consider to change `unrecoverable_error_types` parameter from default value.
 
-Change default value of `thread_pool.bulk.queue_size` in elasticsearch.yml:
+Change default value of `thread_pool.write.queue_size` in elasticsearch.yml:
 e.g.)
 
 ```yaml
-thread_pool.bulk.queue_size: 1000
+thread_pool.write.queue_size: 1000
 ```
 
 Then, remove `es_rejected_execution_exception` from `unrecoverable_error_types` parameter:
@@ -1531,7 +1531,7 @@ This parameter is mandatory for `elasticsearch_data_stream`.
 
 ### data_stream_template_name
 
-You can specify an existing matching index template for the data stream. If not present, it creates a new matching index template. 
+You can specify an existing matching index template for the data stream. If not present, it creates a new matching index template.
 
 Default value is `data_stream_name`.
 
