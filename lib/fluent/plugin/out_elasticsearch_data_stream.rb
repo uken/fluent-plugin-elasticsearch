@@ -257,12 +257,18 @@ module Fluent::Plugin
         end
       end
 
+      prepared_data = if compression
+        gzip(bulk_message)
+      else
+        bulk_message
+      end
+
       params = {
         index: data_stream_name,
-        body: bulk_message
+        body: prepared_data
       }
       begin
-        response = client(host).bulk(params)
+        response = client(host, compression).bulk(params)
         if response['errors']
           log.error "Could not bulk insert to Data Stream: #{data_stream_name} #{response}"
           @num_errors_metrics.inc
