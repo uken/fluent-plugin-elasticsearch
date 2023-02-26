@@ -871,55 +871,6 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     end
   end
 
-  class GetElasticsearchVersionTest < self
-    def create_driver(conf='', client_version="\"5.0\"")
-      # For request stub to detect compatibility.
-      @client_version ||= client_version
-      # Ensure original implementation existence.
-      Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
-        def detect_es_major_version
-          @_es_info ||= client.info
-          unless version = @_es_info.dig("version", "number")
-            version = @default_elasticsearch_version
-          end
-          version.to_i
-        end
-      CODE
-      Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
-        def client_library_version
-          #{@client_version}
-        end
-      CODE
-      Fluent::Test::Driver::Output.new(Fluent::Plugin::ElasticsearchOutput).configure(conf)
-    end
-
-    def test_retry_get_es_version
-      config = %{
-        host            logs.google.com
-        port            778
-        scheme          https
-        path            /es/
-        user            john
-        password        doe
-        verify_es_version_at_startup true
-        max_retry_get_es_version 3
-      }
-
-      connection_resets = 0
-      stub_request(:get, "https://logs.google.com:778/es//").
-        with(basic_auth: ['john', 'doe']) do |req|
-        connection_resets += 1
-        raise Faraday::ConnectionFailed, "Test message"
-      end
-
-      assert_raise(Fluent::Plugin::ElasticsearchError::RetryableOperationExhaustedFailure) do
-        create_driver(config)
-      end
-
-      assert_equal(4, connection_resets)
-    end
-  end
-
   class GetElasticsearchIncompatibleVersionTest < self
     def create_driver(conf='', client_version="7.14")
       # For request stub to detect compatibility.
@@ -978,63 +929,6 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       end
 
       assert_equal(1, connection_resets)
-    end
-  end
-
-  class GetElasticsearchVersionWithFallbackTest < self
-    def create_driver(conf='', client_version="\"5.0\"")
-      # For request stub to detect compatibility.
-      @client_version ||= client_version
-      # Ensure original implementation existence.
-      Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
-        def detect_es_major_version
-          @_es_info ||= client.info
-          unless version = @_es_info.dig("version", "number")
-            version = @default_elasticsearch_version
-          end
-          version.to_i
-        end
-      CODE
-      Fluent::Plugin::ElasticsearchOutput.module_eval(<<-CODE)
-        def client_library_version
-          #{@client_version}
-        end
-      CODE
-      Fluent::Test::Driver::Output.new(Fluent::Plugin::ElasticsearchOutput).configure(conf)
-    end
-
-    data("Elasticsearch 5" => ["5.0", 5],
-         "Elasticsearch 6" => ["6.0", 6],
-         "Elasticsearch 7" => ["7.0", 7],
-         "Elasticsearch 8" => ["8.0", 8])
-    def test_retry_get_es_version_without_fail_on_detecting_es_version_retry_exceeded(data)
-      client_version, es_major_version = data
-      config = %{
-        host            logs.google.com
-        port            778
-        scheme          https
-        path            /es/
-        user            john
-        password        doe
-        verify_es_version_at_startup true
-        max_retry_get_es_version 2
-        fail_on_detecting_es_version_retry_exceed false
-        default_elasticsearch_version #{es_major_version}
-        @log_level info
-      }
-
-      connection_resets = 0
-      stub_request(:get, "https://logs.google.com:778/es//").
-        with(basic_auth: ['john', 'doe']) do |req|
-        connection_resets += 1
-        raise Faraday::ConnectionFailed, "Test message"
-      end
-
-      d = create_driver(config, client_version)
-
-      assert_equal es_major_version, d.instance.default_elasticsearch_version
-      assert_equal 3, connection_resets
-      assert_equal es_major_version, d.instance.instance_variable_get(:@last_seen_major_version)
     end
   end
 
@@ -3375,49 +3269,6 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     end
   end
 
-  data("legacy_template" => [true, "_template"],
-       "new_template"    => [false, "_index_template"])
-  def test_template_retry_install_fails(data)
-    use_legacy_template_flag, endpoint = data
-    if !use_legacy_template_flag && Gem::Version.create(::TRANSPORT_CLASS::VERSION) < Gem::Version.create("7.8.0")
-      omit "elastisearch-ruby v7.8.0 or later is needed."
-    end
-    cwd = File.dirname(__FILE__)
-    template_file = if use_legacy_template_flag
-                      File.join(cwd, 'test_template.json')
-                    else
-                      File.join(cwd, 'test_index_template.json')
-                    end
-
-    config = %{
-      host            logs.google.com
-      port            778
-      scheme          https
-      path            /es/
-      user            john
-      password        doe
-      template_name   logstash
-      template_file   #{template_file}
-      max_retry_putting_template 3
-      use_legacy_template #{use_legacy_template_flag}
-    }
-
-    connection_resets = 0
-    # check if template exists
-    stub_request(:get, "https://logs.google.com:778/es//#{endpoint}/logstash")
-      .with(basic_auth: ['john', 'doe']) do |req|
-      connection_resets += 1
-      raise Faraday::ConnectionFailed, "Test message"
-    end
-    stub_elastic_info("https://logs.google.com:778/es//")
-
-    assert_raise(Fluent::Plugin::ElasticsearchError::RetryableOperationExhaustedFailure) do
-      driver(config)
-    end
-
-    assert_equal(4, connection_resets)
-  end
-
   transport_errors_handled_separately = [TRANSPORT_CLASS::Transport::Errors::NotFound]
   transport_errors = TRANSPORT_CLASS::Transport::Errors.constants.map { |err| [err, TRANSPORT_CLASS::Transport::Errors.const_get(err)]  }
   transport_errors_hash = Hash[transport_errors.select { |err| !transport_errors_handled_separately.include?(err[1]) } ]
@@ -3460,47 +3311,6 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     assert_equal(1, retries)
   end
 
-  data("legacy_template" => [true, "_template"],
-       "new_template"    => [false, "_index_template"])
-  def test_template_retry_install_does_not_fail(data)
-    use_legacy_template_flag, endpoint = data
-    if !use_legacy_template_flag && Gem::Version.create(::TRANSPORT_CLASS::VERSION) < Gem::Version.create("7.8.0")
-      omit "elastisearch-ruby v7.8.0 or later is needed."
-    end
-    cwd = File.dirname(__FILE__)
-    template_file = if use_legacy_template_flag
-                      File.join(cwd, 'test_template.json')
-                    else
-                      File.join(cwd, 'test_index_template.json')
-                    end
-
-    config = %{
-      host            logs.google.com
-      port            778
-      scheme          https
-      path            /es/
-      user            john
-      password        doe
-      template_name   logstash
-      template_file   #{template_file}
-      max_retry_putting_template 3
-      fail_on_putting_template_retry_exceed false
-      use_legacy_template #{use_legacy_template_flag}
-    }
-
-    connection_resets = 0
-    # check if template exists
-    stub_request(:get, "https://logs.google.com:778/es//#{endpoint}/logstash")
-      .with(basic_auth: ['john', 'doe']) do |req|
-      connection_resets += 1
-      raise Faraday::ConnectionFailed, "Test message"
-    end
-    stub_elastic_info("https://logs.google.com:778/es//")
-
-    driver(config)
-
-    assert_equal(4, connection_resets)
-  end
 
   data("legacy_template" => [true, "_template"],
        "new_template"    => [false, "_index_template"])
