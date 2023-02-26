@@ -180,6 +180,18 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_data_stream(datastream_name)
   end
 
+  def stub_elastic_with_store_index_command_counts(url="http://localhost:9200/_bulk")
+    if @index_command_counts == nil
+      @index_command_counts = {}
+      @index_command_counts.default = 0
+    end
+
+    stub_request(:post, url).with do |req|
+      index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
+      @index_command_counts[url] += index_cmds.size
+    end
+  end
+
   def data_stream_supported?
     Gem::Version.create(::TRANSPORT_CLASS::VERSION) >= Gem::Version.create("7.9.0")
   end
@@ -826,6 +838,49 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       driver.feed(sample_record)
     end
     assert_equal 1, @bulk_records.length
+  end
+
+  def test_placeholder_writes_to_multi_hosts
+    stub_default("foo_bar", "foo_tpl_bar")
+    hosts = [['192.168.33.50', 9201], ['192.168.33.51', 9201], ['192.168.33.52', 9201]]
+    hosts_string = hosts.map {|x| "#{x[0]}:#{x[1]}"}.compact.join(',')
+    hosts.each do |host_info|
+      host, port = host_info
+      stub_elastic_with_store_index_command_counts("http://#{host}:#{port}/foo_bar/_bulk")
+      stub_elastic_info("http://#{host}:#{port}/")
+      stub_request(:get, "http://#{host}:#{port}/_data_stream/foo_bar").
+        to_return(status: 200, body: "", headers: {})
+    end
+
+    conf = config_element(
+      'ROOT', '', {
+      '@type' => ELASTIC_DATA_STREAM_TYPE,
+      'data_stream_name' => 'foo_${key1}',
+      'data_stream_template_name' => 'foo_tpl_${key1}',
+      'hosts' => "#{hosts_string}"
+    }, [config_element('buffer', 'tag,key1', {
+      'timekey' => '1d'
+    }, [])])
+    driver(conf).run(default_tag: 'test') do
+      hashes = {
+        'age' => rand(100),
+        'key1' => 'bar'
+      }
+      1000.times do
+        driver.feed(sample_record.merge(hashes))
+      end
+    end
+
+    # @note: we cannot make multi chunks with options (flush_interval, buffer_chunk_limit)
+    # it's Fluentd test driver's constraint
+    # so @index_command_counts.size is always 1
+    assert(@index_command_counts.size > 0, "not working with hosts options")
+
+    total = 0
+    @index_command_counts.each do |_, count|
+      total += count
+    end
+    assert_equal(2000, total)
   end
 
   # gzip compress data
