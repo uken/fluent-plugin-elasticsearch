@@ -2037,7 +2037,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
 
       assert_equal ["logstash-tag1", "logstash-tag2"], driver.instance.alias_indexes
 
-      assert_requested(elastic_request)
+      assert_requested(elastic_request, at_least_times: 1, at_most_times: 2)
     end
 
 
@@ -2950,7 +2950,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       assert_equal('mylogs-test-tag2', index_cmds.first['index']['_index'])
       assert_equal ["mylogs-test-tag1", "mylogs-test-tag2"], driver.instance.alias_indexes
 
-      assert_requested(elastic_request)
+      assert_requested(elastic_request, at_least_times: 1, at_most_times: 2)
     end
 
     data("legacy_template" => [true, "_template"],
