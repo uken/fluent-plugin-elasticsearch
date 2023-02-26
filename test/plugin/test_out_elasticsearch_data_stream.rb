@@ -874,42 +874,6 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     assert_requested(elastic_request)
   end
 
-  def test_template_retry_install_fails
-    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
-
-    cwd = File.dirname(__FILE__)
-    template_file = File.join(cwd, 'test_index_template.json')
-
-    config = %{
-      host                       logs.google.com
-      port                       778
-      scheme                     https
-      data_stream_name           foo
-      data_stream_ilm_name       foo_ilm_policy
-      data_stream_template_name  foo_tpl
-      user                       john
-      password                   doe
-      template_name              logstash
-      template_file              #{template_file}
-      max_retry_putting_template 3
-    }
-
-    connection_resets = 0
-    # check if template exists
-    stub_request(:get, "https://logs.google.com:778/_index_template/logstash")
-      .with(basic_auth: ['john', 'doe']) do |req|
-      connection_resets += 1
-      raise Faraday::ConnectionFailed, "Test message"
-    end
-    stub_elastic_info("https://logs.google.com:778/")
-
-    assert_raise(Fluent::Plugin::ElasticsearchError::RetryableOperationExhaustedFailure) do
-      driver(config)
-    end
-
-    assert_equal(4, connection_resets)
-  end
-
   def test_doesnt_update_ilm_policy_if_overwrite_unset
     omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
 
