@@ -4,7 +4,6 @@
 ![Testing on Windows](https://github.com/uken/fluent-plugin-elasticsearch/workflows/Testing%20on%20Windows/badge.svg?branch=master)
 ![Testing on macOS](https://github.com/uken/fluent-plugin-elasticsearch/workflows/Testing%20on%20macOS/badge.svg?branch=master)
 ![Testing on Ubuntu](https://github.com/uken/fluent-plugin-elasticsearch/workflows/Testing%20on%20Ubuntu/badge.svg?branch=master)
-[![Coverage Status](https://coveralls.io/repos/uken/fluent-plugin-elasticsearch/badge.png)](https://coveralls.io/r/uken/fluent-plugin-elasticsearch)
 [![Code Climate](https://codeclimate.com/github/uken/fluent-plugin-elasticsearch.png)](https://codeclimate.com/github/uken/fluent-plugin-elasticsearch)
 
 Send your logs to Elasticsearch (and search them with Kibana maybe?)
