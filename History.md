@@ -2,6 +2,15 @@
 
 ### [Unreleased]
 
+### 5.2.5
+
+- Update the name of parameter about `thread_pool`.
+  It should be `thread_pool.write.queue_size` instead of `thread_pool.bulk.queue_size` (#1000)
+- Replace obsolete `File.exists?` with `File.exist?` (#998)
+- Support `compression_level` for `elasticsearch_data_stream` (#995)
+- Honor `hosts` parameter for `elasticsearch_data_stream` (#1008)
+- Drop outdated coveralls (#1009)
+
 ### 5.2.4
 - Pin Faraday 1.10 (#987)
 - Increase errors metric on error response in data stream (#986)
