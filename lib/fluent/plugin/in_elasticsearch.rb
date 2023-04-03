@@ -1,5 +1,6 @@
 require 'elasticsearch'
 
+require 'faraday/excon'
 require 'fluent/log-ext'
 require 'fluent/plugin/input'
 require_relative 'elasticsearch_constants'

@@ -32,6 +32,8 @@ begin
 rescue LoadError
 end
 
+require 'faraday/excon'
+
 module Fluent::Plugin
   class ElasticsearchOutput < Output
     class RecoverableRequestFailure < StandardError; end
