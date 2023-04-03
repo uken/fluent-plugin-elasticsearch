@@ -32,6 +32,8 @@ begin
 rescue LoadError
 end
 
+require 'faraday/excon'
+
 module Fluent::Plugin
   class ElasticsearchOutput < Output
     class RecoverableRequestFailure < StandardError; end
@@ -471,7 +473,7 @@ EOC
       when :excon
         { client_key: @client_key, client_cert: @client_cert, client_key_pass: @client_key_pass, nonblock: @http_backend_excon_nonblock }
       when :typhoeus
-        require 'typhoeus'
+        require 'faraday/typhoeus'
         { sslkey: @client_key, sslcert: @client_cert, keypasswd: @client_key_pass }
       end
     rescue LoadError => ex
