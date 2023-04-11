@@ -2,6 +2,12 @@
 
 ### [Unreleased]
 
+### 5.3.0
+
+- Unpin `faraday` from v1, upgrade to v2. (#1012)
+  Note that if you can't migrate other plugins from `faraday` v1 yet, need to keep
+  fluent-plugin-elasticsearch v5.2.5.
+
 ### 5.2.5
 
 - Update the name of parameter about `thread_pool`.

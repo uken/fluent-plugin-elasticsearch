@@ -125,6 +125,8 @@ Current maintainers: [Hiroshi Hatake | @cosmo0920](https://github.com/cosmo0920)
 | >= 2.0.0 && < 3.2.3          | >= v0.14.20 | >= 2.1 |
 |  < 2.0.0                     | >= v0.12.0  | >= 1.9 |
 
+NOTE: Since fluent-plugin-elasticsearch 5.3.0, it requires faraday 2.0 or later.
+
 NOTE: For v0.12 version, you should use 1.x.y version. Please send patch into v0.12 branch if you encountered 1.x version's bug.
 
 NOTE: This documentation is for fluent-plugin-elasticsearch 2.x or later. For 1.x documentation, please see [v0.12 branch](https://github.com/uken/fluent-plugin-elasticsearch/tree/v0.12).
