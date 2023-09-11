@@ -16,7 +16,7 @@ jobs:
           - ubuntu-latest
     name: Ruby ${{ matrix.ruby }} unit testing on ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ matrix.ruby }}
