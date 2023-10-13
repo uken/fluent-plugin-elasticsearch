@@ -653,6 +653,14 @@ EOC
       end
     end
 
+    def is_ipv6_host(host_str)
+      begin
+        IPAddr.new(host_str).ipv6?
+      rescue IPAddr::InvalidAddressError
+        return false
+      end
+    end
+
     def get_connection_options(con_host=nil)
 
       hosts = if con_host || @hosts
@@ -664,6 +672,21 @@ EOC
               port:   (host_str.split(':')[1] || @port).to_i,
               scheme: @scheme.to_s
             }
+          # Support ipv6 for host/host placeholders
+          elsif is_ipv6_host(host_str)
+            if Resolv::IPv6::Regex.match(host_str)
+              {
+                host: "[#{host_str}]",
+                port: @port.to_i,
+                scheme: @scheme.to_s 
+              }
+            else
+              {
+                host: host_str,
+                port: @port.to_i, 
+                scheme: @scheme.to_s
+              }
+            end
           else
             # New hosts format expects URLs such as http://logs.foo.com,https://john:pass@logs2.foo.com/elastic
             uri = URI(get_escaped_userinfo(host_str))
