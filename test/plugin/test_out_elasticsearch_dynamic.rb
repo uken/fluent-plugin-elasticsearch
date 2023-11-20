@@ -67,7 +67,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
   def stub_elastic(url="http://localhost:9200/_bulk")
     stub_request(:post, url).with do |req|
       @index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
-    end
+    end.to_return({:status => 200, :body => "", :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch' } })
   end
 
   def stub_elastic_info(url="http://localhost:9200/", version=elasticsearch_version)
@@ -92,7 +92,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     stub_request(:post, url).with do |req|
       index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
       @index_command_counts[url] += index_cmds.size
-    end
+    end.to_return({:status => 200, :body => "", :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch' } })
   end
 
   def assert_logs_include(logs, msg, exp_matches=1)
@@ -182,7 +182,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     end
 
     stub_request(:post, "http://localhost:9200/_bulk").
-      to_return(status: 200, body: "", headers: {})
+      to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -215,7 +215,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     end
 
     stub_request(:post, "http://localhost:9200/_bulk").
-      to_return(status: 200, body: "", headers: {})
+      to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -387,13 +387,15 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
 
   def test_content_type_header
     stub_request(:head, "http://localhost:9200/").
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     if Elasticsearch::VERSION >= "6.0.2"
       elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
-                          with(headers: { "Content-Type" => "application/x-ndjson" })
+                          with(headers: { "Content-Type" => "application/x-ndjson"}).
+                          to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     else
       elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
-                          with(headers: { "Content-Type" => "application/json" })
+                          with(headers: { "Content-Type" => "application/json"}).
+                          to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     end
     stub_elastic_info('http://localhost:9200')
 
@@ -444,7 +446,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     compressed_body = gzip(bodystr, Zlib::DEFAULT_COMPRESSION)
 
     elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
-        to_return(:status => 200, :headers => {'Content-Type' => 'Application/json'}, :body => compressed_body)
+        to_return(:status => 200, :headers => {'Content-Type' => 'Application/json', 'x-elastic-product' => 'Elasticsearch'}, :body => compressed_body)
     stub_elastic_info
 
     driver(config)
@@ -1122,7 +1124,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     stub_request(:post, "http://localhost:9200/_bulk").with do |req|
       connection_resets += 1
       raise Faraday::ConnectionFailed, "Test message"
-    end
+    end.to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info
 
     assert_raise(Fluent::Plugin::ElasticsearchOutput::RecoverableRequestFailure) {
@@ -1139,7 +1141,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     stub_request(:post, "http://localhost:9200/_bulk").with do |req|
       connection_resets += 1
       raise ZeroDivisionError, "any not host_unreachable_exceptions exception"
-    end
+    end.to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info
 
     driver.configure("reconnect_on_error true\n")
@@ -1166,7 +1168,7 @@ class ElasticsearchOutputDynamic < Test::Unit::TestCase
     stub_request(:post, "http://localhost:9200/_bulk").with do |req|
       connection_resets += 1
       raise ZeroDivisionError, "any not host_unreachable_exceptions exception"
-    end
+    end.to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info
 
     driver.configure("reconnect_on_error false\n")

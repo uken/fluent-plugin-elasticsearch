@@ -15,7 +15,6 @@ end
 
 require 'test/unit'
 require 'fluent/test'
-require 'minitest/pride'
 
 require 'webmock/test_unit'
 WebMock.disable_net_connect!
