@@ -57,6 +57,10 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     Gem::Version.create(::TRANSPORT_CLASS::VERSION) >= Gem::Version.new("7.14.0")
   end
 
+  def elastic_perform_request_refactored?
+    Gem::Version.create(Elasticsearch::VERSION) >= Gem::Version.new("8.8.0")
+  end
+
   def elastic_transport_layer?
     Gem::Version.create(::TRANSPORT_CLASS::VERSION) >= Gem::Version.new("8.0.0")
   end
@@ -84,7 +88,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
   def stub_elastic(url="http://localhost:9200/_bulk")
     stub_request(:post, url).with do |req|
       @index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
-    end
+    end.to_return({:status => 200, :body => "", :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch' } })
   end
 
   def stub_elastic_all_requests(url="http://localhost:9200/_bulk")
@@ -92,7 +96,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     stub_request(:post, url).with do |req|
       @index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
       @index_cmds_all_requests << @index_cmds
-    end
+    end.to_return({:status => 200, :body => "", :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch' } })
   end
 
   def stub_elastic_unavailable(url="http://localhost:9200/_bulk")
@@ -112,7 +116,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     stub_request(:post, url).with do |req|
       index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
       @index_command_counts[url] += index_cmds.size
-    end
+    end.to_return({:status => 200, :body => "{}", :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch' } })
   end
 
   def make_response_body(req, error_el = nil, error_status = nil, error = nil)
@@ -179,7 +183,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
         "reason" => "Invalid format: \"...\""
       }
     }
-    stub_request(:post, url).to_return(lambda { |req| { :status => 200, :body => make_response_body(req, 1, 400, error), :headers => { 'Content-Type' => 'json' } } })
+    stub_request(:post, url).to_return(lambda { |req| { :status => 200, :body => make_response_body(req, 1, 400, error), :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch'  } } })
   end
 
   def stub_elastic_bulk_error(url="http://localhost:9200/_bulk")
@@ -187,7 +191,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       "type" => "some-unrecognized-error",
       "reason" => "some message printed here ...",
     }
-    stub_request(:post, url).to_return(lambda { |req| { :status => 200, :body => make_response_body(req, 1, 500, error), :headers => { 'Content-Type' => 'json' } } })
+    stub_request(:post, url).to_return(lambda { |req| { :status => 200, :body => make_response_body(req, 1, 500, error), :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch'  } } })
   end
 
   def stub_elastic_bulk_rejected(url="http://localhost:9200/_bulk")
@@ -196,7 +200,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       "type" => "es_rejected_execution_exception",
       "reason" => "rejected execution of org.elasticsearch.transport.TransportService$4@1a34d37a on EsThreadPoolExecutor[bulk, queue capacity = 50, org.elasticsearch.common.util.concurrent.EsThreadPoolExecutor@312a2162[Running, pool size = 32, active threads = 32, queued tasks = 50, completed tasks = 327053]]"
     }
-    stub_request(:post, url).to_return(lambda { |req| { :status => 200, :body => make_response_body(req, 1, 429, error), :headers => { 'Content-Type' => 'json' } } })
+    stub_request(:post, url).to_return(lambda { |req| { :status => 200, :body => make_response_body(req, 1, 429, error), :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch'  } } })
   end
 
   def stub_elastic_out_of_memory(url="http://localhost:9200/_bulk")
@@ -205,7 +209,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       "type" => "out_of_memory_error",
       "reason" => "Java heap space"
     }
-    stub_request(:post, url).to_return(lambda { |req| { :status => 200, :body => make_response_body(req, 1, 500, error), :headers => { 'Content-Type' => 'json' } } })
+    stub_request(:post, url).to_return(lambda { |req| { :status => 200, :body => make_response_body(req, 1, 500, error), :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch'  } } })
   end
 
   def stub_elastic_unexpected_response_op(url="http://localhost:9200/_bulk")
@@ -213,7 +217,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       "category" => "some-other-type",
       "reason" => "some-other-reason"
     }
-    stub_request(:post, url).to_return(lambda { |req| bodystr = make_response_body(req, 0, 500, error); body = JSON.parse(bodystr); body['items'][0]['unknown'] = body['items'][0].delete('create'); { :status => 200, :body => body.to_json, :headers => { 'Content-Type' => 'json' } } })
+    stub_request(:post, url).to_return(lambda { |req| bodystr = make_response_body(req, 0, 500, error); body = JSON.parse(bodystr); body['items'][0]['unknown'] = body['items'][0].delete('create'); { :status => 200, :body => body.to_json, :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch'  } } })
   end
 
   def assert_logs_include(logs, msg, exp_matches=1)
@@ -324,7 +328,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     end
 
     stub_request(:post, "http://localhost:9200/_bulk").
-      to_return(status: 200, body: "", headers: {})
+      to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -357,7 +361,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     end
 
     stub_request(:post, "http://localhost:9200/_bulk").
-      to_return(status: 200, body: "", headers: {})
+      to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch' })
     stub_elastic_info
     driver.run(default_tag: 'test') do
       driver.feed(sample_record)
@@ -458,7 +462,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
 
     def stub_elastic_info_bad(url="http://localhost:9200/", version="6.4.2")
       body ="{\"version\":{\"number\":\"#{version}\",\"build_flavor\":\"default\"},\"tagline\":\"You Know, for Search\"}"
-      stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'text/plain' } })
+      stub_request(:get, url).to_return({:status => 200, :body => body, :headers => { 'Content-Type' => 'text/plain', 'x-elastic-product' => 'Elasticsearch'} })
     end
 
     test 'handle invalid client.info' do
@@ -474,7 +478,11 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
         scheme https
         @log_level info
       }
-      if elastic_transport_layer?
+      if elastic_perform_request_refactored?
+        d = create_driver(config, 8, "\"8.8.0\"")
+        logs = d.logs
+        assert_logs_include(logs, /Detected ES 7.x: `_doc` will be used as the document `_type`./)
+      elsif elastic_transport_layer?
         assert_raise(NoMethodError) do
           d = create_driver(config, 8, "\"8.0.0\"")
         end
@@ -543,22 +551,22 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
         use_legacy_template #{use_legacy_template_flag}
       }
       stub_request(:get, "http://localhost:9200/#{endpoint}/fluentd").
-        to_return(status: 200, body: "", headers: {})
+        to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:head, "http://localhost:9200/_alias/fluentd").
-        to_return(status: 404, body: "", headers: {})
+        to_return(status: 404, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "http://localhost:9200/%3Cfluentd-default-%7Bnow%2Fd%7D-000001%3E/#{alias_endpoint}/fluentd").
         with(body: "{\"aliases\":{\"fluentd\":{\"is_write_index\":true}}}").
-        to_return(status: 200, body: "", headers: {})
+        to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "http://localhost:9200/%3Cfluentd-default-%7Bnow%2Fd%7D-000001%3E").
-        to_return(status: 200, body: "", headers: {})
+        to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "http://localhost:9200/_xpack").
         to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}',
-                  :headers => {"Content-Type"=> "application/json"})
+                  :headers => {"Content-Type"=> "application/json", 'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "http://localhost:9200/#{ilm_endpoint}/policy/logstash-policy").
-        to_return(status: 404, body: "", headers: {})
+        to_return(status: 404, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "http://localhost:9200/#{ilm_endpoint}/policy/logstash-policy").
         with(body: "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}").
-        to_return(status: 200, body: "", headers: {})
+        to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       stub_elastic_info
 
       assert_nothing_raised {
@@ -588,22 +596,22 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
         use_legacy_template #{use_legacy_template_flag}
       }
       stub_request(:get, "http://localhost:9200/#{endpoint}/fluentd").
-        to_return(status: 200, body: "", headers: {})
+        to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:head, "http://localhost:9200/_alias/fluentd").
-        to_return(status: 404, body: "", headers: {})
+        to_return(status: 404, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "http://localhost:9200/%3Cfluentd-default-%7Bnow%2Fd%7D-000001%3E/#{alias_endpoint}/fluentd").
         with(body: "{\"aliases\":{\"fluentd\":{\"is_write_index\":true}}}").
-        to_return(status: 200, body: "", headers: {})
+        to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "http://localhost:9200/%3Cfluentd-default-%7Bnow%2Fd%7D-000001%3E").
-        to_return(status: 200, body: "", headers: {})
+        to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "http://localhost:9200/_xpack").
         to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}',
-                  :headers => {"Content-Type"=> "application/json"})
+                  :headers => {"Content-Type"=> "application/json", 'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "http://localhost:9200/#{ilm_endpoint}/policy/logstash-policy").
-        to_return(status: 200, body: "", headers: {})
+        to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "http://localhost:9200/#{ilm_endpoint}/policy/logstash-policy").
         with(body: "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"75gb\",\"max_age\":\"50d\"}}}}}}").
-        to_return(status: 200, body: "", headers: {})
+        to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       stub_elastic_info
 
       assert_nothing_raised {
@@ -954,11 +962,11 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     # connection start
     stub_request(:head, "https://logs.google.com:777/es//").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if template exists
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info("https://logs.google.com:777/es//")
 
     driver(config)
@@ -995,15 +1003,15 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     # connection start
     stub_request(:head, "https://logs.google.com:777/es//").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if template exists
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # creation
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info("https://logs.google.com:777/es//")
 
     driver(config)
@@ -1043,27 +1051,27 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     # connection start
     stub_request(:head, "https://logs.google.com:777/es//").
       with(basic_auth: ['john', 'doe']).
-    to_return(:status => 200, :body => "", :headers => {})
+    to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if template exists
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash-test.template").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # create template
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash-test.template").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if alias exists
     stub_request(:head, "https://logs.google.com:777/es//_alias/myapp_deflector-test.template").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # put the alias for the index
     stub_request(:put, "https://logs.google.com:777/es//%3Cfluentd-test.template-default-000001%3E").
       with(basic_auth: ['john', 'doe']).
-      to_return(status: 200, body: "", headers: {})
+      to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
     stub_request(:put, "https://logs.google.com:777/es//%3Cfluentd-test.template-default-000001%3E/#{alias_endpoint}/myapp_deflector-test.template").
       with(basic_auth: ['john', 'doe'],
            body: "{\"aliases\":{\"myapp_deflector-test.template\":{\"is_write_index\":true}}}").
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
 
     driver(config)
 
@@ -1113,27 +1121,27 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     # connection start
     stub_request(:head, "https://logs.google.com:777/es//").
       with(basic_auth: ['john', 'doe']).
-    to_return(:status => 200, :body => "", :headers => {})
+    to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if template exists
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash-test.template").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # create template
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash-test.template").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if alias exists
     stub_request(:head, "https://logs.google.com:777/es//_alias/myapp_deflector-test.template").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # put the alias for the index
     stub_request(:put, "https://logs.google.com:777/es//%3Cfluentd-test.template-default-000001%3E").
       with(basic_auth: ['john', 'doe']).
-      to_return(status: 200, body: "", headers: {})
+      to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
     stub_request(:put, "https://logs.google.com:777/es//%3Cfluentd-test.template-default-000001%3E/#{alias_endpoint}/myapp_deflector-test.template").
       with(basic_auth: ['john', 'doe'],
            body: "{\"aliases\":{\"myapp_deflector-test.template\":{\"is_write_index\":true}}}").
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info("https://logs.google.com:777/es//")
 
     driver(config)
@@ -1210,51 +1218,51 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       # connection start
       stub_request(:head, "https://logs.google.com:777/es//").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if template exists
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # creation
       stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if alias exists
       stub_request(:head, "https://logs.google.com:777/es//_alias/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(status: 404, body: "", headers: {})
+        to_return(status: 404, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       if use_legacy_template_flag
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
           with(basic_auth: ['john', 'doe'],
                body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"logstash-*\",\"order\":51}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       else
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
           with(basic_auth: ['john', 'doe'],
                body: "{\"index_patterns\":\"logstash-*\",\"template\":{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}}},\"priority\":101}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       end
       # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/logstash").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"logstash\":{\"is_write_index\":true}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
+        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json", 'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/logstash-policy").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/logstash-policy").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_elastic_info("https://logs.google.com:777/es//")
 
       driver(config)
@@ -1296,52 +1304,52 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       # connection start
       stub_request(:head, "https://logs.google.com:777/es//").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if template exists
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash-#{date_str}").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # creation
       stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash-#{date_str}").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if alias exists
       stub_request(:head, "https://logs.google.com:777/es//_alias/logstash-#{date_str}").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash-#{date_str}").
         with(basic_auth: ['john', 'doe']).
-        to_return(status: 404, body: "", headers: {})
+        to_return(status: 404, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       if use_legacy_template_flag
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash-#{date_str}").
           with(basic_auth: ['john', 'doe'],
                body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash-log-#{date_str}\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"logstash-log-#{date_str}-*\",\"order\":53}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       else
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash-#{date_str}").
           with(basic_auth: ['john', 'doe'],
                body: "{\"index_patterns\":\"logstash-log-2020.09.21-*\",\"template\":{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash-2020.09.21\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}}},\"priority\":103}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       end
       # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-log-#{date_str}-000001%3E").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
 
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-log-#{date_str}-000001%3E/#{alias_endpoint}/logstash-#{date_str}").
         with(basic_auth: ['john', 'doe'],
              body: "{\"aliases\":{\"logstash-#{date_str}\":{\"is_write_index\":true}}}").
-        to_return(status: 200, body: "", headers: {})
+        to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
+        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json", 'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/logstash-policy").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/logstash-policy").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_elastic_info("https://logs.google.com:777/es//")
 
       driver(config)
@@ -1389,51 +1397,51 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       # connection start
       stub_request(:head, "https://logs.google.com:777/es//").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if template exists
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # creation
       stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if alias exists
       stub_request(:head, "https://logs.google.com:777/es//_alias/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(status: 404, body: "", headers: {})
+        to_return(status: 404, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       if use_legacy_template_flag
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
           with(basic_auth: ['john', 'doe'],
                body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"logstash-*\",\"order\":51}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       else
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
           with(basic_auth: ['john', 'doe'],
                body: "{\"index_patterns\":\"logstash-*\",\"template\":{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}}},\"priority\":101}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       end
       # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/logstash").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"logstash\":{\"is_write_index\":true}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
+        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json", 'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/logstash-policy").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/logstash-policy").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"60gb\",\"max_age\":\"45d\"}}}}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_elastic_info("https://logs.google.com:777/es//")
 
       driver(config)
@@ -1498,51 +1506,51 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       # connection start
       stub_request(:head, "https://logs.google.com:777/es//").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if template exists
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # creation
       stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if alias exists
       stub_request(:head, "https://logs.google.com:777/es//_alias/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(status: 404, body: "", headers: {})
+        to_return(status: 404, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       if use_legacy_template_flag
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/myapp_deflector").
           with(basic_auth: ['john', 'doe'],
                body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"logstash-*\",\"order\":51}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       else
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/myapp_deflector").
           with(basic_auth: ['john', 'doe'],
                body: "{\"index_patterns\":\"logstash-*\",\"template\":{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}}},\"priority\":101}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       end
       # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-000001%3E").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-000001%3E/#{alias_endpoint}/logstash").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"logstash\":{\"is_write_index\":true}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
+        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json", 'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/logstash-policy").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/logstash-policy").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_elastic_info("https://logs.google.com:777/es//")
 
       driver(config)
@@ -1584,50 +1592,50 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       # connection start
       stub_request(:head, "https://logs.google.com:777/es//").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if template exists
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # creation
       stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if alias exists
       stub_request(:head, "https://logs.google.com:777/es//_alias/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(status: 404, body: "", headers: {})
+        to_return(status: 404, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       if use_legacy_template_flag
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
           with(basic_auth: ['john', 'doe'],
                body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"myalogs\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"mylogs-*\",\"order\":51}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       else
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
           with(basic_auth: ['john', 'doe'],
                body: "{\"index_patterns\":\"logstash-*\",\"template\":{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"logstash\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}}},\"priority\":101}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       end
       # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/logstash").
         with(body: "{\"aliases\":{\"logstash\":{\"is_write_index\":true}}}").
-        to_return(status: 200, body: "", headers: {})
+        to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
+        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json", 'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/fluentd-policy").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/fluentd-policy").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"70gb\",\"max_age\":\"30d\"}}}}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_elastic_info("https://logs.google.com:777/es//")
 
       driver(config)
@@ -1669,50 +1677,50 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       # connection start
       stub_request(:head, "https://logs.google.com:777/es//").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if template exists
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # creation
       stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if alias exists
       stub_request(:head, "https://logs.google.com:777/es//_alias/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(status: 404, body: "", headers: {})
+        to_return(status: 404, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       if use_legacy_template_flag
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
           with(basic_auth: ['john', 'doe'],
                body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"myalogs\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"mylogs-*\",\"order\":51}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       else
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
           with(basic_auth: ['john', 'doe'],
                body: "{\"index_patterns\":\"logstash-*\",\"template\":{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"logstash\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}}},\"priority\":101}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       end
       # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/logstash").
         with(body: "{\"aliases\":{\"logstash\":{\"is_write_index\":true}}}").
-        to_return(status: 200, body: "", headers: {})
+        to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
+        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json", 'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/fluentd-policy").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/fluentd-policy").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"70gb\",\"max_age\":\"30d\"}}}}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_elastic_info("https://logs.google.com:777/es//")
 
       driver(config)
@@ -1761,50 +1769,50 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
         # connection start
         stub_request(:head, "https://logs.google.com:777/es//").
           with(basic_auth: ['john', 'doe']).
-          to_return(:status => 200, :body => "", :headers => {})
+          to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
         # check if template exists
         stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash").
           with(basic_auth: ['john', 'doe']).
-          to_return(:status => 404, :body => "", :headers => {})
+          to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
         # creation
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
           with(basic_auth: ['john', 'doe']).
-          to_return(:status => 200, :body => "", :headers => {})
+          to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
         # check if alias exists
         stub_request(:head, "https://logs.google.com:777/es//_alias/logstash").
           with(basic_auth: ['john', 'doe']).
-          to_return(:status => 404, :body => "", :headers => {})
+          to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
         stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash").
           with(basic_auth: ['john', 'doe']).
-          to_return(status: 404, body: "", headers: {})
+          to_return(status: 404, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
         if use_legacy_template_flag
           stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
             with(basic_auth: ['john', 'doe'],
                  body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"myalogs\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"mylogs-*\",\"order\":51}").
-            to_return(status: 200, body: "", headers: {})
+            to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
         else
           stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
             with(basic_auth: ['john', 'doe'],
                  body: "{\"index_patterns\":\"logstash-*\",\"template\":{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"logstash\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}}},\"priority\":101}").
-            to_return(status: 200, body: "", headers: {})
+            to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
         end
         # put the alias for the index
         stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
           with(basic_auth: ['john', 'doe']).
-          to_return(:status => 200, :body => "", :headers => {})
+          to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
         stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/logstash").
           with(body: "{\"aliases\":{\"logstash\":{\"is_write_index\":true}}}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
         stub_request(:get, "https://logs.google.com:777/es//_xpack").
           with(basic_auth: ['john', 'doe']).
-          to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
+          to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json", 'x-elastic-product' => 'Elasticsearch'})
         stub_request(:get, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/fluentd-policy").
           with(basic_auth: ['john', 'doe']).
-          to_return(:status => 404, :body => "", :headers => {})
+          to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
         stub_request(:put, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/fluentd-policy").
           with(basic_auth: ['john', 'doe'],
                body: "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"70gb\",\"max_age\":\"30d\"}}}}}}").
-          to_return(:status => 200, :body => "", :headers => {})
+          to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
         stub_elastic_info("https://logs.google.com:777/es//")
 
         driver(config)
@@ -1852,50 +1860,50 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
         # connection start
         stub_request(:head, "https://logs.google.com:777/es//").
           with(basic_auth: ['john', 'doe']).
-          to_return(:status => 200, :body => "", :headers => {})
+          to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
         # check if template exists
         stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash").
           with(basic_auth: ['john', 'doe']).
-          to_return(:status => 404, :body => "", :headers => {})
+          to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
         # creation
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
           with(basic_auth: ['john', 'doe']).
-          to_return(:status => 200, :body => "", :headers => {})
+          to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
         # check if alias exists
         stub_request(:head, "https://logs.google.com:777/es//_alias/logstash").
           with(basic_auth: ['john', 'doe']).
-          to_return(:status => 404, :body => "", :headers => {})
+          to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
         stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash").
           with(basic_auth: ['john', 'doe']).
-          to_return(status: 404, body: "", headers: {})
+          to_return(status: 404, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
         if use_legacy_template_flag
           stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
             with(basic_auth: ['john', 'doe'],
                  body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"fluentd-policy2\",\"index.lifecycle.rollover_alias\":\"logstash\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"logstash-*\",\"order\":51}").
-            to_return(status: 200, body: "", headers: {})
+            to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
         else
           stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
             with(basic_auth: ['john', 'doe'],
                  body: "{\"index_patterns\":\"logstash-*\",\"template\":{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"fluentd-policy2\",\"index.lifecycle.rollover_alias\":\"logstash\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}}},\"priority\":101}").
-            to_return(status: 200, body: "", headers: {})
+            to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
         end
         # put the alias for the index
         stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
           with(basic_auth: ['john', 'doe']).
-          to_return(:status => 200, :body => "", :headers => {})
+          to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
         stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/logstash").
           with(body: "{\"aliases\":{\"logstash\":{\"is_write_index\":true}}}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
         stub_request(:get, "https://logs.google.com:777/es//_xpack").
           with(basic_auth: ['john', 'doe']).
-          to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
+          to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json", 'x-elastic-product' => 'Elasticsearch'})
         stub_request(:get, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/fluentd-policy2").
           with(basic_auth: ['john', 'doe']).
-          to_return(:status => 404, :body => "", :headers => {})
+          to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
         stub_request(:put, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/fluentd-policy2").
           with(basic_auth: ['john', 'doe'],
                body: "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"80gb\",\"max_age\":\"20d\"}}}}}}").
-          to_return(:status => 200, :body => "", :headers => {})
+          to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
         stub_elastic_info("https://logs.google.com:777/es//")
 
         driver(config)
@@ -1942,86 +1950,86 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       # connection start
       stub_request(:head, "https://logs.google.com:777/es//").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if template exists
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # creation
       stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if alias exists
       stub_request(:head, "https://logs.google.com:777/es//_alias/logstash-tag1").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash-tag1").
         with(basic_auth: ['john', 'doe']).
-        to_return(status: 404, body: "", headers: {})
+        to_return(status: 404, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       if use_legacy_template_flag
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash-tag1").
           with(basic_auth: ['john', 'doe'],
                body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash-tag1\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"logstash-tag1-*\",\"order\":52}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       else
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash-tag1").
           with(basic_auth: ['john', 'doe'],
                body: "{\"index_patterns\":\"logstash-tag1-*\",\"template\":{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash-tag1\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}}},\"priority\":102}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       end
       # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-tag1-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-tag1-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/logstash-tag1").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"logstash-tag1\":{\"is_write_index\":true}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
+        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json", 'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/logstash-policy").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/logstash-policy").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if alias exists
       stub_request(:head, "https://logs.google.com:777/es//_alias/logstash-tag2").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash-tag2").
         with(basic_auth: ['john', 'doe']).
-        to_return(status: 404, body: "", headers: {})
+        to_return(status: 404, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       if use_legacy_template_flag
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash-tag2").
           with(basic_auth: ['john', 'doe'],
                body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash-tag2\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"logstash-tag2-*\",\"order\":52}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       else
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash-tag2").
           with(basic_auth: ['john', 'doe'],
                body: "{\"index_patterns\":\"logstash-tag2-*\",\"template\":{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash-tag2\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}}},\"priority\":102}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       end      # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-tag2-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash-tag2-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/logstash-tag2").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"logstash-tag2\":{\"is_write_index\":true}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
+        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json", 'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/logstash-policy").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/logstash-policy").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_elastic_info("https://logs.google.com:777/es//")
 
       driver(config)
@@ -2074,51 +2082,51 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       # connection start
       stub_request(:head, "https://logs.google.com:777/es//").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if template exists
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # creation
       stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if alias exists
       stub_request(:head, "https://logs.google.com:777/es//_alias/logstash.tag1").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash.tag1").
         with(basic_auth: ['john', 'doe']).
-        to_return(status: 404, body: "", headers: {})
+        to_return(status: 404, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       if use_legacy_template_flag
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash.tag1").
           with(basic_auth: ['john', 'doe'],
                body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash.tag1\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"logstash.tag1.*\",\"order\":52}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       else
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash.tag1").
           with(basic_auth: ['john', 'doe'],
                body: "{\"index_patterns\":\"logstash.tag1.*\",\"template\":{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"logstash.tag1\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}}},\"priority\":102}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       end
       # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash.tag1.default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//%3Clogstash.tag1.default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/logstash.tag1").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"logstash.tag1\":{\"is_write_index\":true}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
+        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json", 'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/logstash-policy").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/logstash-policy").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_elastic_info("https://logs.google.com:777/es//")
 
       driver(config)
@@ -2177,45 +2185,45 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       # connection start
       stub_request(:head, "https://logs.google.com:777/es//").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if template exists
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/#{task_def_value}-#{date_str}").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # creation
       if use_legacy_template_flag
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/#{task_def_value}-#{date_str}").
           with(basic_auth: ['john', 'doe'],
                body: "{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"#{task_def_value}-#{date_str}\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}},\"index_patterns\":\"#{task_def_value}-#{date_str}-*\",\"order\":52}").
-          to_return(:status => 200, :body => "", :headers => {})
+          to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       else
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/#{task_def_value}-#{date_str}").
           with(basic_auth: ['john', 'doe'],
                body: "{\"index_patterns\":\"task_definition-#{date_str}-*\",\"template\":{\"settings\":{\"number_of_shards\":1,\"index.lifecycle.name\":\"logstash-policy\",\"index.lifecycle.rollover_alias\":\"task_definition-#{date_str}\"},\"mappings\":{\"type1\":{\"_source\":{\"enabled\":false},\"properties\":{\"host_name\":{\"type\":\"string\",\"index\":\"not_analyzed\"},\"created_at\":{\"type\":\"date\",\"format\":\"EEE MMM dd HH:mm:ss Z YYYY\"}}}}},\"priority\":102}").
-          to_return(:status => 200, :body => "", :headers => {})
+          to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       end
       # check if alias exists
       stub_request(:head, "https://logs.google.com:777/es//_alias/#{task_def_value}-#{date_str}").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3C#{task_def_value}-#{date_str}-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//%3C#{task_def_value}-#{date_str}-default-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/#{task_def_value}-#{date_str}").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"#{task_def_value}-#{date_str}\":{\"is_write_index\":true}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
+        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json", 'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/logstash-policy").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/logstash-policy").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_elastic_info("https://logs.google.com:777/es//")
 
       driver(config)
@@ -2263,15 +2271,15 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     # connection start
     stub_request(:head, "https://logs.google.com:777/es//").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if template exists
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # creation
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info("https://logs.google.com:777/es//")
 
     driver(config)
@@ -2309,18 +2317,18 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     # connection start
     stub_request(:head, "https://logs.google.com:777/es//").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if template exists
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template-test.template").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # creation
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template-test.template").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
 
     stub_request(:put, "https://logs.google.com:777/es//%3Cfluentd-test-default-000001%3E").
-      to_return(status: 200, body: "", headers: {})
+      to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
 
     driver(config)
 
@@ -2365,14 +2373,14 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     # connection start
     stub_request(:head, "https://logs-test.google.com:777/es//").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if template exists
     stub_request(:get, "https://logs-test.google.com:777/es//#{endpoint}/logstash").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_request(:put, "https://logs-test.google.com:777/es//#{endpoint}/logstash").
       with(basic_auth: ['john', 'doe']).
-      to_return(status: 200, body: "", headers: {})
+      to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
 
     driver(config)
 
@@ -2417,27 +2425,27 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     # connection start
     stub_request(:head, "https://logs.google.com:777/es//").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if template exists
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # creation
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # creation of index which can rollover
     stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if alias exists
     stub_request(:head, "https://logs.google.com:777/es//_alias/mylogs").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # put the alias for the index
     stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/mylogs").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info("https://logs.google.com:777/es//")
 
     driver(config)
@@ -2480,27 +2488,27 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     # connection start
     stub_request(:head, "https://logs.google.com:777/es//").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if template exists
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # creation
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # creation of index which can rollover
     stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if alias exists
     stub_request(:head, "https://logs.google.com:777/es//_alias/myapp_deflector").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # put the alias for the index
     stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/myapp_deflector").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info("https://logs.google.com:777/es//")
 
     driver(config)
@@ -2544,28 +2552,28 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     # connection start
     stub_request(:head, "https://logs.google.com:777/es//").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if template exists
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # creation
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # creation of index which can rollover
     stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-#{timestr}-000001%3E").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if alias exists
     stub_request(:head, "https://logs.google.com:777/es//_alias/mylogs-#{timestr}").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # put the alias for the index
     stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-#{timestr}-000001%3E/#{alias_endpoint}/mylogs-#{timestr}").
       with(basic_auth: ['john', 'doe'],
            body: "{\"aliases\":{\"mylogs-#{timestr}\":{\"is_write_index\":true}}}").
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
 
     driver(config)
 
@@ -2635,52 +2643,52 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       # connection start
       stub_request(:head, "https://logs.google.com:777/es//").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if template exists
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # creation
       stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # creation of index which can rollover
       stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if alias exists
       stub_request(:head, "https://logs.google.com:777/es//_alias/mylogs").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/mylogs").
         with(basic_auth: ['john', 'doe']).
-        to_return(status: 404, body: "", headers: {})
+        to_return(status: 404, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       if use_legacy_template_flag
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/mylogs").
           with(basic_auth: ['john', 'doe'],
                body: "{\"order\":6,\"settings\":{\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"mylogs\"},\"mappings\":{},\"aliases\":{\"myapp-logs-alias\":{}},\"index_patterns\":\"mylogs-*\"}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       else
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/mylogs").
           with(basic_auth: ['john', 'doe'],
                body: "{\"priority\":106,\"index_patterns\":\"mylogs-*\",\"template\":{\"settings\":{\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"mylogs\"},\"mappings\":{},\"aliases\":{\"myapp-logs-alias\":{}}}}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       end
       # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/mylogs").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"mylogs\":{\"is_write_index\":true}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
+        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json", 'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/fluentd-policy").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/fluentd-policy").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_elastic_info("https://logs.google.com:777/es//")
       driver(config)
 
@@ -2724,52 +2732,52 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       # connection start
       stub_request(:head, "https://logs.google.com:777/es//").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if template exists
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # creation
       stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # creation of index which can rollover
       stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if alias exists
       stub_request(:head, "https://logs.google.com:777/es//_alias/mylogs").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/mylogs").
         with(basic_auth: ['john', 'doe']).
-        to_return(status: 404, body: "", headers: {})
+        to_return(status: 404, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       if use_legacy_template_flag
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/mylogs").
           with(basic_auth: ['john', 'doe'],
                body: "{\"order\":6,\"settings\":{\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"mylogs\"},\"mappings\":{},\"aliases\":{\"myapp-logs-alias\":{}},\"index_patterns\":\"mylogs-*\"}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       else
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/mylogs").
           with(basic_auth: ['john', 'doe'],
                body: "{\"priority\":106,\"index_patterns\":\"mylogs-*\",\"template\":{\"settings\":{\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"mylogs\"},\"mappings\":{},\"aliases\":{\"myapp-logs-alias\":{}}}}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       end
       # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/mylogs").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"mylogs\":{\"is_write_index\":true}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
+        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json", 'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/fluentd-policy").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/fluentd-policy").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"60gb\",\"max_age\":\"45d\"}}}}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_elastic_info("https://logs.google.com:777/es//")
 
       driver(config)
@@ -2841,101 +2849,101 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       # connection start
       stub_request(:head, "https://logs.google.com:777/es//").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
 
       # test-tag1
       # check if template exists
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # creation
       stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # creation of index which can rollover
       stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-test-tag1-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if alias exists
       stub_request(:head, "https://logs.google.com:777/es//_alias/mylogs-test-tag1").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/mylogs-test-tag1").
         with(basic_auth: ['john', 'doe']).
-        to_return(status: 404, body: "", headers: {})
+        to_return(status: 404, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       if use_legacy_template_flag
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/mylogs-test-tag1").
           with(basic_auth: ['john', 'doe'],
                body: "{\"order\":8,\"settings\":{\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"mylogs-test-tag1\"},\"mappings\":{},\"aliases\":{\"myapp-logs-alias\":{}},\"index_patterns\":\"mylogs-test-tag1-*\"}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       else
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/mylogs-test-tag1").
           with(basic_auth: ['john', 'doe'],
                body: "{\"priority\":108,\"index_patterns\":\"mylogs-test-tag1-*\",\"template\":{\"settings\":{\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"mylogs-test-tag1\"},\"mappings\":{},\"aliases\":{\"myapp-logs-alias\":{}}}}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       end
       # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-test-tag1-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/mylogs-test-tag1").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"mylogs-test-tag1\":{\"is_write_index\":true}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
+        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json", 'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/fluentd-policy").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/fluentd-policy").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
 
       # test-tag2
       # check if template exists
       stub_request(:get, "https://logs.google.com:777/es//_template/myapp_alias_template").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # creation
       stub_request(:put, "https://logs.google.com:777/es//_template/myapp_alias_template").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # creation of index which can rollover
       stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-test-tag2-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if alias exists
       stub_request(:head, "https://logs.google.com:777/es//_alias/mylogs-test-tag2").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/mylogs-test-tag2").
         with(basic_auth: ['john', 'doe']).
-        to_return(status: 404, body: "", headers: {})
+        to_return(status: 404, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       if use_legacy_template_flag
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/mylogs-test-tag2").
           with(basic_auth: ['john', 'doe'],
                body: "{\"order\":8,\"settings\":{\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"mylogs-test-tag2\"},\"mappings\":{},\"aliases\":{\"myapp-logs-alias\":{}},\"index_patterns\":\"mylogs-test-tag2-*\"}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       else
         stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/mylogs-test-tag2").
           with(basic_auth: ['john', 'doe'],
                body: "{\"priority\":108,\"index_patterns\":\"mylogs-test-tag2-*\",\"template\":{\"settings\":{\"index.lifecycle.name\":\"fluentd-policy\",\"index.lifecycle.rollover_alias\":\"mylogs-test-tag2\"},\"mappings\":{},\"aliases\":{\"myapp-logs-alias\":{}}}}").
-          to_return(status: 200, body: "", headers: {})
+          to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       end
       # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-test-tag2-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/mylogs-test-tag2").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"mylogs-test-tag2\":{\"is_write_index\":true}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
+        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json", 'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/fluentd-policy").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/fluentd-policy").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_elastic_info("https://logs.google.com:777/es//")
 
       driver(config)
@@ -2989,44 +2997,44 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       # connection start
       stub_request(:head, "https://logs.google.com:777/es//").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if template exists
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # creation
       stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # creation of index which can rollover
       stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       # check if alias exists
       stub_request(:head, "https://logs.google.com:777/es//_alias/mylogs").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/mylogs").
         with(basic_auth: ['john', 'doe']).
-        to_return(status: 404, body: "", headers: {})
+        to_return(status: 404, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/mylogs").
         with(basic_auth: ['john', 'doe']).
-        to_return(status: 200, body: "", headers: {})
+        to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
       # put the alias for the index
       stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fw%7Bxxxx.ww%7D%7D-000001%3E/#{alias_endpoint}/mylogs").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"aliases\":{\"mylogs\":{\"is_write_index\":true}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//_xpack").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json"})
+        to_return(:status => 200, :body => '{"features":{"ilm":{"available":true,"enabled":true}}}', :headers => {"Content-Type"=> "application/json", 'x-elastic-product' => 'Elasticsearch'})
       stub_request(:get, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/fluentd-policy").
         with(basic_auth: ['john', 'doe']).
-        to_return(:status => 404, :body => "", :headers => {})
+        to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_request(:put, "https://logs.google.com:777/es//#{ilm_endpoint}/policy/fluentd-policy").
         with(basic_auth: ['john', 'doe'],
              :body => "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"70gb\",\"max_age\":\"30d\"}}}}}}").
-        to_return(:status => 200, :body => "", :headers => {})
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
       stub_elastic_info("https://logs.google.com:777/es//")
       driver(config)
 
@@ -3064,15 +3072,15 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     # connection start
     stub_request(:head, "https://logs.google.com:777/es//").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if template exists
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # creation
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info("https://logs.google.com:777/es//")
 
     driver(config)
@@ -3111,15 +3119,15 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     # connection start
     stub_request(:head, "https://logs.google.com:777/es//").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if template exists
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # creation
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info("https://logs.google.com:777/es//")
 
     driver(config)
@@ -3162,27 +3170,27 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     # connection start
     stub_request(:head, "https://logs.google.com:777/es//").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if template exists
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # creation
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/myapp_alias_template").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # creation of index which can rollover
     stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if alias exists
     stub_request(:head, "https://logs.google.com:777/es//_alias/myapp_deflector").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # put the alias for the index
     stub_request(:put, "https://logs.google.com:777/es//%3Cmylogs-myapp-%7Bnow%2Fd%7D-000001%3E/#{alias_endpoint}/myapp_deflector").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info("https://logs.google.com:777/es//")
 
     driver(config)
@@ -3205,11 +3213,11 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     # connection start
     stub_request(:head, "https://logs.google.com:777/es//").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if template exists
     stub_request(:get, "https://logs.google.com:777/es//_template/logstash").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info("https://logs.google.com:777/es//")
 
     assert_raise(RuntimeError) {
@@ -3248,17 +3256,17 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     # connection start
     stub_request(:head, "https://logs-test.google.com:777/es//").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if template exists
     stub_request(:get, "https://logs-test.google.com:777/es//#{endpoint}/logstash").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_request(:put, "https://logs-test.google.com:777/es//#{endpoint}/logstash").
       with(basic_auth: ['john', 'doe']).
-      to_return(status: 200, body: "", headers: {})
+      to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
     stub_request(:post, "https://logs-test.google.com:777/es//_bulk").
       with(basic_auth: ['john', 'doe']).
-      to_return(status: 200, body: "", headers: {})
+      to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
 
     driver(config)
 
@@ -3339,28 +3347,28 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
 
     stub_request(:head, "https://logs.google.com:777/es//").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
      # check if template exists
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash1").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash2").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
 
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash3").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {}) #exists
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'}) #exists
 
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash1").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash2").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash3").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info("https://logs.google.com:777/es//")
 
     driver(config)
@@ -3398,27 +3406,27 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
 
     stub_request(:head, "https://logs.google.com:777/es//").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
      # check if template exists
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash1").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash2").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash3").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {}) #exists
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'}) #exists
 
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash1").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash2").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash3").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info("https://logs.google.com:777/es//")
 
     driver(config)
@@ -3457,27 +3465,27 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     # connection start
     stub_request(:head, "https://logs.google.com:777/es//").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     # check if template exists
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash1").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash2").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     #creation
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash1").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash2").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info("https://logs.google.com:777/es//")
 
     driver(config)
@@ -3514,21 +3522,21 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     }
     stub_request(:head, "https://logs.google.com:777/es//").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
      # check if template exists
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash1").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_request(:get, "https://logs.google.com:777/es//#{endpoint}/logstash2").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 404, :body => "", :headers => {})
+      to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
 
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash1").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_request(:put, "https://logs.google.com:777/es//#{endpoint}/logstash2").
       with(basic_auth: ['john', 'doe']).
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info("https://logs.google.com:777/es//")
 
     assert_raise(RuntimeError) {
@@ -3794,13 +3802,15 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
 
   def test_content_type_header
     stub_request(:head, "http://localhost:9200/").
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     if Elasticsearch::VERSION >= "6.0.2"
       elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
-                          with(headers: { "Content-Type" => "application/x-ndjson" })
+                          with(headers: { "Content-Type" => "application/x-ndjson" }).
+                          to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     else
       elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
-                          with(headers: { "Content-Type" => "application/json" })
+                          with(headers: { "Content-Type" => "application/json" }).
+                          to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     end
     stub_elastic_info
     driver.run(default_tag: 'test') do
@@ -3811,9 +3821,10 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
 
   def test_custom_headers
     stub_request(:head, "http://localhost:9200/").
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
-                        with(headers: {'custom' => 'header1','and_others' => 'header2' })
+                        with(headers: {'custom' => 'header1','and_others' => 'header2' }).
+                        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info
     driver.configure(%[custom_headers {"custom":"header1", "and_others":"header2"}])
     driver.run(default_tag: 'test') do
@@ -3824,9 +3835,10 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
 
   def test_api_key_header
     stub_request(:head, "http://localhost:9200/").
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
-                        with(headers: {'Authorization'=>'ApiKey dGVzdGF1dGhoZWFkZXI='})
+                        with(headers: {'Authorization'=>'ApiKey dGVzdGF1dGhoZWFkZXI='}).
+                        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info
     driver.configure(%[api_key testauthheader])
     driver.run(default_tag: 'test') do
@@ -3895,7 +3907,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     compressed_body = gzip(bodystr, Zlib::DEFAULT_COMPRESSION)
 
     elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
-        to_return(:status => 200, :headers => {'Content-Type' => 'Application/json'}, :body => compressed_body)
+        to_return(:status => 200, :headers => {'Content-Type' => 'Application/json', 'x-elastic-product' => 'Elasticsearch'}, :body => compressed_body)
     stub_elastic_info("http://localhost:9200/")
 
     driver(config)
@@ -3975,7 +3987,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       with(
         body: /#{index_part}\n{"age":26,"request_id":"42","parent_id":"parent","routing_id":"routing","#{chunk_id_key}":".*"}\n/) do |req|
       @index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
-    end
+    end.to_return({:status => 200, :body => "", :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch' } })
     stub_elastic_info
     driver.run(default_tag: 'test', shutdown: false) do
       driver.feed(sample_record)
@@ -4137,7 +4149,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       )
       .to_return(lambda do |req|
       { :status => 200,
-        :headers => { 'Content-Type' => 'json' },
+        :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch'},
         :body => return_body_str
       }
     end)
@@ -5493,7 +5505,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     stub_request(:post, "http://localhost:9200/_bulk").with do |req|
       connection_resets += 1
       raise Faraday::ConnectionFailed, "Test message"
-    end
+    end.to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info
 
     assert_raise(Fluent::Plugin::ElasticsearchOutput::RecoverableRequestFailure) {
@@ -5510,7 +5522,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     stub_request(:post, "http://localhost:9200/_bulk").with do |req|
       connection_resets += 1
       raise ZeroDivisionError, "any not host_unreachable_exceptions exception"
-    end
+    end.to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info
 
     driver.configure("reconnect_on_error true\n")
@@ -5537,7 +5549,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     stub_request(:post, "http://localhost:9200/_bulk").with do |req|
       connection_resets += 1
       raise ZeroDivisionError, "any not host_unreachable_exceptions exception"
-    end
+    end.to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
     stub_elastic_info
 
     driver.configure("reconnect_on_error false\n")
@@ -5561,7 +5573,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     stub_request(:post, 'http://localhost:9200/_bulk')
         .to_return(lambda do |req|
       { :status => 200,
-        :headers => { 'Content-Type' => 'json' },
+        :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch'},
         :body => %({
           "took" : 1,
           "errors" : true,
@@ -5621,7 +5633,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       stub_request(:post, 'http://localhost:9200/_bulk')
         .to_return(lambda do |req|
                      { :status => 200,
-                       :headers => { 'Content-Type' => 'json' },
+                       :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch'},
                        :body => %({
           "took" : 1,
           "errors" : true,
@@ -5673,7 +5685,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     stub_request(:post, 'http://localhost:9200/_bulk')
         .to_return(lambda do |req|
       { :status => 200,
-        :headers => { 'Content-Type' => 'json' },
+        :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch' },
         :body => %({
           "took" : 1,
           "errors" : true,
@@ -5724,7 +5736,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     stub_request(:post, 'http://localhost:9200/_bulk')
         .to_return(lambda do |req|
       { :status => 200,
-        :headers => { 'Content-Type' => 'json' },
+        :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch' },
         :body => %({
           "took" : 1,
           "errors" : true,
@@ -5774,7 +5786,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     stub_request(:post, 'http://localhost:9200/_bulk')
         .to_return(lambda do |req|
       { :status => 200,
-        :headers => { 'Content-Type' => 'json' },
+        :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch'},
         :body => %({
           "took" : 1,
           "errors" : true,

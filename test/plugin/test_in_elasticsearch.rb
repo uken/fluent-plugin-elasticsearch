@@ -334,7 +334,7 @@ class ElasticsearchInputTest < Test::Unit::TestCase
     stub_request(@http_method, "http://localhost:9200/fluentd/_search?scroll=1m&size=1000").
       with(body: "{\"sort\":[\"_doc\"]}").
       to_return(status: 200, body: sample_response.to_s,
-                headers: {'Content-Type' => 'application/json'})
+                headers: {'Content-Type' => 'application/json', 'X-elastic-product' => 'Elasticsearch'})
     stub_elastic_info
 
     driver(CONFIG)
@@ -350,7 +350,7 @@ class ElasticsearchInputTest < Test::Unit::TestCase
     stub_request(@http_method, "http://localhost:9200/#{index_name}/_search?scroll=1m&size=1000").
       with(body: "{\"sort\":[\"_doc\"]}").
       to_return(status: 200, body: sample_response(index_name).to_s,
-                headers: {'Content-Type' => 'application/json'})
+                headers: {'Content-Type' => 'application/json', 'X-elastic-product' => 'Elasticsearch'})
     stub_elastic_info
 
     driver(CONFIG + %[index_name #{index_name}])
@@ -366,7 +366,7 @@ class ElasticsearchInputTest < Test::Unit::TestCase
     stub_request(@http_method, "http://localhost:9200/#{index_name}/_search?scroll=1m&size=1000").
       with(body: "{\"sort\":[\"_doc\"]}").
       to_return(status: 200, body: sample_response(index_name).to_s,
-                headers: {'Content-Type' => 'application/json'})
+                headers: {'Content-Type' => 'application/json', 'X-elastic-product' => 'Elasticsearch'})
     stub_elastic_info
 
     driver(CONFIG + %[parse_timestamp])
@@ -385,7 +385,7 @@ class ElasticsearchInputTest < Test::Unit::TestCase
     stub_request(@http_method, "http://localhost:9200/#{index_name}/_search?scroll=1m&size=1000").
       with(body: "{\"sort\":[\"_doc\"]}").
       to_return(status: 200, body: sample_response(index_name).to_s,
-                headers: {'Content-Type' => 'application/json'})
+                headers: {'Content-Type' => 'application/json', 'X-elastic-product' => 'Elasticsearch'})
     stub_elastic_info
 
     driver(CONFIG + %[parse_timestamp true
@@ -405,7 +405,7 @@ class ElasticsearchInputTest < Test::Unit::TestCase
     stub_request(@http_method, "http://localhost:9200/fluentd/_search?scroll=1m&size=1000").
       with(body: "{\"sort\":[\"_doc\"]}").
       to_return(status: 200, body: sample_response.to_s,
-                headers: {'Content-Type' => 'application/json'})
+                headers: {'Content-Type' => 'application/json', 'X-elastic-product' => 'Elasticsearch'})
     stub_elastic_info
 
     driver(CONFIG + %[docinfo true])
@@ -425,11 +425,11 @@ class ElasticsearchInputTest < Test::Unit::TestCase
     stub_request(@http_method, "http://localhost:9200/fluentd/_search?scroll=1m&size=1000").
       with(body: "{\"sort\":[\"_doc\"],\"slice\":{\"id\":0,\"max\":2}}").
       to_return(status: 200, body: sample_response.to_s,
-                headers: {'Content-Type' => 'application/json'})
+                headers: {'Content-Type' => 'application/json', 'X-elastic-product' => 'Elasticsearch'})
     stub_request(@http_method, "http://localhost:9200/fluentd/_search?scroll=1m&size=1000").
       with(body: "{\"sort\":[\"_doc\"],\"slice\":{\"id\":1,\"max\":2}}").
       to_return(status: 200, body: sample_response.to_s,
-                headers: {'Content-Type' => 'application/json'})
+                headers: {'Content-Type' => 'application/json', 'X-elastic-product' => 'Elasticsearch'})
     stub_elastic_info
 
     driver(CONFIG + %[num_slices 2])
@@ -446,7 +446,7 @@ class ElasticsearchInputTest < Test::Unit::TestCase
     stub_request(@http_method, "http://localhost:9200/fluentd/_search?scroll=1m&size=1").
       with(body: "{\"sort\":[\"_doc\"]}").
       to_return(status: 200, body: sample_scroll_response.to_s,
-                headers: {'Content-Type' => 'application/json'})
+                headers: {'Content-Type' => 'application/json', 'X-elastic-product' => 'Elasticsearch'})
     connection = 0
     scroll_request = stub_request(@http_method, "http://localhost:9200/_search/scroll?scroll=1m").
       with(
@@ -457,10 +457,10 @@ class ElasticsearchInputTest < Test::Unit::TestCase
     scroll_request.to_return(lambda do |req|
                                if connection <= 1
                                  {status: 200, body: sample_scroll_response_2.to_s,
-                                  headers: {'Content-Type' => 'application/json'}}
+                                  headers: {'Content-Type' => 'application/json', 'X-elastic-product' => 'Elasticsearch'}}
                                else
                                  {status: 200, body: sample_scroll_response_terminate.to_s,
-                                  headers: {'Content-Type' => 'application/json'}}
+                                  headers: {'Content-Type' => 'application/json', 'X-elastic-product' => 'Elasticsearch'}}
                                end
                              end)
     stub_request(:delete, "http://localhost:9200/_search/scroll/WomkoUKG0QPB679Ulo6TqQgh3pIGRUmrl9qXXGK3EeiQh9rbYNasTkspZQcJ01uz").

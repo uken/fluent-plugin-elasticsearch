@@ -15,7 +15,7 @@ class ElasticsearchFallbackSelectorTest < Test::Unit::TestCase
   def stub_elastic(url="http://localhost:9200/_bulk")
     stub_request(:post, url).with do |req|
       @index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
-    end
+    end.to_return({:status => 200, :body => "{}", :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch' } })
   end
 
   def elasticsearch_version

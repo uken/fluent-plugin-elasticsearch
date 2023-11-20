@@ -92,40 +92,40 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   NONEXISTENT_DATA_STREAM_EXCEPTION = {"error": {}, "status": 404}
 
   def stub_ilm_policy(name="foo_ilm_policy", url="http://localhost:9200")
-    stub_request(:put, "#{url}/#{ilm_endpoint}/policy/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+    stub_request(:put, "#{url}/#{ilm_endpoint}/policy/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED], :headers => {'x-elastic-product' => 'Elasticsearch'})
   end
 
   def stub_index_template(name="foo_tpl", url="http://localhost:9200")
-    stub_request(:put, "#{url}/_index_template/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+    stub_request(:put, "#{url}/_index_template/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED], :headers => {'x-elastic-product' => 'Elasticsearch'})
   end
 
   def stub_data_stream(name="foo", url="http://localhost:9200")
-    stub_request(:put, "#{url}/_data_stream/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+    stub_request(:put, "#{url}/_data_stream/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED], :headers => {'x-elastic-product' => 'Elasticsearch'})
   end
 
   def stub_existent_data_stream?(name="foo", url="http://localhost:9200")
-    stub_request(:get, "#{url}/_data_stream/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+    stub_request(:get, "#{url}/_data_stream/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED], :headers => {'x-elastic-product' => 'Elasticsearch'})
   end
 
   def stub_existent_ilm?(name="foo_ilm_policy", url="http://localhost:9200")
 
-    stub_request(:get, "#{url}/#{ilm_endpoint}/policy/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+    stub_request(:get, "#{url}/#{ilm_endpoint}/policy/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED], :headers => {'x-elastic-product' => 'Elasticsearch'})
   end
 
   def stub_existent_template?(name="foo_tpl", url="http://localhost:9200")
-    stub_request(:get, "#{url}/_index_template/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED])
+    stub_request(:get, "#{url}/_index_template/#{name}").to_return(:status => [200, RESPONSE_ACKNOWLEDGED], :headers => {'x-elastic-product' => 'Elasticsearch'})
   end
 
   def stub_nonexistent_data_stream?(name="foo", url="http://localhost:9200")
-    stub_request(:get, "#{url}/_data_stream/#{name}").to_return(:status => [404, TRANSPORT_CLASS::Transport::Errors::NotFound])
+    stub_request(:get, "#{url}/_data_stream/#{name}").to_return(:status => [404, TRANSPORT_CLASS::Transport::Errors::NotFound], :headers => {'x-elastic-product' => 'Elasticsearch'})
   end
 
   def stub_nonexistent_ilm?(name="foo_ilm_policy", url="http://localhost:9200")
-    stub_request(:get, "#{url}/#{ilm_endpoint}/policy/#{name}").to_return(:status => [404, TRANSPORT_CLASS::Transport::Errors::NotFound])
+    stub_request(:get, "#{url}/#{ilm_endpoint}/policy/#{name}").to_return(:status => [404, TRANSPORT_CLASS::Transport::Errors::NotFound], :headers => {'x-elastic-product' => 'Elasticsearch'})
   end
 
   def stub_nonexistent_template?(name="foo_tpl", url="http://localhost:9200")
-    stub_request(:get, "#{url}/_index_template/#{name}").to_return(:status => [404, TRANSPORT_CLASS::Transport::Errors::NotFound])
+    stub_request(:get, "#{url}/_index_template/#{name}").to_return(:status => [404, TRANSPORT_CLASS::Transport::Errors::NotFound], :headers => {'x-elastic-product' => 'Elasticsearch'})
   end
 
 
@@ -141,7 +141,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
 
   def stub_nonexistent_template_retry?(name="foo_tpl", url="http://localhost:9200")
     stub_request(:get, "#{url}/_index_template/#{name}").
-      to_return({ status: 500, body: 'Internal Server Error' }, { status: 404, body: '{}' })
+      to_return({ status: 500, body: 'Internal Server Error' }, { status: 404, body: '{}', :headers => {'x-elastic-product' => 'Elasticsearch'} })
   end
 
   def stub_bulk_feed(datastream_name="foo", ilm_name="foo_ilm_policy", template_name="foo_tpl", url="http://localhost:9200")
@@ -150,19 +150,19 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       # {"create": {}}\nhttp://localhost:9200/_ilm/policy/foo_ilm_bar
       # {"@timestamp": ...}
       push_bulk_request(req.body)
-    end
+    end.to_return({:status => 200, :body => "{}", :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch' } })
     stub_request(:post, "#{url}/#{ilm_name}/_bulk").with do |req|
       # bulk data must be pair of OP and records
       # {"create": {}}\nhttp://localhost:9200/_ilm/policy/foo_ilm_bar
       # {"@timestamp": ...}
       push_bulk_request(req.body)
-    end
+    end.to_return({:status => 200, :body => "{}", :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch' } })
     stub_request(:post, "#{url}/#{template_name}/_bulk").with do |req|
       # bulk data must be pair of OP and records
       # {"create": {}}\nhttp://localhost:9200/_ilm/policy/foo_ilm_bar
       # {"@timestamp": ...}
       push_bulk_request(req.body)
-    end
+    end.to_return({:status => 200, :body => "{}", :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch' } })
   end
 
   def stub_elastic_info(url="http://localhost:9200/", version=elasticsearch_version, headers={})
@@ -189,7 +189,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_request(:post, url).with do |req|
       index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
       @index_command_counts[url] += index_cmds.size
-    end
+    end.to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
   end
 
   def data_stream_supported?
@@ -588,7 +588,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
 
     stub_default
     stub_request(:post, "http://localhost:9200/foo/_bulk").
-      to_return(status: 200, body: "", headers: {})
+      to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
 
     instance = driver(config).instance
 
@@ -626,7 +626,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
 
     stub_default
     stub_request(:post, "http://localhost:9200/foo/_bulk").
-      to_return(status: 200, body: "", headers: {})
+      to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
 
     instance = driver(config).instance
 
@@ -849,7 +849,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
       stub_elastic_with_store_index_command_counts("http://#{host}:#{port}/foo_bar/_bulk")
       stub_elastic_info("http://#{host}:#{port}/")
       stub_request(:get, "http://#{host}:#{port}/_data_stream/foo_bar").
-        to_return(status: 200, body: "", headers: {})
+        to_return(status: 200, body: "", headers: {'x-elastic-product' => 'Elasticsearch'})
     end
 
     conf = config_element(
@@ -919,7 +919,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
 
     stub_default
     elastic_request = stub_request(:post, "http://localhost:9200/foo/_bulk").
-        to_return(:status => 200, :headers => {'Content-Type' => 'application/json'}, :body => compressed_body)
+        to_return(:status => 200, :headers => {'Content-Type' => 'application/json', 'x-elastic-product' => 'Elasticsearch'}, :body => compressed_body)
 
     driver(config)
     driver.run(default_tag: 'test') do
@@ -945,7 +945,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_data_stream
 
     stub_request(:put, "http://localhost:9200/#{ilm_endpoint}/policy/foo_ilm_policy").
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
 
     assert_nothing_raised {
       driver(config)
@@ -970,7 +970,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_data_stream
 
     stub_request(:put, "http://localhost:9200/#{ilm_endpoint}/policy/foo_ilm_policy").
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
 
     assert_nothing_raised {
       driver(config)
@@ -999,7 +999,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_nonexistent_template?("foo_template")
 
     stub_request(:put, "http://localhost:9200/#{ilm_endpoint}/policy/foo_ilm_policy").
-      to_return(:status => 200, :body => "", :headers => {})
+      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
 
     assert_nothing_raised {
       driver(config)
