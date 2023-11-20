@@ -3603,7 +3603,12 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
   def test_hosts_list_with_existing_connection
     stub_elastic_info("https://john:password@host1:443/elastic/")
     stub_elastic_info("http://host2")
-    instance = driver.instance
+    config = %{
+      path     /default_path
+      user     default_user
+      password default_password
+    }
+    instance = driver(config).instance
 
     assert_equal 2, instance.get_connection_options("https://john:password@host1:443/elastic/,http://host2")[:hosts].length
     host1, host2 = instance.get_connection_options("https://john:password@host1:443/elastic/,http://host2")[:hosts]
@@ -3693,7 +3698,12 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     end
 
     def test_hosts_list_with_existing_connection
-      instance = driver.instance
+      config = %{
+        path     /default_path
+        user     default_user
+        password default_password
+      }
+      instance = driver(config).instance
 
       assert_equal 2, instance.get_connection_options("https://john:password@[2404:7a80:d440:3000:192a:a292:bd7f:ca19]:443/elastic/,http://host2")[:hosts].length
       host1, host2 = instance.get_connection_options("https://john:password@[2404:7a80:d440:3000:192a:a292:bd7f:ca19]:443/elastic/,http://host2")[:hosts]
@@ -3759,7 +3769,11 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
   end
 
   def test_single_existing_connection
-    instance = driver.instance
+    config = %{
+      user     john
+      password doe
+    }
+    instance = driver(config).instance
 
     assert_equal 1, instance.get_connection_options("logs.google.com")[:hosts].length
     host1 = instance.get_connection_options("logs.google.com")[:hosts][0]
@@ -3827,6 +3841,10 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     end
 
     def test_single_existing_connection
+      config = %{
+        user     john
+        password doe
+      }
       instance = driver(config).instance
 
       assert_equal 1, instance.get_connection_options("2404:7a80:d440:3000:192a:a292:bd7f:ca19")[:hosts].length
