@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### 5.4.0
+- Fix support for host/hosts placeholders for ipv6 addresses (#1030)
+- Handle newer es library (#1032)
+
 ### 5.3.0
 
 - Unpin `faraday` from v1, upgrade to v2. (#1012)
