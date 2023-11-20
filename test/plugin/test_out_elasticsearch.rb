@@ -3600,6 +3600,33 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     assert_equal '/default_path', host2[:path]
   end
 
+  def test_hosts_list_with_existing_connection
+    stub_elastic_info("https://john:password@host1:443/elastic/")
+    stub_elastic_info("http://host2")
+    config = %{
+      path     /default_path
+      user     default_user
+      password default_password
+    }
+    instance = driver(config).instance
+
+    assert_equal 2, instance.get_connection_options("https://john:password@host1:443/elastic/,http://host2")[:hosts].length
+    host1, host2 = instance.get_connection_options("https://john:password@host1:443/elastic/,http://host2")[:hosts]
+
+    assert_equal 'host1', host1[:host]
+    assert_equal 443, host1[:port]
+    assert_equal 'https', host1[:scheme]
+    assert_equal 'john', host1[:user]
+    assert_equal 'password', host1[:password]
+    assert_equal '/elastic/', host1[:path]
+
+    assert_equal 'host2', host2[:host]
+    assert_equal 'http', host2[:scheme]
+    assert_equal 'default_user', host2[:user]
+    assert_equal 'default_password', host2[:password]
+    assert_equal '/default_path', host2[:path]
+  end
+
   def test_hosts_list_with_escape_placeholders
     config = %{
       hosts    https://%{j+hn}:%{passw@rd}@host1:443/elastic/,http://host2
@@ -3670,6 +3697,31 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       assert_equal '/default_path', host2[:path]
     end
 
+    def test_hosts_list_with_existing_connection
+      config = %{
+        path     /default_path
+        user     default_user
+        password default_password
+      }
+      instance = driver(config).instance
+
+      assert_equal 2, instance.get_connection_options("https://john:password@[2404:7a80:d440:3000:192a:a292:bd7f:ca19]:443/elastic/,http://host2")[:hosts].length
+      host1, host2 = instance.get_connection_options("https://john:password@[2404:7a80:d440:3000:192a:a292:bd7f:ca19]:443/elastic/,http://host2")[:hosts]
+
+      assert_equal '[2404:7a80:d440:3000:192a:a292:bd7f:ca19]', host1[:host]
+      assert_equal 443, host1[:port]
+      assert_equal 'https', host1[:scheme]
+      assert_equal 'john', host1[:user]
+      assert_equal 'password', host1[:password]
+      assert_equal '/elastic/', host1[:path]
+
+      assert_equal 'host2', host2[:host]
+      assert_equal 'http', host2[:scheme]
+      assert_equal 'default_user', host2[:user]
+      assert_equal 'default_password', host2[:password]
+      assert_equal '/default_path', host2[:path]
+    end
+
     def test_hosts_list_with_escape_placeholders
       config = %{
         hosts    https://%{j+hn}:%{passw@rd}@[2404:7a80:d440:3000:192a:a292:bd7f:ca19]:443/elastic/,http://host2
@@ -3707,6 +3759,24 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
 
     assert_equal 1, instance.get_connection_options[:hosts].length
     host1 = instance.get_connection_options[:hosts][0]
+
+    assert_equal 'logs.google.com', host1[:host]
+    assert_equal 9200, host1[:port]
+    assert_equal 'http', host1[:scheme]
+    assert_equal 'john', host1[:user]
+    assert_equal 'doe', host1[:password]
+    assert_equal nil, host1[:path]
+  end
+
+  def test_single_existing_connection
+    config = %{
+      user     john
+      password doe
+    }
+    instance = driver(config).instance
+
+    assert_equal 1, instance.get_connection_options("logs.google.com")[:hosts].length
+    host1 = instance.get_connection_options("logs.google.com")[:hosts][0]
 
     assert_equal 'logs.google.com', host1[:host]
     assert_equal 9200, host1[:port]
@@ -3768,6 +3838,34 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
       assert_equal 'john', host1[:user]
       assert_equal 'doe', host1[:password]
       assert_equal nil, host1[:path]
+    end
+
+    def test_single_existing_connection
+      config = %{
+        user     john
+        password doe
+      }
+      instance = driver(config).instance
+
+      assert_equal 1, instance.get_connection_options("2404:7a80:d440:3000:192a:a292:bd7f:ca19")[:hosts].length
+      host1 = instance.get_connection_options("2404:7a80:d440:3000:192a:a292:bd7f:ca19")[:hosts][0]
+
+      assert_equal 1, instance.get_connection_options("[2404:7a80:d440:3000:192a:a292:bd7f:ca19]")[:hosts].length
+      host2 = instance.get_connection_options("[2404:7a80:d440:3000:192a:a292:bd7f:ca19]")[:hosts][0]
+
+      assert_equal '[2404:7a80:d440:3000:192a:a292:bd7f:ca19]', host1[:host]
+      assert_equal 9200, host1[:port]
+      assert_equal 'http', host1[:scheme]
+      assert_equal 'john', host1[:user]
+      assert_equal 'doe', host1[:password]
+      assert_equal nil, host1[:path]
+
+      assert_equal '[2404:7a80:d440:3000:192a:a292:bd7f:ca19]', host2[:host]
+      assert_equal 9200, host2[:port]
+      assert_equal 'http', host2[:scheme]
+      assert_equal 'john', host2[:user]
+      assert_equal 'doe', host2[:password]
+      assert_equal nil, host2[:path]
     end
 
     def test_single_host_params_and_defaults_with_escape_placeholders
