@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### 5.4.1
+- Adjust ilm endpoint (#1036)
+
 ### 5.4.0
 - Fix support for host/hosts placeholders for ipv6 addresses (#1030)
 - Handle newer es library (#1032)
