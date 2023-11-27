@@ -12,6 +12,7 @@ if Gem::Version.new(Elasticsearch::VERSION) < Gem::Version.new("8.0.0")
   begin
     require 'elasticsearch/xpack'
   rescue LoadError
+    require 'elasticsearch/api' # For elasticsearch-ruby 8 or later
   end
 end
 

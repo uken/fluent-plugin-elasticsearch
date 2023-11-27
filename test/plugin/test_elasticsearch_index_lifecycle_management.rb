@@ -38,19 +38,15 @@ class TestElasticsearchIndexLifecycleManagement < Test::Unit::TestCase
   end
 
   def ilm_existence_endpoint(policy_id)
-    if Gem::Version.new(TRANSPORT_CLASS::VERSION) >= Gem::Version.new("8.0.0")
-      "_enrich/policy/#{policy_id}"
+    if Gem::Version.new(Elasticsearch::VERSION) >= Gem::Version.new("8.0.0")
+      "_ilm/policy/#{policy_id}"
     else
       "_ilm/policy/%7B:policy_id=%3E%22#{policy_id}%22%7D"
     end
   end
 
   def ilm_creation_endpoint(policy_id)
-    if Gem::Version.new(TRANSPORT_CLASS::VERSION) >= Gem::Version.new("8.0.0")
-      "_enrich/policy/#{policy_id}"
-    else
-      "_ilm/policy/#{policy_id}"
-    end
+    "_ilm/policy/#{policy_id}"
   end
 
   def stub_elastic_info(url="http://localhost:9200/", version=elasticsearch_version)
