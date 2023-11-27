@@ -102,8 +102,8 @@ module Fluent::Plugin
       retry_operate(@max_retry_putting_template,
                     @fail_on_putting_template_retry_exceed,
                     @catch_transport_exception_on_retry) do
-        if Gem::Version.new(TRANSPORT_CLASS::VERSION) >= Gem::Version.new("8.0.0")
-          client(host).enrich.put_policy(params.merge(name: ilm_name))
+        if Gem::Version.new(Elasticsearch::VERSION) >= Gem::Version.new("8.0.0")
+          client(host).ilm.put_lifecycle(params.merge(policy: ilm_name))
         else
           client(host).xpack.ilm.put_policy(params.merge(policy_id: ilm_name))
         end
@@ -159,8 +159,8 @@ module Fluent::Plugin
 
     def ilm_policy_exists?(policy_id, host = nil)
       begin
-        if Gem::Version.new(TRANSPORT_CLASS::VERSION) >= Gem::Version.new("8.0.0")
-          client(host).enrich.get_policy(name: policy_id)
+        if Gem::Version.new(Elasticsearch::VERSION) >= Gem::Version.new("8.0.0")
+          client(host).ilm.get_lifecycle(policy: policy_id)
         else
           client(host).ilm.get_policy(policy_id: policy_id)
         end

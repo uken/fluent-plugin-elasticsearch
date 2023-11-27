@@ -31,11 +31,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   end
 
   def ilm_endpoint
-    if Gem::Version.new(TRANSPORT_CLASS::VERSION) >= Gem::Version.new("8.0.0")
-      '_enrich'.freeze
-    else
-      '_ilm'.freeze
-    end
+    '_ilm'.freeze
   end
 
   def driver(conf='', es_version=elasticsearch_version.to_i, client_version=elasticsearch_version)

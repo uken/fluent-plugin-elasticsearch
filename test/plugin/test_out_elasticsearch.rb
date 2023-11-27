@@ -524,11 +524,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     end
 
     def ilm_endpoint
-      if Gem::Version.new(TRANSPORT_CLASS::VERSION) >= Gem::Version.new("8.0.0")
-        '_enrich'.freeze
-      else
-        '_ilm'.freeze
-      end
+      '_ilm'.freeze
     end
 
     data("legacy_template" => [true, "_template"],
@@ -1179,11 +1175,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     end
 
     def ilm_endpoint
-      if Gem::Version.new(TRANSPORT_CLASS::VERSION) >= Gem::Version.new("8.0.0")
-        '_enrich'.freeze
-      else
-        '_ilm'.freeze
-      end
+      '_ilm'.freeze
     end
 
     data("legacy_template" => [true, "_template"],
@@ -2601,11 +2593,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
 
 
     def ilm_endpoint
-      if Gem::Version.new(TRANSPORT_CLASS::VERSION) >= Gem::Version.new("8.0.0")
-        '_enrich'.freeze
-      else
-        '_ilm'.freeze
-      end
+      '_ilm'.freeze
     end
 
     data("legacy_template" => [true, "_template"],

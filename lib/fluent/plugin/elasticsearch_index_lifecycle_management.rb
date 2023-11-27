@@ -45,19 +45,19 @@ module Fluent::Plugin::ElasticsearchIndexLifecycleManagement
   end
 
   def get_ilm_policy
-    if Gem::Version.new(TRANSPORT_CLASS::VERSION) < Gem::Version.new("8.0.0")
-      client.ilm.get_policy
+    if Gem::Version.new(Elasticsearch::VERSION) >= Gem::Version.new("8.0.0")
+      client.ilm.get_lifecycle
     else
-      client.enrich.get_policy
+      client.ilm.get_policy
     end
   end
 
   def ilm_policy_exists?(policy_id)
     begin
-      if Gem::Version.new(TRANSPORT_CLASS::VERSION) < Gem::Version.new("8.0.0")
-        client.ilm.get_policy(policy_id: policy_id)
+      if Gem::Version.new(Elasticsearch::VERSION) >= Gem::Version.new("8.0.0")
+        client.ilm.get_lifecycle(policy: policy_id)
       else
-        client.enrich.get_policy(name: policy_id)
+        client.ilm.get_policy(policy_id: policy_id)
       end
       true
     rescue
@@ -67,10 +67,10 @@ module Fluent::Plugin::ElasticsearchIndexLifecycleManagement
 
   def ilm_policy_put(policy_id, policy)
     log.info("Installing ILM policy: #{policy}")
-    if Gem::Version.new(TRANSPORT_CLASS::VERSION) < Gem::Version.new("8.0.0")
-      client.ilm.put_policy(policy_id: policy_id, body: policy)
+    if Gem::Version.new(Elasticsearch::VERSION) >= Gem::Version.new("8.0.0")
+      client.ilm.put_lifecycle(policy: policy_id, body: policy)
     else
-      client.enrich.put_policy(name: policy_id, body: policy)
+      client.ilm.put_policy(policy_id: policy_id, body: policy)
     end
   end
 
