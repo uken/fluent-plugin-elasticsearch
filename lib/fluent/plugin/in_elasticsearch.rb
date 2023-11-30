@@ -286,7 +286,7 @@ module Fluent::Plugin
       end
 
       router.emit_stream(@tag, es)
-      client.clear_scroll(scroll_id: scroll_id) if scroll_id
+      client.clear_scroll(:body => { :scroll_id => scroll_id } ) if scroll_id
     end
 
     def process_scroll_request(scroll_id)
