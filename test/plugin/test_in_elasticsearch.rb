@@ -463,9 +463,14 @@ class ElasticsearchInputTest < Test::Unit::TestCase
                                   headers: {'Content-Type' => 'application/json', 'X-elastic-product' => 'Elasticsearch'}}
                                end
                              end)
-    stub_request(:delete, "http://localhost:9200/_search/scroll/WomkoUKG0QPB679Ulo6TqQgh3pIGRUmrl9qXXGK3EeiQh9rbYNasTkspZQcJ01uz").
+    if Gem::Version.new(Elasticsearch::VERSION) >= Gem::Version.new("7.0.0")
+      stub_request(:delete, "http://localhost:9200/_search/scroll").
+        with(body: "{\"scroll_id\":\"WomkoUKG0QPB679Ulo6TqQgh3pIGRUmrl9qXXGK3EeiQh9rbYNasTkspZQcJ01uz\"}").
       to_return(status: 200, body: "", headers: {})
-
+    else
+      stub_request(:delete, "http://localhost:9200/_search/scroll/WomkoUKG0QPB679Ulo6TqQgh3pIGRUmrl9qXXGK3EeiQh9rbYNasTkspZQcJ01uz").
+        to_return(status: 200, body: "", headers: {})
+    end
     driver(CONFIG + %[size 1])
     driver.run(expect_emits: 1, timeout: 10)
     expected = [
