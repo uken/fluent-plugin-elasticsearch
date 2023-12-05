@@ -3,6 +3,9 @@
 ### [Unreleased]
 
 ### 5.4.1
+- in\_elasticsearch: Avoid to use deprecated endpoint for clear\_scroll (#1039)
+
+### 5.4.1
 - Adjust ilm endpoint (#1036)
 
 ### 5.4.0
