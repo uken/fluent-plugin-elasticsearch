@@ -286,7 +286,11 @@ module Fluent::Plugin
       end
 
       router.emit_stream(@tag, es)
-      client.clear_scroll(scroll_id: scroll_id) if scroll_id
+      if Gem::Version.new(Elasticsearch::VERSION) >= Gem::Version.new("7.0.0")
+        client.clear_scroll(body: {scroll_id: scroll_id}) if scroll_id
+      else
+        client.clear_scroll(scroll_id: scroll_id) if scroll_id
+      end
     end
 
     def process_scroll_request(scroll_id)
