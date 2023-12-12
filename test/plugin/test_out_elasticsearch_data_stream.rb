@@ -34,6 +34,10 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     '_ilm'.freeze
   end
 
+  def index_template_endpoint
+    '_index_template'.freeze
+  end
+
   def driver(conf='', es_version=elasticsearch_version.to_i, client_version=elasticsearch_version)
     # For request stub to detect compatibility.
     @es_version ||= es_version
@@ -123,7 +127,6 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
   def stub_nonexistent_template?(name="foo_tpl", url="http://localhost:9200")
     stub_request(:get, "#{url}/_index_template/#{name}").to_return(:status => [404, TRANSPORT_CLASS::Transport::Errors::NotFound], :headers => {'x-elastic-product' => 'Elasticsearch'})
   end
-
 
   def push_bulk_request(req_body)
     # bulk data must be pair of OP and records
@@ -486,7 +489,8 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
         '@type' => ELASTIC_DATA_STREAM_TYPE,
         'data_stream_name' => 'foo',
         'data_stream_ilm_name' => "foo_ilm_policy",
-        'data_stream_template_name' => "foo_tpl"
+        'data_stream_template_name' => "foo_tpl",
+        'data_stream_template_use_index_patterns_wildcard' => false
       })
     assert_equal "foo", driver(conf).instance.data_stream_name
   end
@@ -554,6 +558,21 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     stub_default
 
     assert_equal true, driver(config).instance.compression
+  end
+
+  def test_configure_wildcard_usage
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    config = %{
+      data_stream_name                                        foo
+      data_stream_template_name                               foo_tpl
+      data_stream_ilm_name                                    foo_ilm_policy
+      data_stream_template_use_index_patterns_wildcard        false
+    }
+
+    stub_default
+
+    assert_equal false, driver(config).instance.data_stream_template_use_index_patterns_wildcard
   end
 
   def test_check_compression_strategy
@@ -720,6 +739,72 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     assert_equal "foo", driver(conf).instance.data_stream_name
     assert_equal "foo_template", driver(conf).instance.data_stream_template_name
     assert_equal "foo_policy", driver(conf).instance.data_stream_ilm_name
+  end
+
+  def test_template_index_patterns_with_wildcard
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    stub_existent_ilm?
+
+    stub_nonexistent_data_stream?
+    stub_data_stream
+
+    stub_nonexistent_template?("foo_template")
+    stub_request(:put, "http://localhost:9200/#{index_template_endpoint}/foo_template").with do |req|
+      # bulk data must be pair of OP and records
+      # {"create": {}}\nhttp://localhost:9200/_index_template//foo_template
+      # {"@timestamp": ...}
+      push_bulk_request(req.body)
+    end.to_return({:status => 200, :body => "{}", :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch' } })
+
+    conf = config_element(
+      'ROOT', '', {
+      '@type' => ELASTIC_DATA_STREAM_TYPE,
+      'data_stream_name' => 'foo',
+      'data_stream_ilm_name' => 'foo_ilm_policy',
+      'data_stream_template_use_index_patterns_wildcard' => false
+    })
+
+    assert_nothing_raised {
+      driver(conf)
+    }
+
+    assert_requested(:put, "http://localhost:9200/#{index_template_endpoint}/foo_template",
+                     body: '{"index_patterns":["foo"],"data_stream":{},"template":{"settings":{"index.lifecycle.name":"foo_ilm_policy"}}}',
+                     times: 1)
+  end
+
+  def test_template_index_patterns_without_wildcard
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    stub_existent_ilm?
+
+    stub_nonexistent_data_stream?
+    stub_data_stream
+
+    stub_nonexistent_template?("foo_template")
+    stub_request(:put, "http://localhost:9200/#{index_template_endpoint}/foo_template").with do |req|
+      # bulk data must be pair of OP and records
+      # {"create": {}}\nhttp://localhost:9200/_index_template//foo_template
+      # {"@timestamp": ...}
+      push_bulk_request(req.body)
+    end.to_return({:status => 200, :body => "{}", :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch' } })
+
+    conf = config_element(
+      'ROOT', '', {
+      '@type' => ELASTIC_DATA_STREAM_TYPE,
+      'data_stream_name' => 'foo',
+      'data_stream_ilm_name' => 'foo_ilm_policy',
+      'data_stream_template_use_index_patterns_wildcard' => true
+    })
+
+    assert_nothing_raised {
+      driver(conf)
+    }
+
+    assert_requested(:put, "http://localhost:9200/#{index_template_endpoint}/foo_template",
+                     body: '{"index_patterns":["foo*"],"data_stream":{},"template":{"settings":{"index.lifecycle.name":"foo_ilm_policy"}}}',
+                     times: 1)
   end
 
   def test_placeholder

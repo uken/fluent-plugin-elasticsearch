@@ -1561,6 +1561,50 @@ Default value is `false`.
 
 **NOTE:** This parameter requests to install elasticsearch-xpack gem.
 
+### data_stream_template_use_index_patterns_wildcard
+
+Specify whether index patterns should include a wildcard (*) when creating an index template. This is particularly useful to prevent errors in scenarios where index templates are generated automatically, and multiple services with distinct suffixes are in use.
+
+Default value is `true`.
+
+Consider the following JSON error response when index patterns clash due to wildcard usage:
+```json
+{
+  "error": {
+    "root_cause": [
+      {
+        "type": "illegal_argument_exception",
+        "reason": "index template [eks-kube-apiserver] has index patterns [eks-kube-apiserver*] matching patterns from existing templates [eks-kube-apiserver-audit] with patterns (eks-kube-apiserver-audit => [eks-kube-apiserver-audit*]) that have the same priority [0], multiple index templates may not match during index creation, please use a different priority"
+      }
+    ],
+    "type": "illegal_argument_exception",
+    "reason": "index template [eks-kube-apiserver] has index patterns [eks-kube-apiserver*] matching patterns from existing templates [eks-kube-apiserver-audit] with patterns (eks-kube-apiserver-audit => [eks-kube-apiserver-audit*]) that have the same priority [0], multiple index templates may not match during index creation, please use a different priority"
+  },
+  "status": 400
+}
+```
+
+#### Usage Examples
+
+When `data_stream_template_use_index_patterns_wildcard` is set to `true` (default):
+
+```
+data_stream_name: foo
+data_stream_template_use_index_patterns_wildcard: true
+```
+
+In this case, the resulting index patterns will be: `["foo*"]`
+
+When `data_stream_template_use_index_patterns_wildcard` is set to `false`:
+
+```
+data_stream_name: foo
+data_stream_template_use_index_patterns_wildcard: false
+```
+
+The resulting index patterns will be: `["foo"]`
+
+
 ## Troubleshooting
 
 See [Troubleshooting document](README.Troubleshooting.md)
