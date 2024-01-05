@@ -142,7 +142,7 @@ module Fluent::Plugin
         response = client(host).indices.get_data_stream(params)
         return (not response.is_a?(TRANSPORT_CLASS::Transport::Errors::NotFound))
       rescue TRANSPORT_CLASS::Transport::Errors::NotFound => e
-        log.info "Specified data stream does not exist. Will be created: <#{e}>"
+        log.info "Specified data stream does not exist. Will be created: <#{datastream_name}>"
         return false
       end
     end
