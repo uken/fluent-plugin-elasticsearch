@@ -2,7 +2,10 @@
 
 ### [Unreleased]
 
-### 5.4.1
+### 5.4.3
+- add data_stream_template\_use\_index\_patterns\_wildcard in elasticsearch\_data\_stream (#1040)
+
+### 5.4.2
 - in\_elasticsearch: Avoid to use deprecated endpoint for clear\_scroll (#1039)
 
 ### 5.4.1
