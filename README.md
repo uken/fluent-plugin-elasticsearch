@@ -541,7 +541,7 @@ The path to the file containing the template to install.
 
 ### templates
 
-Specify index templates (to be created on startup) in the form of a Ruby hash (accepts JSON dict). Can contain multiple templates.
+Specify index templates (to be created on startup) in the form of a hash (accepts JSON dict). Can contain multiple templates.
 
 ```
 templates { "template_name_1": "path_to_template_1_file", "template_name_2": "path_to_template_2_file"}
