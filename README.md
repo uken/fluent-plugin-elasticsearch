@@ -527,7 +527,7 @@ into same document with data1 as wanted and duplicated document is avoided.
 
 ### template_name
 
-The name of the template to define. If a template by the name given is already present, it will be left unchanged, unless [template_overwrite](#template_overwrite) is set, in which case the template will be updated.
+The name of the index template to create on fluentd startup. If a template by the name given is already present, it will be left unchanged, unless [template_overwrite](#template_overwrite) is set, in which case the template will be updated.
 
 This parameter along with template_file allow the plugin to behave similarly to Logstash (it installs a template at creation time) so that raw records are available. See [https://github.com/uken/fluent-plugin-elasticsearch/issues/33](https://github.com/uken/fluent-plugin-elasticsearch/issues/33).
 
@@ -541,7 +541,7 @@ The path to the file containing the template to install.
 
 ### templates
 
-Specify index templates in form of hash. Can contain multiple templates.
+Specify index templates (to be created on startup) in the form of a hash (accepts JSON dict). Can contain multiple templates.
 
 ```
 templates { "template_name_1": "path_to_template_1_file", "template_name_2": "path_to_template_2_file"}
