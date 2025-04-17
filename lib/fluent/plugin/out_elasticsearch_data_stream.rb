@@ -14,6 +14,8 @@ module Fluent::Plugin
     config_param :data_stream_ilm_policy, :string, :default => nil
     config_param :data_stream_ilm_policy_overwrite, :bool, :default => false
     config_param :data_stream_template_use_index_patterns_wildcard, :bool, :default => true
+    config_param :remove_keys, :string, :default => nil
+    config_param :id_key, :string, :default => nil
 
     # Elasticsearch 7.9 or later always support new style of index template.
     config_set_default :use_legacy_template, false
@@ -219,6 +221,8 @@ module Fluent::Plugin
       data_stream_name = @data_stream_name
       data_stream_template_name = @data_stream_template_name
       data_stream_ilm_name = @data_stream_ilm_name
+      id_key = @id_key
+      remove_keys = @remove_keys
       host = nil
       if @use_placeholder
         host = if @hosts
@@ -257,7 +261,15 @@ module Fluent::Plugin
           unless record.has_key?("@timestamp")
             record.merge!({"@timestamp" => Time.at(time).iso8601(@time_precision)})
           end
-          bulk_message = append_record_to_messages(CREATE_OP, {}, headers, record, bulk_message)
+
+          # meta variable to be appended in bulk_message
+          meta = {}
+          meta = {'_id' => record[id_key]} if id_key and record[id_key]
+
+          # Remove any key in remove_keys if defined
+          remove_keys.each { |key| record.delete(key) } if remove_keys
+
+          bulk_message = append_record_to_messages(CREATE_OP, meta, headers, record, bulk_message)
         rescue => e
           router.emit_error_event(tag, time, record, e)
         end
