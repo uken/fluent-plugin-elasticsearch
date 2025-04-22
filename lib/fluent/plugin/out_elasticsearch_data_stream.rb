@@ -14,8 +14,6 @@ module Fluent::Plugin
     config_param :data_stream_ilm_policy, :string, :default => nil
     config_param :data_stream_ilm_policy_overwrite, :bool, :default => false
     config_param :data_stream_template_use_index_patterns_wildcard, :bool, :default => true
-    config_param :remove_keys, :string, :default => nil
-    config_param :id_key, :string, :default => nil
 
     # Elasticsearch 7.9 or later always support new style of index template.
     config_set_default :use_legacy_template, false
