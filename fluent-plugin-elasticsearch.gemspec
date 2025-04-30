@@ -26,7 +26,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'faraday', '>= 2.0.0'
   s.add_runtime_dependency 'faraday-excon', '>= 2.0.0'
   s.add_runtime_dependency 'excon', '>= 0'
-  s.add_runtime_dependency 'elasticsearch'
+  s.add_runtime_dependency 'elasticsearch', '~> 8.0'
 
 
   s.add_development_dependency 'rake', '>= 0'
