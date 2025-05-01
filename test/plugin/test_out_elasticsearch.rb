@@ -65,6 +65,10 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
     Gem::Version.create(::TRANSPORT_CLASS::VERSION) >= Gem::Version.new("8.0.0")
   end
 
+  def elasticsearch_miscellaneous_content_type?
+    Gem::Version.create(Elasticsearch::VERSION) >= Gem::Version.new("9.0.0")
+  end
+
   def default_type_name
     Fluent::Plugin::ElasticsearchOutput::DEFAULT_TYPE_NAME
   end
@@ -3889,7 +3893,12 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
   def test_content_type_header
     stub_request(:head, "http://localhost:9200/").
       to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
-    if Elasticsearch::VERSION >= "6.0.2"
+
+    if elasticsearch_miscellaneous_content_type?
+      elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
+                          with(headers: { "Content-Type" => "application/vnd.elasticsearch+x-ndjson; compatible-with=9" }).
+                          to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
+    elsif Elasticsearch::VERSION >= "6.0.2"
       elastic_request = stub_request(:post, "http://localhost:9200/_bulk").
                           with(headers: { "Content-Type" => "application/x-ndjson" }).
                           to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
