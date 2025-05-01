@@ -37,6 +37,10 @@ class TestElasticsearchIndexLifecycleManagement < Test::Unit::TestCase
     end
   end
 
+  def elasticsearch_miscellaneous_content_type?
+    Gem::Version.create(Elasticsearch::VERSION) >= Gem::Version.new("9.0.0")
+  end
+
   def ilm_existence_endpoint(policy_id)
     if Gem::Version.new(Elasticsearch::VERSION) >= Gem::Version.new("8.0.0")
       "_ilm/policy/#{policy_id}"
@@ -90,10 +94,20 @@ class TestElasticsearchIndexLifecycleManagement < Test::Unit::TestCase
   def test_create_ilm_policy
     stub_request(:get, "http://localhost:9200/#{ilm_creation_endpoint("fluent-policy")}").
       to_return(:status => 404, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
-    stub_request(:put, "http://localhost:9200/#{ilm_creation_endpoint("fluent-policy")}").
-      with(:body => "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}",
-         :headers => {'Content-Type'=>'application/json'}).
-      to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
+    if elasticsearch_miscellaneous_content_type?
+      stub_request(:put, "http://localhost:9200/#{ilm_creation_endpoint("fluent-policy")}").
+        with(
+          body: "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}",
+          headers: {
+            'Content-Type'=>'application/vnd.elasticsearch+json; compatible-with=9',
+          }).
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
+    else
+      stub_request(:put, "http://localhost:9200/#{ilm_creation_endpoint("fluent-policy")}").
+        with(:body => "{\"policy\":{\"phases\":{\"hot\":{\"actions\":{\"rollover\":{\"max_size\":\"50gb\",\"max_age\":\"30d\"}}}}}}",
+             :headers => {'Content-Type'=>'application/json'}).
+        to_return(:status => 200, :body => "", :headers => {'x-elastic-product' => 'Elasticsearch'})
+    end
     stub_elastic_info
     create_ilm_policy("fluent-policy")
 
