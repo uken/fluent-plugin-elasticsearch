@@ -147,7 +147,7 @@ EOC
     config_param :sniffer_class_name, :string, :default => nil
     config_param :selector_class_name, :string, :default => nil
     config_param :reload_after, :integer, :default => DEFAULT_RELOAD_AFTER
-    config_param :content_type, :enum, list: [:"application/json", :"application/x-ndjson", :"#{ES9_CONTENT_TYPE}"], :default => :"application/json",
+    config_param :content_type, :enum, list: [:"application/json", :"application/x-ndjson"], :default => :"application/json",
                  :deprecated => <<EOC
 elasticsearch gem v6.0.2 starts to use correct Content-Type. Please upgrade elasticserach gem and stop to use this option.
 see: https://github.com/elastic/elasticsearch-ruby/pull/514
