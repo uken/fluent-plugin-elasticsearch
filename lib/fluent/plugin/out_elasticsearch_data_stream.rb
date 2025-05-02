@@ -219,6 +219,8 @@ module Fluent::Plugin
       data_stream_name = @data_stream_name
       data_stream_template_name = @data_stream_template_name
       data_stream_ilm_name = @data_stream_ilm_name
+      id_key = @id_key
+      remove_keys = @remove_keys
       host = nil
       if @use_placeholder
         host = if @hosts
@@ -257,7 +259,15 @@ module Fluent::Plugin
           unless record.has_key?("@timestamp")
             record.merge!({"@timestamp" => Time.at(time).iso8601(@time_precision)})
           end
-          bulk_message = append_record_to_messages(CREATE_OP, {}, headers, record, bulk_message)
+
+          # meta variable to be appended in bulk_message
+          meta = {}
+          meta = {'_id' => record[id_key]} if id_key and record[id_key]
+
+          # Remove any key in remove_keys if defined
+          remove_keys.each { |key| record.delete(key) } if remove_keys
+
+          bulk_message = append_record_to_messages(CREATE_OP, meta, headers, record, bulk_message)
         rescue => e
           router.emit_error_event(tag, time, record, e)
         end

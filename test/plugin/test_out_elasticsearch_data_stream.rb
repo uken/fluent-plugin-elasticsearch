@@ -19,6 +19,7 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     @driver = nil
     log = Fluent::Engine.log
     log.out.logs.slice!(0, log.out.logs.length)
+    @bulk_meta = []
     @bulk_records = []
   end
 
@@ -87,6 +88,10 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     {'message' => 'Sample record no timestamp'}
   end
 
+  def sample_record_with_hash
+    {'@timestamp' => SAMPLE_RECORD_TIMESTAMP, 'message' => 'Sample record', '_hash' => 'new_id_value'}
+  end
+
   RESPONSE_ACKNOWLEDGED = {"acknowledged": true}
   DUPLICATED_DATA_STREAM_EXCEPTION = {"error": {}, "status": 400}
   NONEXISTENT_DATA_STREAM_EXCEPTION = {"error": {}, "status": 404}
@@ -133,6 +138,10 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     # {"create": {}}\nhttp://localhost:9200/_ilm/policy/foo_ilm_bar
     # {"@timestamp": ...}
     ops = req_body.split("\n")
+    @bulk_meta += ops.values_at(
+      * ops.each_index.select {|i| i.even? }
+    ).map{ |i| JSON.parse(i) }
+
     @bulk_records += ops.values_at(
       * ops.each_index.select {|i| i.odd? }
     ).map{ |i| JSON.parse(i) }
@@ -1195,5 +1204,74 @@ class ElasticsearchOutputDataStreamTest < Test::Unit::TestCase
     end
     assert_equal 1, @bulk_records.length
     assert(@bulk_records[0].has_key?('@timestamp'))
+  end
+
+  def test_id_key_if_value_present_in_record
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    stub_default
+    stub_bulk_feed
+    conf = config_element(
+      'ROOT', '', {
+        '@type' => ELASTIC_DATA_STREAM_TYPE,
+        'data_stream_name' => 'foo',
+        'data_stream_ilm_name' => 'foo_ilm_policy',
+        'data_stream_template_name' => 'foo_tpl',
+        'id_key' => '_hash'
+      })
+    driver(conf).run(default_tag: 'test') do
+      driver.feed(sample_record_with_hash)
+    end
+    assert_equal 1, @bulk_records.length
+    assert_equal 1, @bulk_meta.length
+    assert(@bulk_meta[0].has_key?('create'))
+    assert(@bulk_meta[0]['create'].has_key?('_id'))
+    assert_equal 'new_id_value', @bulk_meta[0]['create']['_id']
+
+  end
+
+  def test_id_key_if_value_not_present_in_record
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    stub_default
+    stub_bulk_feed
+    conf = config_element(
+      'ROOT', '', {
+        '@type' => ELASTIC_DATA_STREAM_TYPE,
+        'data_stream_name' => 'foo',
+        'data_stream_ilm_name' => 'foo_ilm_policy',
+        'data_stream_template_name' => 'foo_tpl',
+        'id_key' => '_hash'
+      })
+    driver(conf).run(default_tag: 'test') do
+      driver.feed(sample_record)
+    end
+    assert_equal 1, @bulk_records.length
+    assert_equal 1, @bulk_meta.length
+    assert(@bulk_meta[0].has_key?('create'))
+    assert_false(@bulk_meta[0]['create'].has_key?('_id'))
+
+  end
+
+  def test_remove_keys_if_key_present_in_record
+    omit REQUIRED_ELASTIC_MESSAGE unless data_stream_supported?
+
+    stub_default
+    stub_bulk_feed
+    conf = config_element(
+      'ROOT', '', {
+        '@type' => ELASTIC_DATA_STREAM_TYPE,
+        'data_stream_name' => 'foo',
+        'data_stream_ilm_name' => 'foo_ilm_policy',
+        'data_stream_template_name' => 'foo_tpl',
+        'remove_keys' => '_hash, message'
+      })
+    driver(conf).run(default_tag: 'test') do
+      driver.feed(sample_record_with_hash)
+    end
+    assert_equal 1, @bulk_records.length
+    assert_false(@bulk_records[0].has_key?('_hash'))
+    assert_false(@bulk_records[0].has_key?('message'))
+
   end
 end
