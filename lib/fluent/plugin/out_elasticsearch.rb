@@ -883,11 +883,11 @@ EOC
           if split_request?(bulk_message, info)
             bulk_message.each do |info, msgs|
               send_bulk(msgs, tag, chunk, bulk_message_count[info], extracted_values, info, unpackedMsgArr[info]) unless msgs.empty?
+            ensure
               unpackedMsgArr[info].clear
               msgs.clear
               # Clear bulk_message_count for this info.
               bulk_message_count[info] = 0;
-              next
             end
           end
 
@@ -907,7 +907,7 @@ EOC
 
       bulk_message.each do |info, msgs|
         send_bulk(msgs, tag, chunk, bulk_message_count[info], extracted_values, info, unpackedMsgArr[info]) unless msgs.empty?
-
+      ensure
         unpackedMsgArr[info].clear
         msgs.clear
       end
