@@ -2,6 +2,12 @@
 
 ### [Unreleased]
 
+### 5.4.4
+- docs: Clarify README docs for template_name and templates (#1043)
+- `out_elasticsearch_data_stream`: Avoid long worrying log line at info level (#1044)
+- `out_elasticsearch_data_stream`: Support `id_key` and `remove_keys` (#1057)
+- `out_elasticsearch`: Fix memory leaks when exception was raised frequently (#1065)
+
 ### 5.4.3
 - add data_stream_template\_use\_index\_patterns\_wildcard in elasticsearch\_data\_stream (#1040)
 
