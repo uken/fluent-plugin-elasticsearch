@@ -3,7 +3,7 @@
 ### [Unreleased]
 
 ### 6.0.0
--  Adjust Content-Type and Accept for sending logs into ES9 (#1064)
+-  Adjust Content-Type and Accept headers for sending logs into ES9 (#1064)
 
 ### 5.4.4
 - docs: Clarify README docs for template_name and templates (#1043)
