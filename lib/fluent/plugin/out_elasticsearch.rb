@@ -73,6 +73,7 @@ module Fluent::Plugin
     DEFAULT_RELOAD_AFTER = -1
     DEFAULT_TARGET_BULK_BYTES = -1
     DEFAULT_POLICY_ID = "logstash-policy"
+    ES9_CONTENT_TYPE = "application/vnd.elasticsearch+x-ndjson; compatible-with=9"
 
     config_param :host, :string,  :default => 'localhost'
     config_param :port, :integer, :default => 9200
@@ -350,9 +351,21 @@ EOC
           log.warn "Detected ES 7.x: `_doc` will be used as the document `_type`."
           @type_name = '_doc'.freeze
         end
-        if @last_seen_major_version >= 8 && @type_name != DEFAULT_TYPE_NAME_ES_7x
-          log.debug "Detected ES 8.x or above: This parameter has no effect."
+        if @last_seen_major_version == 8 && @type_name != DEFAULT_TYPE_NAME_ES_7x
+          log.debug "Detected ES 8.x: This parameter has no effect."
           @type_name = nil
+        end
+        if @last_seen_major_version >= 9
+          if @type_name != DEFAULT_TYPE_NAME_ES_7x
+            log.debug "Detected ES 9.x or above: This parameter has no effect."
+            @type_name = nil
+          end
+          @accept_type = nil
+          if @content_type != ES9_CONTENT_TYPE
+            log.trace "Detected ES 9.x or above: Content-Type will be adjusted."
+            @content_type = ES9_CONTENT_TYPE
+            @accept_type = ES9_CONTENT_TYPE
+          end
         end
       end
 
@@ -614,6 +627,8 @@ EOC
                     .merge(@custom_headers)
                     .merge(@api_key_header)
                     .merge(gzip_headers)
+        headers.merge!('Accept' => @accept_type) if @accept_type
+
         ssl_options = { verify: @ssl_verify, ca_file: @ca_file}.merge(@ssl_version_options)
 
         transport = TRANSPORT_CLASS::Transport::HTTP::Faraday.new(connection_options.merge(

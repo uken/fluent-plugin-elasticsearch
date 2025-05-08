@@ -90,7 +90,13 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
   end
 
   def stub_elastic(url="http://localhost:9200/_bulk")
-    stub_request(:post, url).with do |req|
+    headers = if elasticsearch_miscellaneous_content_type?
+                { "Content-Type" => "application/vnd.elasticsearch+x-ndjson; compatible-with=9" }
+              else
+                {}
+              end
+
+    stub_request(:post, url).with({headers: headers}) do |req|
       @index_cmds = req.body.split("\n").map {|r| JSON.parse(r) }
     end.to_return({:status => 200, :body => "", :headers => { 'Content-Type' => 'json', 'x-elastic-product' => 'Elasticsearch' } })
   end
@@ -4016,6 +4022,7 @@ class ElasticsearchOutputTest < Test::Unit::TestCase
   data('Elasticsearch 6' => [6, Fluent::Plugin::ElasticsearchOutput::DEFAULT_TYPE_NAME],
        'Elasticsearch 7' => [7, Fluent::Plugin::ElasticsearchOutput::DEFAULT_TYPE_NAME_ES_7x],
        'Elasticsearch 8' => [8, nil],
+       'Elasticsearch 9' => [9, nil],
       )
   def test_writes_to_default_type(data)
     version, index_type = data
