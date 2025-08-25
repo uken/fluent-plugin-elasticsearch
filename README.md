@@ -125,6 +125,10 @@ Current maintainers: [Hiroshi Hatake | @cosmo0920](https://github.com/cosmo0920)
 | >= 2.0.0 && < 3.2.3          | >= v0.14.20 | >= 2.1 |
 |  < 2.0.0                     | >= v0.12.0  | >= 1.9 |
 
+NOTE: You need to change the version of `elasticsearch` gem, according to the version of Elasticsearch you use. Please refer to the following example.
+
+* https://docs.fluentd.org/container-deployment/docker-compose#step-1-create-fluentd-image-with-your-config--plugin
+
 NOTE: Since fluent-plugin-elasticsearch 5.3.0, it requires faraday 2.0 or later.
 
 NOTE: For v0.12 version, you should use 1.x.y version. Please send patch into v0.12 branch if you encountered 1.x version's bug.
