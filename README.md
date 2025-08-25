@@ -1,10 +1,9 @@
 # Fluent::Plugin::Elasticsearch, a plugin for [Fluentd](http://fluentd.org)
 
 [![Gem Version](https://badge.fury.io/rb/fluent-plugin-elasticsearch.png)](http://badge.fury.io/rb/fluent-plugin-elasticsearch)
-![Testing on Windows](https://github.com/uken/fluent-plugin-elasticsearch/workflows/Testing%20on%20Windows/badge.svg?branch=master)
-![Testing on macOS](https://github.com/uken/fluent-plugin-elasticsearch/workflows/Testing%20on%20macOS/badge.svg?branch=master)
-![Testing on Ubuntu](https://github.com/uken/fluent-plugin-elasticsearch/workflows/Testing%20on%20Ubuntu/badge.svg?branch=master)
-[![Code Climate](https://codeclimate.com/github/uken/fluent-plugin-elasticsearch.png)](https://codeclimate.com/github/uken/fluent-plugin-elasticsearch)
+![Testing on Windows](https://github.com/uken/fluent-plugin-elasticsearch/actions/workflows/windows.yml/badge.svg)
+![Testing on macOS](https://github.com/uken/fluent-plugin-elasticsearch/actions/workflows/macos.yml/badge.svg)
+![Testing on Ubuntu](https://github.com/uken/fluent-plugin-elasticsearch/actions/workflows/linux.yml/badge.svg)
 
 Send your logs to Elasticsearch (and search them with Kibana maybe?)
 
