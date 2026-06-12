@@ -296,7 +296,7 @@ EOC
           Elasticsearch::API.settings[:serializer] = Fluent::Plugin::Serializer::Oj
         end
       rescue LoadError
-        @dump_proc = Yajl.method(:dump)
+        @dump_proc = JSON.method(:generate)
       end
 
       raise Fluent::ConfigError, "`cloud_auth` must be present if `cloud_id` is present" if @cloud_id && @cloud_auth.nil?
@@ -954,7 +954,7 @@ EOC
             {"_index" => {"order" => "desc"}}
          ]
         }
-        result = client.search(options.merge(:body => Yajl.dump(query)))
+        result = client.search(options.merge(:body => JSON.generate(query)))
         # There should be just one hit per _id, but in case there still is multiple, just the oldest index is stored to map
         result['hits']['hits'].each do |hit|
           indices[hit["_id"]] = hit["_index"]

@@ -272,7 +272,7 @@ module Fluent::Plugin
     def run_slice(slice_id=nil)
       slice_query = @base_query
       slice_query = slice_query.merge('slice' => { 'id' => slice_id, 'max' => @num_slices}) unless slice_id.nil?
-      result = client.search(@options.merge(:body => Yajl.dump(slice_query) ))
+      result = client.search(@options.merge(:body => JSON.generate(slice_query) ))
       es = Fluent::MultiEventStream.new
 
       result["hits"]["hits"].each {|hit| process_events(hit, es)}

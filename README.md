@@ -986,7 +986,8 @@ compression_level best_compression
 
 ### prefer_oj_serializer
 
-With default behavior, Elasticsearch client uses `Yajl` as JSON encoder/decoder.
+With default behavior, Elasticsearch client uses `JSON` as JSON encoder/decoder.
+(Changed using library from `Yajl` to `JSON` at 6.0.1).
 `Oj` is the alternative high performance JSON encoder/decoder.
 When this parameter sets as `true`, Elasticsearch client uses `Oj` as JSON encoder/decoder.
 
