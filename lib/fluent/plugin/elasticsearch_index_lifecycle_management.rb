@@ -76,6 +76,6 @@ module Fluent::Plugin::ElasticsearchIndexLifecycleManagement
 
   def default_policy_payload
     default_policy_path = File.join(__dir__, ILM_DEFAULT_POLICY_PATH)
-    Yajl.load(::IO.read(default_policy_path))
+    JSON.parse(::IO.read(default_policy_path))
   end
 end
